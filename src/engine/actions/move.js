@@ -1,6 +1,7 @@
 // Action { type: 'move', to } : entrer sur un hexagone adjacent.
 
 import { neighbors } from '../hex.js';
+import { isBlocked, suspectsOnEnter } from '../rules/suspects.js';
 
 // Coût d'entrée par terrain. Un lieu coûte toujours 1 PA, quel que soit son terrain.
 const TERRAIN_COST = { route: 1, herbe: 1, foret: 2, marais: 3, batiment: 1 };
@@ -19,11 +20,12 @@ function swampSurvival(draft, ctx) {
 }
 
 // Réactions à l'entrée sur un hexagone, dans l'ordre. Les jetons et rencontres s'ajoutent ici.
-export const ON_ENTER = [swampSurvival];
+export const ON_ENTER = [swampSurvival, suspectsOnEnter];
 
 export function move(draft, { to }, ctx) {
   const from = draft.player.hex;
   if (!neighbors(from).includes(to)) return 'not-adjacent';
+  if (isBlocked(draft, to)) return 'blocked';
   const cost = entryCost(draft.tile.hexes[to]);
   if (cost > draft.ap.left) return 'not-enough-ap';
 
