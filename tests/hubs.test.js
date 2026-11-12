@@ -184,11 +184,12 @@ test('chest-take refusé quand l’inventaire est plein', () => {
 test('service : refusé hors hub, absent du hub ou pas encore branché', () => {
   assert.equal(step(atCamp(), { type: 'service', service: 'marchand' }).events[0].reason, 'not-in-hub');
   assert.equal(step(inCamp(), { type: 'service', service: 'medecin' }).events[0].reason, 'no-service');
-  assert.equal(step(inCamp(), { type: 'service', service: 'marchand' }).events[0].reason, 'service-unavailable');
+  assert.equal(step(inCamp(), { type: 'service', service: 'contrats' }).events[0].reason, 'service-unavailable');
 });
 
 test('service : un handler branché dans HUB_SERVICES est appelé avec le hub', (t) => {
-  t.after(() => delete HUB_SERVICES.marchand);
+  const { marchand } = HUB_SERVICES;
+  t.after(() => { HUB_SERVICES.marchand = marchand; });
   HUB_SERVICES.marchand = (draft, action, ctx, hub) => {
     if (action.refuse) return 'refused-by-trader';
     draft.player.roubles += 10;

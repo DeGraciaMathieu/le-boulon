@@ -16,6 +16,8 @@
 //   checkDecks       genres et types de cartes connus, 4 à 10 cartes par paquet d'exploration,
 //                    paquet d'un lieu = paquet d'exploration de ce lieu, occupants tirés du
 //                    paquet de rencontres de la tuile, tables de butin au niveau de la tuile
+//   checkTraders     marchand au comptoir de son hub, stock, rangs et répliques connus ; un
+//                    marchand par hub qui offre le service 'marchand'
 // Une collection absente ou vide est valide : chaque règle s'active quand sa carte arrive.
 //
 // FORMAT DU CONTENU (src/content/index.js) : un objet gelé, une clé par collection. Les
@@ -99,6 +101,12 @@
 //       { id, name, threat, wounds, hp?, damage?, type?, faction?, trophy?, count? } (en-tête
 //       de src/content/paquets/rencontres-agroprom.js).
 //   perks (savoir-faire.js, §11.2) { [perkId]: { name, effect } }
+//   traders (marchands.js, §6.2) { [traderId]: { npc, place, coefficient, sell?, stock: [{ item,
+//                                quantity, rank? }], lines } }
+//       npc : PNJ de role 'marchand' posé dans place, hub au service 'marchand'. coefficient
+//       et sell ({ [catégorie]: n }) : nombres > 0. quantity : entier > 0. rank : id de RANKS
+//       (src/engine/rules/progression.js). item : objet à prix. lines : une réplique par clé
+//       de TRADER_LINES (src/engine/rules/traders.js les choisit).
 //
 // RÉFÉRENCES : partout dans une entrée (sauf tiles et links, vérifiés à part), un champ de
 // REF_FIELDS désigne un id de la collection dite ; son pluriel (places, items…) désigne un
@@ -111,6 +119,7 @@
 //   reputation, quand c'est un objet : ses clés sont des factions.
 
 import { HEXES, isEdge } from '../engine/hex.js';
+import { RANKS } from '../engine/rules/progression.js';
 
 export const TERRAINS = Object.freeze(['route', 'herbe', 'foret', 'marais', 'batiment']);
 
@@ -127,6 +136,8 @@ export const OBJECTIVES = Object.freeze([
   'visiter', 'explorer', 'parler', 'rapporter', 'eliminer', 'escorter', 'cartographier',
   'survivre',
 ]);
+
+export const TRADER_LINES = Object.freeze(['premiere', 'quete', 'hostile', 'neutre', 'amical', 'allie']);
 
 // Champ -> [collection, libellé de l'erreur].
 const REF_FIELDS = Object.freeze({
@@ -176,6 +187,7 @@ export function validateContent(content) {
     checkQuests,
     checkDialogues,
     checkDecks,
+    checkTraders,
   ].flatMap((check) => check(content));
 }
 
@@ -475,6 +487,41 @@ export function checkDecks(content) {
       positive(entry.weight, `${path}.entries[${i}].weight`);
       if (entry.qty !== undefined) positive(entry.qty, `${path}.entries[${i}].qty`);
     });
+  }
+  return errors;
+}
+
+export function checkTraders(content) {
+  const errors = [];
+  if (!content.traders) return errors;
+  const isPositive = (n) => typeof n === 'number' && n > 0;
+  const counters = new Map();
+  for (const [id, trader] of entriesOf(content, 'traders')) {
+    const path = `traders.${id}`;
+    const place = content.places?.[trader.place];
+    if (place && !place.services?.includes('marchand')) errors.push(`${path}.place : « ${trader.place} » n'offre pas le service marchand`);
+    const npc = content.npcs?.[trader.npc];
+    if (npc && (npc.role !== 'marchand' || npc.place !== trader.place)) {
+      errors.push(`${path}.npc : « ${trader.npc} » n'est pas le marchand de ${trader.place}`);
+    }
+    counters.set(trader.place, (counters.get(trader.place) ?? 0) + 1);
+    if (!isPositive(trader.coefficient)) errors.push(`${path}.coefficient : ${trader.coefficient} n'est pas un nombre > 0`);
+    for (const [category, n] of Object.entries(trader.sell ?? {})) {
+      if (!isPositive(n)) errors.push(`${path}.sell.${category} : ${n} n'est pas un nombre > 0`);
+    }
+    (trader.stock ?? []).forEach(({ item, quantity, rank }, i) => {
+      if (!Number.isInteger(quantity) || quantity <= 0) errors.push(`${path}.stock[${i}].quantity : ${quantity} n'est pas un entier > 0`);
+      if (rank !== undefined && !RANKS.some((r) => r.id === rank)) errors.push(`${path}.stock[${i}].rank : rang inconnu « ${rank} »`);
+      if (content.items?.[item]?.price === null) errors.push(`${path}.stock[${i}].item : « ${item} » n'a pas de prix`);
+    });
+    for (const line of TRADER_LINES) {
+      if (typeof trader.lines?.[line] !== 'string' || !trader.lines[line]) errors.push(`${path}.lines.${line} : réplique manquante`);
+    }
+  }
+  for (const [id, place] of entriesOf(content, 'places')) {
+    if (!place.services?.includes('marchand')) continue;
+    const n = counters.get(id) ?? 0;
+    if (n !== 1) errors.push(`places.${id}.services : ${n} marchand(s) au lieu d'un`);
   }
   return errors;
 }

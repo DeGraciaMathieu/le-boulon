@@ -49,7 +49,7 @@
 //     npcs: { [id]: { alive, tile, place, met, helped } }  (rules/npcs.js)          carte 19
 //     quests: { [id]: questState }  (rules/quests.js)                                carte 15
 //     contracts: { [hubId]: [...] }                                                  carte 22
-//     traders: { [id]: { stock, restockDay } }                                       carte 13
+//     traders: { [id]: { stock, restockDay } }  (rules/traders.js)                   carte 13
 //     reputation: { [factionId]: -3..3 }  valeurs de départ du §9 (rules/factions.js) carte 16
 //     rumors, stashes,             []                                                carte 23
 //     journal,                     [] journal du PDA                                 cartes 15, 28
