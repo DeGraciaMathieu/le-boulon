@@ -10,6 +10,7 @@ import { HUB_SERVICES } from '../src/engine/rules/hubs.js';
 import { DAY_HOOKS } from '../src/engine/rules/time.js';
 import { questLog } from '../src/engine/rules/quests.js';
 import { encounterCards } from '../src/engine/rules/tile.js';
+import { contractCardId } from '../src/engine/rules/places.js';
 import {
   BOARD_SIZE, OFFER_DAYS, FAILURE_REPUTATION, CONTRACT_TYPES,
   tileDistance, maxTileLevel, contractReward, offerContract, contractBoard, renewContracts,
@@ -126,7 +127,8 @@ test('offerContract : chaque type devient une quête aux objectifs de quests.js'
   assert.equal(livraison.item, 'colis');
   assert.equal(content.npcs[livraison.npc].place === HUB, false, 'livré hors du hub');
   const [aller, rapporter] = objectives('recuperation-camp-novices');
-  assert.equal(aller.type, 'visiter');
+  assert.equal(aller.type, 'explorer');
+  assert.equal(aller.card, contractCardId('meduse'));
   assert.deepEqual([rapporter.type, rapporter.item, content.npcs[rapporter.npc].place], ['rapporter', 'meduse', HUB]);
   const [eliminer] = objectives('elimination-camp-novices');
   assert.ok(Object.hasOwn(encounterCards(content.tiles[eliminer.tile]), eliminer.encounter));
@@ -250,4 +252,25 @@ test('état sérialisable : le JSON rejoue à l’identique', () => {
   const accepted = accept(board, board.contracts[HUB][0].id).state;
   const replay = (c) => step(step(c, { type: 'leave-hub' }).state, { type: 'enter-hub' });
   assert.deepEqual(replay(jsonCopy(accepted)), replay(accepted));
+});
+
+// LBL-55 (3) : l'artefact d'un contrat de récupération se trouve dans le lieu cible.
+
+test('récupération : la première exploration du lieu cible donne l’artefact à rapporter', () => {
+  let found = 0;
+  for (let seed = 1; seed <= 20; seed += 1) {
+    const { campaign, offer } = withOffer(inCamp(), 'recuperation-camp-novices', { seed });
+    const { place } = offer.quest.steps.aller.objective;
+    if (content.places[place].faction) continue;
+    const accepted = jsonCopy(step(accept(campaign, offer.id).state, { type: 'leave-hub' }).state);
+    accepted.world.hex = content.places[place].hex;
+    const inside = step(accepted, { type: 'enter-place', place });
+    assert.equal(inside.events[0].type, 'place-entered', `${seed} : ${place}`);
+    const { state, events } = step(inside.state, { type: 'explore' });
+    assert.ok(events.some((e) => e.type === 'item-gained' && e.kind === 'meduse'), `${seed} : ${place}`);
+    assert.ok(state.inventory.some((item) => item.kind === 'meduse'));
+    assert.equal(state.quests[offer.id].step, 'rapporter');
+    found += 1;
+  }
+  assert.ok(found > 0);
 });

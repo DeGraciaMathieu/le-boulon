@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCampaign, step } from '../src/engine/campaign.js';
+import { createCampaign, step, dayState, storeDay } from '../src/engine/campaign.js';
 import { candidates, createMind, PROFILES } from '../bench/campaign-ai.js';
 import { playCampaign, runCampaignBench, formatCampaignReport } from '../bench/campaign.js';
 
@@ -14,10 +14,9 @@ test('banc de campagne : une campagne courte de chaque IA finit sans blocage', (
   for (const profile of Object.keys(PROFILES)) {
     for (const seed of [1, 2, 3]) {
       const record = playCampaign(seed, profile, { days: 4 });
-      assert.ok(['days', 'dead'].includes(record.end), `${profile} ${seed} : ${record.end}`);
+      assert.equal(record.end, 'days', `${profile} ${seed} : ${record.end}`);
       assert.ok(record.days <= 4);
       assert.ok(record.roubles.length >= 1 && record.roubles.length <= 4);
-      assert.equal(record.deathDay === null, record.end !== 'dead');
     }
   }
 });
@@ -51,4 +50,31 @@ test('rapport : mesures du §17.3 et verdicts sur les cibles', () => {
   assert.match(text, /acte 1 en 4 à 7 jours/);
   assert.match(text, /arme d'épaule vers le jour 8 à 12/);
   assert.match(text, /moins de 1 mort \/ 10 jours/);
+});
+
+// LBL-55 (1) : en mode normal, le banc fait réapparaître au dernier hub au lieu de finir.
+
+test('IA de campagne : morte en mode normal, elle choisit la réapparition', () => {
+  const campaign = createCampaign({ seed: 1, combatMode: 'rapide' });
+  const day = dayState(campaign);
+  day.status = 'dead';
+  storeDay(campaign, day);
+  const [first] = candidates(campaign, createMind(PROFILES.prudente));
+  assert.deepEqual(first, { type: 'respawn' });
+  assert.equal(step(campaign, first).events[0].type, 'respawned');
+});
+
+test('banc de campagne : les morts réapparaissent, la campagne continue et le rapport les compte', () => {
+  const records = [1, 2, 3, 4, 5, 6].map((seed) => playCampaign(seed, 'gourmande', { days: 10 }));
+  const died = records.filter((r) => r.deaths > 0);
+  assert.ok(died.length > 0, 'au moins une mort');
+  for (const r of records) {
+    assert.equal(r.respawns, r.deaths);
+    assert.notEqual(r.end, 'dead');
+    assert.equal(r.deathDay === null, r.deaths === 0);
+  }
+  const report = runCampaignBench({ ...SHORT, campaigns: 1 });
+  for (const p of Object.values(report.profiles)) {
+    assert.ok('deaths' in p && 'respawns' in p);
+  }
 });

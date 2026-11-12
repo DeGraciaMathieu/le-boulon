@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, step as stepGame } from '../src/engine/game.js';
-import { createCampaign, step, dayState } from '../src/engine/campaign.js';
+import { createCampaign, step, dayState, REACTIONS } from '../src/engine/campaign.js';
 import { toAxial, toNumber } from '../src/engine/hex.js';
 import { RANKS as DIALOGUE_RANKS } from '../src/engine/rules/dialogue.js';
 import { createItem, addItem, irradiate } from '../src/engine/rules/sheet.js';
@@ -17,6 +17,8 @@ import {
   perkPicksLeft,
   hasPerk,
   stealthBonus,
+  xpAfterStep,
+  XP_GAINS,
 } from '../src/engine/rules/progression.js';
 
 const jsonCopy = (value) => JSON.parse(JSON.stringify(value));
@@ -277,4 +279,28 @@ test('Fantôme : +1 Discrétion la nuit ou sous la pluie, exposé pour la carte 
   assert.equal(stealthBonus(ghost, { night: false, rain: true }), 1);
   assert.equal(stealthBonus(ghost, { night: true, rain: true }), 1);
   assert.equal(stealthBonus({ player: { perks: [] } }, { night: true }), 0);
+});
+
+// LBL-55 (2) : XP des combats gagnés et des découvertes (§11.1, montants hypothèse v2).
+
+test('XP : combat gagné, artefact ramassé, lieu vidé une seule fois', () => {
+  const draft = jsonCopy(createCampaign({ seed: 1 }));
+  const events = [];
+  const ctx = { emit: (event) => events.push(event) };
+  xpAfterStep(draft, [
+    { type: 'fight', won: true },
+    { type: 'fight', won: false },
+    { type: 'combat-ended', outcome: 'victory' },
+    { type: 'combat-ended', outcome: 'fled' },
+    { type: 'artefact-picked', hex: 3, value: 1000 },
+    { type: 'place-emptied', place: 'ferme-cordon' },
+  ], ctx);
+  assert.equal(draft.player.xp, 2 * XP_GAINS.combat + XP_GAINS.artefact + XP_GAINS.lieu);
+  assert.deepEqual(events.filter((e) => e.type === 'xp-gained').map((e) => e.cause),
+    ['combat', 'combat', 'decouverte', 'decouverte']);
+
+  const xp = draft.player.xp;
+  xpAfterStep(draft, [{ type: 'place-emptied', place: 'ferme-cordon' }], ctx);
+  assert.equal(draft.player.xp, xp, 'lieu revidé après l’Émission : pas d’XP');
+  assert.ok(REACTIONS.includes(xpAfterStep));
 });
