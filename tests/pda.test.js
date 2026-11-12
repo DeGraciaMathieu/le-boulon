@@ -43,7 +43,7 @@ test('rumeurs : contenu lisible, fraîches d’abord, la plus récente en premie
   const rumors = pdaRumors(campaign);
   assert.deepEqual(rumors.map((rumor) => rumor.type), ['raccourci', 'artefact', 'patrouille']);
   assert.equal(rumors[1].name, 'Artefact rare');
-  assert.equal(rumors[1].text, `${content.items.meduse.name} à ${content.tiles.cordon.name}, hexagone 7`);
+  assert.equal(rumors[1].text, `${content.items.meduse.name} à ${content.tiles.cordon.name}, au nord-ouest`);
   assert.equal(rumors[1].age, 'Fraîche jusqu’à l’Émission du jour 5');
   assert.equal(rumors[2].stale, true);
   assert.equal(rumors[2].age, 'Périmée : une Émission est passée');

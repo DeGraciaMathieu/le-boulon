@@ -211,7 +211,7 @@ test('boulon (1 PA) : désamorce une anomalie avant de la révéler, sinon montr
   const { campaign, events } = play(start, [{ type: 'bolt-card' }]);
   assert.equal(apLeft(campaign), apLeft(start) - 1);
   assert.equal(countCharges(campaign.inventory, 'boulons'), countCharges(start.inventory, 'boulons') - 1);
-  assert.equal(ofType(events, 'card-defused')[0].card, 'x');
+  assert.deepEqual(ofType(events, 'card-defused')[0], { type: 'card-defused', place, card: 'x', position: 1, zone: 'main' });
   assert.equal(campaign.player.wounds, 0);
   assert.equal(campaign.places[place].emptied, true);
 
