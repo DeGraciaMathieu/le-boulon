@@ -11,25 +11,28 @@
 //     seed,                        graine de départ
 //     rng,                         état interne du RNG (uint32), avance à chaque tirage
 //     tile,                        { name, entry, hexes } (format de src/engine/data/agroprom.js)
-//     status,                      'playing' | 'exited' | 'night' (0 PA sans être sorti)
+//     status,                      'playing' | 'exited' | 'night' (0 PA sans être sorti) | 'dead'
 //     turn,                        nombre d'actions acceptées
 //     ap: { max, left, spent },    budget de PA de la journée
 //     player: {
 //       hex, previousHex,          position (numéro 1-19) et précédente (null au départ), pour la fuite
-//       wounds, radiation,
+//       wounds, radiation,         pistes 0-6 (src/engine/rules/sheet.js)
+//       woundPenalty,              true une fois la pénalité de PA des 4 blessures appliquée
 //       stats: { tir, survie, discretion, endurance },
 //     },
-//     tokens, encounters, inventory, zone, mission   réservés aux cartes suivantes
+//     inventory,                   [{ kind, size, charges? }], grille de 12 cases (sheet.js)
+//     tokens, encounters, zone, mission   réservés aux cartes suivantes
 //   }
 //
 // ÉVÉNEMENTS (un objet { type, ... } par ligne de journal) :
 //   { type: 'moved', from, to, cost }
 //   { type: 'check', stat, roll, bonus, target, success }
-//   { type: 'wounded', amount, cause }
+//   { type: 'wounded', amount, cause }   et les autres événements de la fiche (sheet.js)
 //   { type: 'exited', hex }
 //   { type: 'day-ended', reason: 'no-ap' }
 //   { type: 'refused', action, reason }
 //     reason : 'game-over' | 'unknown-action' | 'not-adjacent' | 'not-enough-ap' | 'not-on-edge'
+//              | 'not-usable' | 'no-item'
 //
 // BRANCHER UNE RÈGLE :
 //   - Nouvelle action (boulon, fouille, fuite…) : écrire un handler
@@ -41,16 +44,19 @@
 //     fonction (draft, ctx) à ON_ENTER dans src/engine/actions/move.js.
 //   - ctx.rng : RNG à graine dont l'état est reporté dans draft.rng à la fin
 //     du step ; ctx.spend(cost) dépense des PA ; ctx.check(stat) fait un test et rend sa réussite.
+//   - Fiche (blessures, radiations, inventaire) : ctx.wound, ctx.irradiate, ctx.addItem,
+//     ctx.removeItem, ctx.useCharge, documentés en tête de src/engine/rules/sheet.js.
 
 import { createRng } from './rng.js';
 import { move } from './actions/move.js';
 import { exit } from './actions/exit.js';
+import { use, wound, irradiate, addItem, removeItem, useCharge, startingInventory } from './rules/sheet.js';
 
 export const BASE_AP = 10;
 
 const START_STATS = Object.freeze({ tir: 1, survie: 1, discretion: 1, endurance: 0 });
 
-const ACTIONS = { move, exit };
+const ACTIONS = { move, exit, use };
 
 export function createGame({ seed, tile }) {
   const stats = { ...START_STATS };
@@ -62,10 +68,10 @@ export function createGame({ seed, tile }) {
     status: 'playing',
     turn: 0,
     ap: { max, left: max, spent: 0 },
-    player: { hex: tile.entry, previousHex: null, wounds: 0, radiation: 0, stats },
+    player: { hex: tile.entry, previousHex: null, wounds: 0, radiation: 0, woundPenalty: false, stats },
     tokens: [],
     encounters: [],
-    inventory: [],
+    inventory: startingInventory(),
     zone: null,
     mission: null,
   };
@@ -89,6 +95,11 @@ export function step(state, action) {
       draft.ap.spent += cost;
     },
     check: (stat) => skillCheck(draft, stat, ctx),
+    wound: (amount, cause) => wound(draft, amount, cause, ctx.emit),
+    irradiate: (amount, cause) => irradiate(draft, amount, cause, ctx.emit),
+    addItem: (item) => addItem(draft, item),
+    removeItem: (kind, cause) => removeItem(draft, kind, cause, ctx.emit),
+    useCharge: (kind) => useCharge(draft, kind),
   };
 
   const refusal = handler(draft, action, ctx);

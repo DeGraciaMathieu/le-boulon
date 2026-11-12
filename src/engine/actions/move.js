@@ -15,8 +15,7 @@ function swampSurvival(draft, ctx) {
   const hex = draft.tile.hexes[draft.player.hex];
   if (hex.lieu || hex.terrain !== 'marais') return;
   if (ctx.check('survie')) return;
-  draft.player.wounds += 1;
-  ctx.emit({ type: 'wounded', amount: 1, cause: 'marais' });
+  ctx.wound(1, 'marais');
 }
 
 // Réactions à l'entrée sur un hexagone, dans l'ordre. Les jetons et rencontres s'ajoutent ici.
