@@ -8,7 +8,10 @@
 // la tuile (repaires et lieux tenus en ont deux ou trois). Une Cache tire dans la table
 // `cache` du niveau ; les paquets intérieurs (Passage) aussi pour leur Butin.
 //
-// Cartes fixées par les quêtes (fixCard) : 'indice-acte1' de l'ATP (acte 1, 3e position).
+// Cartes fixées par les quêtes (fixCard) : objectifs 'explorer' de src/content/quetes/.
+// Une carte réservée (champ quest, helper reservee) ne sort que fixée par sa quête : « Le
+// Guide » (ATP, Souterrains, Usine de la Vallée, Complexe, Usine Rostok, Village abandonné,
+// Champ d'anomalies), « Le souvenir du Guide » (Église).
 
 import { deepFreeze } from '../freeze.js';
 
@@ -21,9 +24,11 @@ const cache = (level, more = {}) => ({ id: 'cache', type: 'cache', loot: `n${lev
 const anomalie = (anomaly, count = 1) => ({ id: `anomalie-${anomaly}`, type: 'anomalie', anomaly, ...many(count) });
 const occupant = (encounter, count = 1) => ({ id: `occupant-${encounter}`, type: 'occupant', encounter, ...many(count) });
 const pnj = (npc) => ({ id: `pnj-${npc}`, type: 'pnj', npc });
-const indice = (id, text) => ({ id, type: 'indice', text });
+const indice = (id, text, effects) => ({ id, type: 'indice', text, ...(effects && { effects }) });
 const passage = (inner) => ({ id: 'passage', type: 'passage', deck: inner });
 const rien = (id, text) => ({ id, type: 'rien', text });
+const reservee = (quest, card) => ({ ...card, quest });
+const donner = (item) => ({ type: 'donner', item });
 
 export default deepFreeze({
   // Cordon (niveau 1)
@@ -45,7 +50,9 @@ export default deepFreeze({
     butin(2),
     occupant('pillard'),
     occupant('bandits'),
-    indice('indice-acte1', 'Un PDA sous un camion éventré. Le dernier message parle d’un convoi.'),
+    reservee('le-guide', indice('indice-acte1',
+      'Un courrier mort sous un camion éventré. Son PDA est verrouillé. Sur l’écran, un seul mot lisible : « Guide ».',
+      [donner('pda')])),
     cache(1, { trap: 'bruit' }),
     anomalie('electro'),
     rien('garage', 'Des carcasses de camions sur cales. Les pneus ont été volés depuis longtemps.'),
@@ -104,6 +111,8 @@ export default deepFreeze({
     anomalie('gravitationnelle'),
     anomalie('electro'),
     indice('icone', 'Derrière l’icône, une carte du Marais annotée au crayon.'),
+    reservee('souvenir-du-guide', indice('notes-guide',
+      'Sous l’autel, un carnet. L’écriture du Guide : « Les Émissions suivent le vent. Toujours vers le nord. »')),
     rien('nef', 'Des bancs renversés. La lumière tombe du clocher crevé.'),
   ]),
   hameau: deck('hameau', [
@@ -193,6 +202,9 @@ export default deepFreeze({
     occupant('bandits'),
     passage('souterrains-profonds'),
     indice('plan', 'Un plan des galeries, une croix tracée au fond du réseau.'),
+    reservee('le-guide', indice('documents-agroprom',
+      'Au fond du réseau, une sacoche étanche. Des documents tamponnés : « Complexe, niveau -2. Laboratoire X. »',
+      [donner('documents')])),
     rien('galerie', 'Une galerie de béton, des câbles arrachés au plafond.'),
   ]),
   'souterrains-profonds': deck('souterrains', [
@@ -218,6 +230,9 @@ export default deepFreeze({
     occupant('bandits-armes'),
     cache(3, { stat: 'discretion', trap: 'bruit' }),
     indice('livre-comptes', 'Le livre de comptes du chef : qui paie, qui doit, qui a disparu.'),
+    reservee('le-guide', indice('cle-labo',
+      'Dans le bureau du chef, une clé magnétique pend à un clou. Étiquette : « Complexe ».',
+      [donner('cle')])),
     rien('dortoir', 'Des matelas à même le sol, des bouteilles vides.'),
   ]),
   complexe: deck('complexe', [
@@ -226,6 +241,9 @@ export default deepFreeze({
     occupant('snork'),
     passage('sous-sol-complexe'),
     indice('badge', 'Un badge d’accès au nom d’un laborantin. Niveau -2.'),
+    reservee('le-guide', indice('donnees-labo',
+      'La clé ouvre une armoire forte. Dedans, des bandes de données et un nom griffonné : « le Guide ».',
+      [{ type: 'prendre', item: 'cle' }, donner('donnees')])),
     rien('couloir', 'Un couloir carrelé de blanc, des portes blindées entrouvertes.'),
   ]),
   'sous-sol-complexe': deck('complexe', [
@@ -284,6 +302,7 @@ export default deepFreeze({
     anomalie('gravitationnelle'),
     passage('ateliers-rostok'),
     indice('consigne', 'Une consigne de l’usine : « Ateliers fermés, ordre du Devoir. »'),
+    reservee('le-guide', occupant('controleur')),
     rien('cheminee', 'La cheminée de l’usine se perd dans le brouillard.'),
   ]),
   'ateliers-rostok': deck('usine-rostok', [
@@ -314,6 +333,8 @@ export default deepFreeze({
     occupant('zombies'),
     anomalie('gravitationnelle'),
     cache(4),
+    reservee('le-guide', occupant('patrouille-liberte')),
+    reservee('le-guide', occupant('commando-devoir')),
     rien('jardin', 'Un jardin retourné à la friche, une balançoire immobile.'),
   ]),
   'champ-anomalies': deck('champ-anomalies', [
@@ -322,6 +343,8 @@ export default deepFreeze({
     anomalie('gravitationnelle'),
     anomalie('bruleuse'),
     cache(4, { stat: 'survie' }),
+    reservee('le-guide', indice('trace-guide',
+      'Au bord de la route du Nord, un boulon peint en rouge sur une borne. La marque du Guide. Elle pointe vers le nord.')),
     rien('rochers', 'Des rochers en lévitation à un mètre du sol.'),
   ]),
   lac: deck('lac', [

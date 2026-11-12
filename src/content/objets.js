@@ -280,4 +280,5 @@ export default deepFreeze({
   pda: { name: 'PDA', category: 'quete', price: null, size: 1 },
   documents: { name: 'Documents', category: 'quete', price: null, size: 1 },
   cle: { name: 'Clé', category: 'quete', price: null, size: 1 },
+  donnees: { name: 'Données du laboratoire', category: 'quete', price: null, size: 1 },
 });

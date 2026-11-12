@@ -191,7 +191,7 @@ test('endangerNpcs : seuls les isolés non aidés meurent, la tuile filtre', () 
   const emission = fakeCtx(0);
   endangerNpcs(campaign, emission, { cause: 'emission' });
   const dead = emission.events.map((e) => e.npc).sort();
-  assert.deepEqual(dead, ['blesse-elevateur', 'chasseur', 'kravets', 'pelerin']);
+  assert.deepEqual(dead, ['blesse-elevateur', 'chasseur', 'kravets', 'pelerin', 'vovk']);
   for (const id of npcsAt(campaign, 'bar')) assert.equal(campaign.npcs[id].alive, true);
 
   const safe = createCampaign({ seed: 1 });

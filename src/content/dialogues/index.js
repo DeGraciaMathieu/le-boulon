@@ -29,6 +29,7 @@ import voyageurArret from './voyageur-arret.js';
 import kravets from './kravets.js';
 import pelerin from './pelerin.js';
 import chasseur from './chasseur.js';
+import vovk from './vovk.js';
 
 export default deepFreeze({
   'marchand-bunker': marchandBunker,
@@ -56,4 +57,5 @@ export default deepFreeze({
   kravets,
   pelerin,
   chasseur,
+  vovk,
 });

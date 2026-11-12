@@ -53,4 +53,6 @@ export default deepFreeze(withDialogues({
   kravets: npc('Lieutenant Kravets', 'militaires', 'institut-agroprom', 'stalker'),
   pelerin: roaming('Le Pèlerin', 'solitaires', 'marais', ['eglise', 'ruines-village', 'hameau']),
   chasseur: roaming('Le Chasseur', 'solitaires', 'vallee-sombre', ['ferme-vallee', 'station-service', 'pont']),
+  // Chef des bandits, accord de l'acte 3 du Guide (hypothèse v2 : nom et lieu).
+  vovk: npc('Vovk', 'bandits', 'usine-vallee', 'stalker'),
 }));

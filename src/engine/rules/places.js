@@ -2,8 +2,10 @@
 // Contenu : places (src/content/lieux.js), decks de kind 'exploration' et loot (carte 11),
 // formats en tête de src/content/validate.js.
 //
-// CARTE D'EXPLORATION (deck.cards[]) : { id, type, count?, text?, ...champs du type }
+// CARTE D'EXPLORATION (deck.cards[]) : { id, type, count?, text?, quest?, ...champs du type }
 //   count : nombre d'exemplaires (1 par défaut). text : phrase affichée (rien, indice…).
+//   quest : carte réservée à cette quête (carte 20) : hors de la pioche, elle ne sort que
+//           fixée par fixCard (objectif 'explorer').
 //   'butin'     loot?          table de butin (sinon celle du lieu, place.loot) : 1 tirage
 //   'cache'     stat?, trap?, loot?   test de stat ('survie' | 'discretion' ; sans stat, la
 //                              meilleure des deux, hypothèse v2). Réussi : 2 tirages (hypothèse
@@ -239,7 +241,7 @@ export function enterPlace(draft, { place: id, approach }, ctx) {
   if (occupied && approach === 'payer' && draft.player.roubles < PLACE_FEE) return 'not-enough-roubles';
 
   const state = placeState(draft, id);
-  state.pool ??= ctx.rng.shuffle(withoutFixed(expand(deckById(place.deck)), state.fixed));
+  state.pool ??= ctx.rng.shuffle(withoutFixed(drawable(deckById(place.deck)), state.fixed));
   draft.place = occupied ? { id, approach } : { id };
   draft.screen = 'place';
   ctx.emit({ type: 'place-entered', place: id, ...(occupied && { approach }) });
@@ -436,6 +438,11 @@ function placeState(draft, id) {
 // Ids des cartes d'un paquet, un par exemplaire.
 function expand(deck) {
   return (deck?.cards ?? []).flatMap((card) => Array(card.count ?? 1).fill(card.id));
+}
+
+// Ids de la pioche : sans les cartes réservées à une quête, qui ne sortent que fixées.
+function drawable(deck) {
+  return expand({ cards: (deck?.cards ?? []).filter((card) => !card.quest) });
 }
 
 function withoutFixed(ids, fixed) {
