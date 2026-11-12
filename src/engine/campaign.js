@@ -42,7 +42,7 @@
 //     quests: { [id]: questState }                                                   carte 15
 //     contracts: { [hubId]: [...] }                                                  carte 22
 //     traders: { [id]: { stock, restockDay } }                                       carte 13
-//     reputation: { [factionId]: -3..3 }  vide : la carte 16 pose les valeurs de départ
+//     reputation: { [factionId]: -3..3 }  valeurs de départ du §9 (rules/factions.js) carte 16
 //     rumors, stashes,             []                                                carte 23
 //     journal,                     [] journal du PDA                                 cartes 15, 28
 //     dialogue?,                   { npc, dialogue, node, previousScreen } pendant un
@@ -87,6 +87,7 @@ import { createGame, step as stepDay } from './game.js';
 import { createRng } from './rng.js';
 import content from '../content/index.js';
 import { talk, choose } from './rules/dialogue.js';
+import { join, startingReputation } from './rules/factions.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -100,7 +101,7 @@ const START_FACTION = 'solitaires';
 // Hypothèse v2 : le brief ne fixe pas les roubles de départ.
 const START_ROUBLES = 0;
 
-export const CAMPAIGN_ACTIONS = { talk, choose };
+export const CAMPAIGN_ACTIONS = { talk, choose, join };
 
 export const REACTIONS = [];
 
@@ -138,7 +139,7 @@ export function createCampaign({ seed, mode = 'normal' }) {
     quests: {},
     contracts: {},
     traders: {},
-    reputation: {},
+    reputation: startingReputation(),
     rumors: [],
     stashes: [],
     journal: [],
