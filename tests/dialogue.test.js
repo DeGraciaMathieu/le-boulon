@@ -57,9 +57,9 @@ test('réputation : bornes min et max incluses, faction absente = 0', () => {
 });
 
 test('objet possédé', () => {
-  assert.equal(evaluate({ type: 'objet', objet: 'bandage' }, campaignWith()), true);
-  assert.equal(evaluate({ type: 'objet', objet: 'artefact' }, campaignWith()), false);
-  assert.equal(evaluate({ type: 'objet', objet: 'artefact' }, campaignWith({ items: ['artefact'] })), true);
+  assert.equal(evaluate({ type: 'objet', item: 'bandage' }, campaignWith()), true);
+  assert.equal(evaluate({ type: 'objet', item: 'artefact' }, campaignWith()), false);
+  assert.equal(evaluate({ type: 'objet', item: 'artefact' }, campaignWith({ items: ['artefact'] })), true);
 });
 
 test('rang : ordre du brief §11.1', () => {
@@ -73,10 +73,10 @@ test('rang : ordre du brief §11.1', () => {
 
 test('étape de quête : quête démarrée, étape précise', () => {
   const campaign = campaignWith({ quests: { courrier: { etape: 'pda' } } });
-  assert.equal(evaluate({ type: 'quete', quete: 'courrier' }, campaign), true);
-  assert.equal(evaluate({ type: 'quete', quete: 'courrier', etape: 'pda' }, campaign), true);
-  assert.equal(evaluate({ type: 'quete', quete: 'courrier', etape: 'ateliers' }, campaign), false);
-  assert.equal(evaluate({ type: 'quete', quete: 'le-guide' }, campaign), false);
+  assert.equal(evaluate({ type: 'quete', quest: 'courrier' }, campaign), true);
+  assert.equal(evaluate({ type: 'quete', quest: 'courrier', step: 'pda' }, campaign), true);
+  assert.equal(evaluate({ type: 'quete', quest: 'courrier', step: 'ateliers' }, campaign), false);
+  assert.equal(evaluate({ type: 'quete', quest: 'le-guide' }, campaign), false);
 });
 
 test('stat et roubles', () => {
@@ -150,17 +150,17 @@ test('talk refusé : PNJ sans dialogue, dialogue déjà ouvert', () => {
   assert.equal(again.events[0].reason, 'already-talking');
 });
 
-test('dialogueView rend le nœud et grise les choix indisponibles avec leur condition', () => {
+test('dialogueView rend le nœud et grise les choix indisponibles avec leurs conditions', () => {
   assert.equal(dialogueView(campaignWith()), null);
   const campaign = step(campaignWith(), { type: 'talk', npc: NPC }).state;
   const view = dialogueView(campaign);
   assert.equal(view.npc, NPC);
   assert.equal(view.node, 'accueil');
-  assert.equal(view.texte, exemple.noeuds[0].texte);
-  assert.deepEqual(view.choix.map((c) => [c.index, c.disponible]), [[0, true], [1, false], [2, false], [3, true]]);
-  assert.deepEqual(view.choix[1].condition, exemple.noeuds[0].choix[1].condition);
-  assert.equal(view.choix[1].texte, 'Voici un artefact.');
-  assert.equal('condition' in view.choix[0], false);
+  assert.equal(view.text, exemple.nodes.accueil.text);
+  assert.deepEqual(view.choices.map((c) => [c.index, c.available]), [[0, true], [1, false], [2, false], [3, true]]);
+  assert.deepEqual(view.choices[1].conditions, exemple.nodes.accueil.choices[1].conditions);
+  assert.equal(view.choices[1].text, 'Voici un artefact.');
+  assert.equal('conditions' in view.choices[0], false);
 });
 
 test('choose suit un choix vers un autre nœud', () => {
@@ -223,8 +223,8 @@ test('effet réputation : piste bornée à -3..3, faction absente partant de 0',
   const draft = campaignWith({ reputation: { solitaires: 3 } });
   const emitted = [];
   const ctx = { emit: (e) => emitted.push(e) };
-  EFFECTS.reputation(draft, { type: 'reputation', faction: 'solitaires', montant: 2 }, ctx);
-  EFFECTS.reputation(draft, { type: 'reputation', faction: 'bandits', montant: -5 }, ctx);
+  EFFECTS.reputation(draft, { type: 'reputation', faction: 'solitaires', amount: 2 }, ctx);
+  EFFECTS.reputation(draft, { type: 'reputation', faction: 'bandits', amount: -5 }, ctx);
   assert.deepEqual(draft.reputation, { solitaires: 3, bandits: -3 });
 });
 
@@ -253,7 +253,7 @@ test('un effet impossible refuse tout le choix sans rien appliquer', () => {
 
 test('roubles insuffisants pour un effet négatif : refus', () => {
   const draft = campaignWith({ roubles: 50 });
-  const reason = EFFECTS.roubles(draft, { type: 'roubles', montant: -100 }, { emit() {} });
+  const reason = EFFECTS.roubles(draft, { type: 'roubles', amount: -100 }, { emit() {} });
   assert.equal(reason, 'not-enough-roubles');
 });
 
@@ -265,9 +265,9 @@ test('un effet sans hook enregistré refuse le choix ; une carte peut le branche
   assert.equal(refused.state, open);
   assert.equal(refused.events[0].reason, 'unknown-effect');
 
-  EFFECTS['demarrer-quete'] = (draft, effect, ctx) => {
-    draft.quests[effect.quete] = { etape: 'debut' };
-    ctx.emit({ type: 'quest-started', quest: effect.quete });
+  EFFECTS.quete = (draft, effect, ctx) => {
+    draft.quests[effect.quest] = { etape: 'debut' };
+    ctx.emit({ type: 'quest-started', quest: effect.quest });
   };
   try {
     const { state, events } = step(open, { type: 'choose', index: 0 });
@@ -275,7 +275,7 @@ test('un effet sans hook enregistré refuse le choix ; une carte peut le branche
     assert.equal(state.screen, 'tile');
     assert.deepEqual(events.map((e) => e.type), ['quest-started', 'dialogue-ended']);
   } finally {
-    delete EFFECTS['demarrer-quete'];
+    delete EFFECTS.quete;
   }
 });
 
@@ -287,4 +287,48 @@ test('une campagne en plein dialogue reste sérialisable et rejoue à l\'identiq
   assert.deepEqual(a, b);
   const next = step(jsonCopy(a), { type: 'choose', index: 0 }).state;
   assert.equal(next.screen, 'tile');
+});
+
+// --- Format (LBL-47) ---------------------------------------------------------------------
+
+test('un choix porte une liste de conditions, toutes requises', () => {
+  const start = campaignWith({ reputation: { solitaires: 2 } });
+  const open = step(start, { type: 'talk', npc: NPC }).state;
+  assert.equal(dialogueView(open).choices[2].available, false, 'réputation seule : rang manquant');
+  const both = step(campaignWith({ reputation: { solitaires: 2 }, rank: 'experimente' }), { type: 'talk', npc: NPC }).state;
+  assert.equal(dialogueView(both).choices[2].available, true);
+});
+
+test('next absent ferme le dialogue comme next null', () => {
+  DIALOGUES['court-test'] = Object.freeze({ start: 'a', nodes: { a: { text: '…', choices: [{ text: 'Salut.' }] } } });
+  try {
+    const open = step(campaignWith(), { type: 'talk', npc: 'court-test' }).state;
+    assert.equal(open.dialogue.dialogue, 'court-test', 'sans champ id, l\'id du dialogue est celui du PNJ');
+    const { state, events } = step(open, { type: 'choose', index: 0 });
+    assert.equal('dialogue' in state, false);
+    assert.deepEqual(events.at(-1), { type: 'dialogue-ended', npc: 'court-test', dialogue: 'court-test', node: 'a' });
+  } finally {
+    delete DIALOGUES['court-test'];
+  }
+});
+
+test('les effets d\'un nœud s\'appliquent à l\'arrivée ; un refus annule le choix', () => {
+  DIALOGUES['prime-test'] = Object.freeze({
+    start: 'a',
+    nodes: {
+      a: { text: 'Voilà ta prime.', effects: [{ type: 'roubles', amount: 100 }], choices: [{ text: 'Encore.', next: 'b' }] },
+      b: { text: 'Rends-la.', effects: [{ type: 'roubles', amount: -1000 }], choices: [] },
+    },
+  });
+  try {
+    const start = campaignWith({ roubles: 0 });
+    const { state, events } = step(start, { type: 'talk', npc: 'prime-test' });
+    assert.equal(state.player.roubles, 100);
+    assert.deepEqual(events.map((e) => e.type), ['dialogue-started', 'dialogue-node', 'roubles-changed']);
+    const refused = step(state, { type: 'choose', index: 0 });
+    assert.equal(refused.state, state);
+    assert.equal(refused.events[0].reason, 'not-enough-roubles');
+  } finally {
+    delete DIALOGUES['prime-test'];
+  }
 });

@@ -124,6 +124,13 @@ test('un contenu vide est valide : chaque règle attend sa collection', () => {
   assert.deepEqual(validateContent(deepFreeze({})), []);
 });
 
+test('références : une collection cible absente n\'est pas encore vérifiée', () => {
+  const content = deepFreeze({ factions: { devoir: { name: 'Devoir', places: ['bar'], joinable: true, start: 0 } } });
+  assert.deepEqual(validateContent(content), []);
+  const empty = deepFreeze({ places: {}, factions: { devoir: { name: 'Devoir', places: ['bar'], joinable: true, start: 0 } } });
+  assert.deepEqual(validateContent(empty), ['factions.devoir.places[0] : lieu inconnu « bar »']);
+});
+
 test('contenu gelé : un objet profond non gelé est signalé', () => {
   const content = deepFreeze(fixture());
   const thawed = { ...content, items: { ...content.items, pda: { name: 'PDA' } } };

@@ -36,18 +36,26 @@
 //       'coffre', 'contrats'].
 //   items (objets.js, §12)   { [itemId]: { name, category, price, size, ammo?, ... } }
 //       category : 'arme-poing' | 'arme-epaule' | 'munitions' | 'armure' | 'detecteur' |
-//       'soin' | 'antirad' | 'nourriture' | 'divers' | 'artefact' | 'trophee' (§13) | 'quete'.
-//       price : prix de base, null pour un objet de quête.
-//       size : cases de la grille. ammo : munitions de l'arme (items).
+//       'sac' | 'soin' | 'antirad' | 'nourriture' | 'divers' | 'artefact' | 'trophee' (§13) |
+//       'quete'. price : prix de base, null pour un objet de quête.
+//       size : cases de la grille. ammo : munitions de l'arme (items). Champs en plus
+//       (slot, charges, consumable, use, weapon, armor, detector, backpack, grenade, belt) :
+//       en-tête de src/content/objets.js.
 //   loot (butin.js, §5.3)    { [tableId]: { level, entries: [{ item, weight, qty? }] } }
 //   npcs (pnj.js, §7)        { [npcId]: { name, faction, place, dialogue } }
 //       place : lieu fixe, ou null pour un PNJ itinérant (il porte alors tile).
 //   dialogues (dialogues/<pnj>.js, §7)
-//       { [dialogueId]: { start, nodes: { [nodeId]: { text, effects?, choices: [
-//         { text, next, conditions?, effects? } ] } } } }
-//       next : nodeId, ou null pour finir le dialogue. Un nœud sans choix finit aussi.
-//       Condition / effet : { type, ...références } (type : 'reputation', 'objet', 'rang',
-//       'etape', 'stat', 'donner', 'prendre', 'roubles', 'quete', 'avancer', 'reveler'…).
+//       { [dialogueId]: { id?, start, nodes: { [nodeId]: { text, effects?, choices: [
+//         { text, next?, conditions?, effects? } ] } } } }
+//       next : nodeId, ou null (ou absent) pour finir le dialogue. Un nœud sans choix finit
+//       aussi. conditions : toutes requises. effects d'un nœud : appliqués à l'arrivée.
+//       Condition / effet : { type, ...références } ; champs en anglais (item, quest, step,
+//       place, faction, amount). Types (src/engine/rules/dialogue.js) :
+//         conditions 'reputation' { faction, min?, max? }, 'objet' { item }, 'rang', 'quete'
+//         { quest, step? }, 'stat', 'roubles', 'tous' | 'un' { conditions }, 'non' { condition } ;
+//         effets 'donner' | 'prendre' { item }, 'roubles' { amount }, 'reputation'
+//         { faction, amount }, 'rejoindre-faction' { faction }, 'quete' { quest }, 'avancer'
+//         { quest, step }, 'reveler' { place } | { stash }.
 //   quests (quetes/<id>.js, §8.2)
 //       { [questId]: { name, giver?, start, deadline?, rewards?, steps: { [stepId]: {
 //         objective: { type, ...références }, next: [stepId…] } } } }
@@ -59,8 +67,11 @@
 //       { [templateId]: { type, faction, places, reward, deadline: [min, max] } }
 //       type : 'livraison' | 'recuperation' | 'elimination' | 'escorte' | 'cartographie'.
 //       places : hubs qui l'affichent.
-//   factions (factions.js, §9) { [factionId]: { name, places, joinable, start } }
-//       places : bases. start : réputation de départ, -3..3.
+//   factions (factions.js, §9) { [factionId]: { name, places, joinable, start, default?, act?,
+//                                rival? } }
+//       places : bases. joinable : on peut en être membre. start : réputation de départ,
+//       -3..3. default : faction du joueur au départ. act : acte de l'adhésion. rival :
+//       faction passée à -2 quand on rejoint celle-ci (src/engine/rules/factions.js).
 //   decks (paquets/, §5.2, §17.2)
 //       { [deckId]: { kind, tile?, place?, cards: [{ id, type, count?, ...références }] } }
 //       kind : 'zone' | 'nuit' | 'meteo' | 'rencontres' | 'exploration'. Carte d'exploration,
@@ -70,7 +81,9 @@
 //
 // RÉFÉRENCES : partout dans une entrée (sauf tiles et links, vérifiés à part), un champ de
 // REF_FIELDS désigne un id de la collection dite ; son pluriel (places, items…) désigne un
-// tableau d'ids. null = pas de référence. Champs liés à un contexte :
+// tableau d'ids. null = pas de référence. Une référence vers une collection absente du
+// contenu n'est pas vérifiée : elle le sera quand la carte de cette collection arrivera
+// (une collection présente mais vide, elle, n'a aucun id). Champs liés à un contexte :
 //   node   nœud du dialogue `dialogue`, ou de celui du PNJ `npc`, dans le même objet ;
 //   step   étape de la quête `quest` du même objet ;
 //   card   carte du paquet `deck`, ou de celui du lieu `place`, du même objet ;
@@ -168,7 +181,8 @@ export function checkIds(content) {
 
 export function checkReferences(content) {
   const errors = [];
-  const exists = (collection, id) => Object.hasOwn(content[collection] ?? {}, id);
+  // Collection cible absente : la référence attend sa carte (voir RÉFÉRENCES).
+  const exists = (collection, id) => content[collection] === undefined || Object.hasOwn(content[collection], id);
   const checkRef = (field, id, path) => {
     if (id === null || id === undefined) return;
     const [collection, label] = REF_FIELDS[field];
