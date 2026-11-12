@@ -3,6 +3,8 @@
 // au DOM (testées par tests/effets.test.js). Le jeu des effets est dans effets-view.js, sur le
 // modèle de fx.js de la v1.
 //
+//   EFFECT_TYPES                 types d'événement qui peuvent donner un effet
+//   eventEffect(event) -> effet | null   l'effet d'un seul événement (séquenceur, sequencer.js)
 //   campaignEffects(events) -> [effet], dans l'ordre des événements :
 //     { kind: 'transition', tile, firstVisit }   traveled : passage d'une tuile à l'autre
 //     { kind: 'card', cardType }                  place-card : carte de lieu révélée
@@ -34,8 +36,14 @@ const EFFECTS = {
   'rank-up': (e) => ({ kind: 'rank', rank: e.rank, name: RANK_NAMES[e.rank] ?? e.rank }),
 };
 
+export const EFFECT_TYPES = Object.keys(EFFECTS);
+
+export function eventEffect(event) {
+  return EFFECTS[event.type]?.(event) ?? null;
+}
+
 export function campaignEffects(events) {
-  return events.map((event) => EFFECTS[event.type]?.(event) ?? null).filter(Boolean);
+  return events.map(eventEffect).filter(Boolean);
 }
 
 export function emissionAmbience(campaign) {

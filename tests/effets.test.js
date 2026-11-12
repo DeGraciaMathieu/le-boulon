@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCampaign, step } from '../src/engine/campaign.js';
 import content from '../src/content/index.js';
-import { campaignEffects, emissionAmbience } from '../src/ui/effets.js';
+import { campaignEffects, eventEffect, EFFECT_TYPES, emissionAmbience } from '../src/ui/effets.js';
 
 test('effets : un événement sans retour visuel ne donne rien', () => {
   assert.deepEqual(campaignEffects([{ type: 'moved', to: 3 }, { type: 'weather', card: 'pluie' }]), []);
@@ -49,4 +49,11 @@ test('ambiance : rien hors Émission, PA restants pendant', () => {
   assert.deepEqual(emissionAmbience(campaign), { left: 2 });
   campaign.screen = 'night';
   assert.equal(emissionAmbience(campaign), null);
+});
+
+test('effets : eventEffect donne l’effet d’un seul événement, null sans retour visuel', () => {
+  assert.deepEqual(eventEffect({ type: 'day-started', day: 2, ap: 12 }), { kind: 'wake', day: 2 });
+  assert.equal(eventEffect({ type: 'weather', card: 'pluie' }), null);
+  assert.equal(eventEffect({ type: 'moved', to: 3 }), null);
+  assert.ok(EFFECT_TYPES.includes('place-card'));
 });
