@@ -68,6 +68,15 @@ test('combatWindow : actions du round disponibles ou non, avec la raison', () =>
   assert.equal(actionOf(armed, 'parley').reason, 'faction hostile, pas de discussion');
 });
 
+test('combatWindow : la nuit, Fuir reste disponible à 0 PA et coûte 1 blessure', () => {
+  const view = combatWindow(fighting('solo', (c) => {
+    c.screen = 'night';
+    c.world.tiles.test.ap.left = 0;
+  }));
+  assert.equal(actionOf(view, 'escape').label, 'Fuir (1 blessure)');
+  assert.equal(actionOf(view, 'escape').available, true);
+});
+
 test('combatWindow : un ennemi abattu reste affiché, à terre', () => {
   const campaign = fighting('meute');
   campaign.combat.enemies[1].hp = 0;

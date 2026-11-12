@@ -77,10 +77,14 @@ function roundActions(campaign, day, odds) {
     option('take-cover', 'Se mettre à couvert'),
     option('grenade', 'Grenade', has((kind) => kind === 'grenade') ? undefined : 'aucune grenade'),
     option('heal', 'Soigner', has(isHealing) ? undefined : 'aucun soin'),
-    option('escape', `Fuir (${odds.escapeCost} PA)`, day.ap.left >= odds.escapeCost ? undefined : 'pas assez de PA'),
+    option('escape', escapeLabel(odds), day.ap.left >= odds.escapeCost ? undefined : 'pas assez de PA'),
     option('parley', parley.toll ? `Parlementer (péage ${parley.toll} ₽)` : 'Parlementer', parley.refusal && REFUSALS[parley.refusal]),
   ];
 }
+
+// La nuit, la fuite coûte une blessure et aucun PA (LBL-56).
+const escapeLabel = ({ escapeCost, escapeWounds }) =>
+  (escapeWounds ? `Fuir (${plural(escapeWounds, 'blessure')})` : `Fuir (${escapeCost} PA)`);
 
 function shotLine(e) {
   const result = e.hit ? `touché, -${e.damage} PV${e.hp === 0 ? '' : ` (reste ${e.hp})`}` : 'raté';

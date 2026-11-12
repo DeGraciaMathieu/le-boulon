@@ -74,6 +74,14 @@ tuile absente de `world.tiles` : `closeDay` lisait une tuile inexistante. La tui
 maintenant créée à la réapparition (`newTileState` de `rules/world.js`, désormais exportée).
 Test : « respawn : hub sur une tuile jamais visitée » dans `tests/death.test.js`.
 
+## LBL-56 : fuite de nuit
+
+Décision de Mathieu : la nuit, la fuite d'un combat est permise sans PA, contre 1 blessure
+(`src/engine/rules/combat.js`) ; l'IA du banc fuit un combat de nuit toujours (prudente) ou si
+la riposte peut tuer (gourmande), jamais si la blessure la tue. Banc graine 1, 50 campagnes :
+morts / 10 jours prudente **0,53 → 0,37**, gourmande **2,52 → 2,10** (morts au combat 48 → 19
+et 289 → 187 ; morts de faim 14 → 21 et 24 → 53).
+
 ## Ce qui reste
 
 - **La gourmande meurt encore 2,5 fois par 10 jours**, à 89 % en combat de nuit. Ce n'est pas

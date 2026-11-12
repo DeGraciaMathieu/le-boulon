@@ -81,8 +81,8 @@
 // HYPOTHÈSES V2 :
 //   - Le jour 1 n'a pas de carte Météo (weather null).
 //   - Les compositions des paquets Nuit et Météo, les effets des cartes Nuit.
-//   - La rencontre de nuit se joue en combat v2 même en combatMode 'rapide' ; la fuite y coûte
-//     2 PA comme le jour, donc impossible à 0 PA.
+//   - La rencontre de nuit se joue en combat v2 même en combatMode 'rapide' ; la fuite y est
+//     toujours permise, à 0 PA contre 1 blessure (décision LBL-56, rules/combat.js).
 //   - Le coût de ceinture n'est pas réduit par la protection contre les radiations.
 //   - La faim de 2 jours ou plus donne 1 blessure chaque matin tant qu'on ne mange pas.
 //   - Le lit soigne au coucher ; dormir au lit se fait à toute heure, PA restants perdus.

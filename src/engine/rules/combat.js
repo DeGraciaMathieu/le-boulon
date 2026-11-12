@@ -41,6 +41,9 @@
 //                                   l'ennemi le plus menaçant. Puis retour sur l'hexagone
 //                                   précédent, le jeton reste ; dans un lieu (hex null), on
 //                                   reste sur l'hexagone. Refus 'not-enough-ap'.
+//                                   De nuit (combat ouvert sur l'écran 'night', LBL-56) :
+//                                   toujours permis, 0 PA, pas de test, 1 blessure (cause
+//                                   'fuite') ; on reste sur l'hexagone, retour à l'écran nuit.
 //   { type: 'parley' }              humains seulement, selon la faction du groupe :
 //                                   membre ou allié -> 'fin' ; amical -> 'echange' (encounterStance) ;
 //                                   neutre ou sans faction -> 'peage' payé en roubles ;
@@ -53,7 +56,7 @@
 //
 // LECTURES (pures, pour l'écran de combat, carte 27) :
 //   combatOdds(campaign) -> null | { tir, weapon: { kind, bonus, damage, ammo, charges }, cover,
-//     attack, defense, coverRounds, absorb, escapeCost }
+//     attack, defense, coverRounds, absorb, escapeCost, escapeWounds }
 //     attack : bonus du tir (Tir + arme + couverture du terrain), un tir touche si
 //     1d6 + attack ≥ Menace ; defense : défense du joueur contre la riposte de ce round.
 //   parleyTerms(campaign) -> { refusal?, faction?, standing?, outcome?, toll? } : ce que
@@ -75,7 +78,7 @@
 //   { type: 'enemy-attack', enemy, name, roll, threat, total, defense, hit, damage, absorbed,
 //     wounds, free? }                             { type: 'enemy-down', enemy, name }
 //   { type: 'parley', faction, standing, outcome, toll? }
-//   { type: 'fled', from, to, cost }              { type: 'encounter-removed', hex, card }
+//   { type: 'fled', from, to, cost, wounds? }              { type: 'encounter-removed', hex, card }
 //   { type: 'trophy-lost', item }
 //   { type: 'combat-ended', outcome, hex, card, trophies }
 //   et ceux de la fiche (wounded, died, item-removed : sheet.js).
@@ -106,10 +109,13 @@ const BASE_DEFENSE = 4;
 const ARMOR_DEFENSE = 1;
 const TAKE_COVER = Object.freeze({ bonus: 2, rounds: 2 });
 const ESCAPE_COST = 2;
+const NIGHT_ESCAPE_WOUNDS = 1;
 const TOLL_PER_ENEMY = 50;
 const SETTLED = Object.freeze(['victory', 'peage', 'echange', 'fin']);
 
 export const combatMode = (campaign) => campaign.combatMode ?? 'rounds';
+
+const atNight = (combat) => combat.previousScreen === 'night';
 
 export function enemiesOf(card) {
   const { name, threat, hp, damage, type, faction, trophy, count } = { ...ENEMY_DEFAULTS, ...card };
@@ -235,7 +241,8 @@ function resolveHeal(day, { item }, ctx) {
   ctx.emit({ type: 'used', item: kind, wounds });
 }
 
-function resolveEscape(day, _action, ctx, draft) {
+function resolveEscape(day, action, ctx, draft) {
+  if (atNight(ctx.combat)) return resolveNightEscape(day, action, ctx, draft);
   if (day.ap.left < ESCAPE_COST) return 'not-enough-ap';
   day.ap.left -= ESCAPE_COST;
   day.ap.spent += ESCAPE_COST;
@@ -254,6 +261,15 @@ function resolveEscape(day, _action, ctx, draft) {
     day.player.previousHex = from;
   }
   ctx.emit({ type: 'fled', from, to, cost: ESCAPE_COST });
+  endCombat(draft, day, 'fled', ctx);
+}
+
+// La nuit, on ne quitte pas son bivouac : la fuite se paie d'une blessure, sur place.
+function resolveNightEscape(day, _action, ctx, draft) {
+  wound(day, NIGHT_ESCAPE_WOUNDS, 'fuite', ctx.emit);
+  if (day.status !== 'playing') return;
+  const { hex } = day.player;
+  ctx.emit({ type: 'fled', from: hex, to: hex, cost: 0, wounds: NIGHT_ESCAPE_WOUNDS });
   endCombat(draft, day, 'fled', ctx);
 }
 
@@ -293,6 +309,7 @@ export function combatOdds(campaign) {
     : null;
   const tir = day.player.stats.tir + statBonus(day.equipment, 'tir');
   const cover = terrainCover(day);
+  const night = atNight(campaign.combat);
   return {
     tir,
     weapon: { kind: weapon.kind ?? null, bonus: weapon.bonus, damage: weapon.damage, ammo: weapon.ammo, charges },
@@ -301,7 +318,8 @@ export function combatOdds(campaign) {
     defense: defenseOf(campaign.combat, day),
     coverRounds: campaign.combat.cover,
     absorb: campaign.combat.absorb,
-    escapeCost: ESCAPE_COST,
+    escapeCost: night ? 0 : ESCAPE_COST,
+    escapeWounds: night ? NIGHT_ESCAPE_WOUNDS : 0,
   };
 }
 
