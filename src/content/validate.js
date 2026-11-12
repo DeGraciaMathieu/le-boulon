@@ -1,0 +1,391 @@
+// Test de cohérence du contenu (brief v2 §17.2) : fonctions pures qui rendent la liste des
+// erreurs, vide si tout va bien. Chaque erreur commence par le chemin de la donnée fautive
+// (« quests.courrier.steps.atp.next[0] : étape inconnue « x » »).
+//
+// API :
+//   validateContent(content) -> string[]   toutes les règles ci-dessous, dans l'ordre
+//   checkFrozen      tout le contenu est gelé en profondeur (src/content/freeze.js)
+//   checkIds         le champ id d'une entrée, s'il existe, vaut sa clé ; pas d'id en double
+//                    dans un tableau (cartes d'un paquet…)
+//   checkReferences  chaque référence existe (champs de REF_FIELDS, voir plus bas)
+//   checkTiles       19 hexagones par tuile, terrains connus
+//   checkLinks       liaisons entre hexagones de bord de tuiles existantes, symétriques
+//   checkPlaces      chaque lieu sur un hexagone 1-19 de sa tuile, un lieu par hexagone
+//   checkQuests      étapes connues, sans orpheline, et chacune mène à une fin
+//   checkDialogues   liens vers des nœuds connus, aucun nœud orphelin
+// Une collection absente ou vide est valide : chaque règle s'active quand sa carte arrive.
+//
+// FORMAT DU CONTENU (src/content/index.js) : un objet gelé, une clé par collection. Les
+// collections sont des dictionnaires { [id]: entrée } : la clé EST l'id (un champ id dans
+// l'entrée est facultatif et doit valoir la clé). Les clés suivent les noms de l'état de
+// campagne (src/engine/campaign.js) ; entre parenthèses, le fichier du brief §17.2.
+//
+//   tiles (tuiles/<id>.js)   { [tileId]: { name, entry, level?, hexes } }
+//       Format v1 de src/engine/data/agroprom.js. hexes : { 1..19 : { terrain, lieu?, abri?,
+//       radiation? } }, les 19 numéros de hex.js. terrain : TERRAINS (coûts dans
+//       src/engine/actions/move.js). entry : hexagone d'arrivée v1. level : 1-4 (§5.3).
+//   links (§3.2)             { [tileId]: { [hex]: { tile, hex } } }
+//       Les sorties de chaque tuile : sortir par l'hexagone de bord `hex` de `tileId` mène à
+//       l'hexagone de bord `hex` de `tile`. Chaque liaison est écrite des deux côtés et le
+//       retour doit ramener à l'hexagone de départ (lecture directe pour le moteur).
+//   places (lieux.js, §3.4)  { [placeId]: { name, label, tile, hex, tags, deck, loot?,
+//                              faction?, services? } }
+//       label : étiquette ukrainienne de l'image. tags : 'hub' | 'abri' | 'irradie' |
+//       'repaire'… deck : paquet d'exploration (decks). faction : occupant (§5.4).
+//       services (hub, §6.1) : ['marchand', 'barman', 'medecin', 'technicien', 'lit',
+//       'coffre', 'contrats'].
+//   items (objets.js, §12)   { [itemId]: { name, category, price, size, ammo?, ... } }
+//       category : 'arme-poing' | 'arme-epaule' | 'munitions' | 'armure' | 'detecteur' |
+//       'soin' | 'antirad' | 'nourriture' | 'divers' | 'artefact' | 'trophee' (§13) | 'quete'.
+//       price : prix de base, null pour un objet de quête.
+//       size : cases de la grille. ammo : munitions de l'arme (items).
+//   loot (butin.js, §5.3)    { [tableId]: { level, entries: [{ item, weight, qty? }] } }
+//   npcs (pnj.js, §7)        { [npcId]: { name, faction, place, dialogue } }
+//       place : lieu fixe, ou null pour un PNJ itinérant (il porte alors tile).
+//   dialogues (dialogues/<pnj>.js, §7)
+//       { [dialogueId]: { start, nodes: { [nodeId]: { text, effects?, choices: [
+//         { text, next, conditions?, effects? } ] } } } }
+//       next : nodeId, ou null pour finir le dialogue. Un nœud sans choix finit aussi.
+//       Condition / effet : { type, ...références } (type : 'reputation', 'objet', 'rang',
+//       'etape', 'stat', 'donner', 'prendre', 'roubles', 'quete', 'avancer', 'reveler'…).
+//   quests (quetes/<id>.js, §8.2)
+//       { [questId]: { name, giver?, start, deadline?, rewards?, steps: { [stepId]: {
+//         objective: { type, ...références }, next: [stepId…] } } } }
+//       type : OBJECTIVES. next vide = fin de la quête ; deux suites ou plus = embranchement.
+//       rewards : { roubles, xp, reputation: { [factionId]: n }, items: [itemId] }.
+//       Objectif 'explorer' : { place, card } (carte fixée du paquet du lieu) ; 'parler' :
+//       { npc, node }.
+//   contracts (contrats.js, §8.4)
+//       { [templateId]: { type, faction, places, reward, deadline: [min, max] } }
+//       type : 'livraison' | 'recuperation' | 'elimination' | 'escorte' | 'cartographie'.
+//       places : hubs qui l'affichent.
+//   factions (factions.js, §9) { [factionId]: { name, places, joinable, start } }
+//       places : bases. start : réputation de départ, -3..3.
+//   decks (paquets/, §5.2, §17.2)
+//       { [deckId]: { kind, tile?, place?, cards: [{ id, type, count?, ...références }] } }
+//       kind : 'zone' | 'nuit' | 'meteo' | 'rencontres' | 'exploration'. Carte d'exploration,
+//       type : 'butin' | 'cache' | 'anomalie' | 'occupant' | 'pnj' | 'indice' | 'passage' |
+//       'rien'. Les ids de cartes sont uniques dans un paquet.
+//   perks (savoir-faire.js, §11.2) { [perkId]: { name, effect } }
+//
+// RÉFÉRENCES : partout dans une entrée (sauf tiles et links, vérifiés à part), un champ de
+// REF_FIELDS désigne un id de la collection dite ; son pluriel (places, items…) désigne un
+// tableau d'ids. null = pas de référence. Champs liés à un contexte :
+//   node   nœud du dialogue `dialogue`, ou de celui du PNJ `npc`, dans le même objet ;
+//   step   étape de la quête `quest` du même objet ;
+//   card   carte du paquet `deck`, ou de celui du lieu `place`, du même objet ;
+//   reputation, quand c'est un objet : ses clés sont des factions.
+
+import { HEXES, isEdge } from '../engine/hex.js';
+
+export const TERRAINS = Object.freeze(['route', 'herbe', 'foret', 'marais', 'batiment']);
+
+export const OBJECTIVES = Object.freeze([
+  'visiter', 'explorer', 'parler', 'rapporter', 'eliminer', 'escorter', 'cartographier',
+  'survivre',
+]);
+
+// Champ -> [collection, libellé de l'erreur].
+const REF_FIELDS = Object.freeze({
+  tile: ['tiles', 'tuile inconnue'],
+  place: ['places', 'lieu inconnu'],
+  item: ['items', 'objet inconnu'],
+  ammo: ['items', 'objet inconnu'],
+  npc: ['npcs', 'PNJ inconnu'],
+  giver: ['npcs', 'PNJ inconnu'],
+  dialogue: ['dialogues', 'dialogue inconnu'],
+  quest: ['quests', 'quête inconnue'],
+  faction: ['factions', 'faction inconnue'],
+  loot: ['loot', 'table de butin inconnue'],
+  deck: ['decks', 'paquet inconnu'],
+  perk: ['perks', 'savoir-faire inconnu'],
+});
+
+const PLURAL_FIELDS = Object.freeze({
+  tiles: 'tile', places: 'place', items: 'item', npcs: 'npc', quests: 'quest',
+  factions: 'faction', perks: 'perk',
+});
+
+const HEX_NUMBERS = HEXES.map(({ n }) => n);
+
+const isHex = (n) => Number.isInteger(n) && HEX_NUMBERS.includes(n);
+const isObject = (value) => value !== null && typeof value === 'object';
+const entriesOf = (content, collection) => Object.entries(content[collection] ?? {});
+
+// Parcourt chaque objet sous value et appelle visit(objet, chemin).
+function walk(value, path, visit) {
+  if (!isObject(value)) return;
+  visit(value, path);
+  for (const [key, child] of Object.entries(value)) {
+    walk(child, Array.isArray(value) ? `${path}[${key}]` : `${path}.${key}`, visit);
+  }
+}
+
+export function validateContent(content) {
+  return [
+    checkFrozen,
+    checkIds,
+    checkReferences,
+    checkTiles,
+    checkLinks,
+    checkPlaces,
+    checkQuests,
+    checkDialogues,
+  ].flatMap((check) => check(content));
+}
+
+export function checkFrozen(content) {
+  const errors = [];
+  if (!Object.isFrozen(content)) errors.push('(racine) : non gelé');
+  for (const [collection, value] of Object.entries(content)) {
+    walk(value, collection, (object, path) => {
+      if (!Object.isFrozen(object)) errors.push(`${path} : non gelé`);
+    });
+  }
+  return errors;
+}
+
+export function checkIds(content) {
+  const errors = [];
+  for (const [collection, entries] of Object.entries(content)) {
+    for (const [key, entry] of Object.entries(entries ?? {})) {
+      if (isObject(entry) && 'id' in entry && entry.id !== key) {
+        errors.push(`${collection}.${key}.id : « ${entry.id} » ≠ clé « ${key} »`);
+      }
+    }
+    walk(entries, collection, (object, path) => {
+      if (!Array.isArray(object)) return;
+      const seen = new Set();
+      object.forEach((item, i) => {
+        if (!isObject(item) || !('id' in item)) return;
+        if (seen.has(item.id)) errors.push(`${path}[${i}].id : « ${item.id} » en double`);
+        seen.add(item.id);
+      });
+    });
+  }
+  return errors;
+}
+
+export function checkReferences(content) {
+  const errors = [];
+  const exists = (collection, id) => Object.hasOwn(content[collection] ?? {}, id);
+  const checkRef = (field, id, path) => {
+    if (id === null || id === undefined) return;
+    const [collection, label] = REF_FIELDS[field];
+    if (!exists(collection, id)) errors.push(`${path} : ${label} « ${id} »`);
+  };
+
+  const visit = (object, path) => {
+    if (Array.isArray(object)) return;
+    for (const [field, value] of Object.entries(object)) {
+      if (REF_FIELDS[field] && !isObject(value)) checkRef(field, value, `${path}.${field}`);
+      if (PLURAL_FIELDS[field] && Array.isArray(value)) {
+        value.forEach((id, i) => checkRef(PLURAL_FIELDS[field], id, `${path}.${field}[${i}]`));
+      }
+    }
+    if (isObject(object.reputation)) {
+      for (const faction of Object.keys(object.reputation)) {
+        if (!exists('factions', faction)) {
+          errors.push(`${path}.reputation : faction inconnue « ${faction} »`);
+        }
+      }
+    }
+    checkContextRefs(content, object, path, errors);
+  };
+
+  for (const [collection, entries] of Object.entries(content)) {
+    if (collection === 'tiles' || collection === 'links') continue;
+    for (const [id, entry] of Object.entries(entries ?? {})) walk(entry, `${collection}.${id}`, visit);
+  }
+  return errors;
+}
+
+// node, step et card : des ids qui n'ont de sens qu'à l'intérieur d'un autre contenu.
+function checkContextRefs(content, object, path, errors) {
+  if ('node' in object) {
+    const dialogueId = object.dialogue ?? content.npcs?.[object.npc]?.dialogue;
+    const dialogue = content.dialogues?.[dialogueId];
+    if (!dialogueId) errors.push(`${path}.node : ni dialogue ni PNJ avec dialogue pour « ${object.node} »`);
+    else if (dialogue && !Object.hasOwn(dialogue.nodes ?? {}, object.node)) {
+      errors.push(`${path}.node : nœud inconnu « ${object.node} » (dialogue ${dialogueId})`);
+    }
+  }
+  if ('step' in object) {
+    const quest = content.quests?.[object.quest];
+    if (!object.quest) errors.push(`${path}.step : pas de quête pour « ${object.step} »`);
+    else if (quest && !Object.hasOwn(quest.steps ?? {}, object.step)) {
+      errors.push(`${path}.step : étape inconnue « ${object.step} » (quête ${object.quest})`);
+    }
+  }
+  if ('card' in object) {
+    const deckId = object.deck ?? content.places?.[object.place]?.deck;
+    const deck = content.decks?.[deckId];
+    if (!deckId) errors.push(`${path}.card : ni paquet ni lieu avec paquet pour « ${object.card} »`);
+    else if (deck && !(deck.cards ?? []).some((card) => card.id === object.card)) {
+      errors.push(`${path}.card : carte inconnue « ${object.card} » (paquet ${deckId})`);
+    }
+  }
+}
+
+export function checkTiles(content) {
+  const errors = [];
+  for (const [id, tile] of entriesOf(content, 'tiles')) {
+    const path = `tiles.${id}`;
+    const hexes = tile.hexes ?? {};
+    for (const n of HEX_NUMBERS) {
+      if (!Object.hasOwn(hexes, n)) errors.push(`${path}.hexes : hexagone ${n} manquant`);
+    }
+    for (const [key, hex] of Object.entries(hexes)) {
+      if (!isHex(Number(key))) errors.push(`${path}.hexes : hexagone ${key} hors tuile`);
+      if (!TERRAINS.includes(hex.terrain)) {
+        errors.push(`${path}.hexes.${key}.terrain : terrain inconnu « ${hex.terrain} »`);
+      }
+    }
+    if (tile.entry !== undefined && !isHex(tile.entry)) {
+      errors.push(`${path}.entry : ${tile.entry} n'est pas un hexagone 1-19`);
+    }
+  }
+  return errors;
+}
+
+export function checkLinks(content) {
+  const errors = [];
+  const links = content.links ?? {};
+  const tiles = content.tiles ?? {};
+  const checkEnd = (tile, hex, path) => {
+    if (!Object.hasOwn(tiles, tile)) {
+      errors.push(`${path} : tuile inconnue « ${tile} »`);
+      return false;
+    }
+    if (!isHex(hex) || !isEdge(hex)) {
+      errors.push(`${path} : hexagone ${hex} de ${tile} n'est pas de bord`);
+      return false;
+    }
+    return true;
+  };
+
+  for (const [tile, exits] of Object.entries(links)) {
+    for (const [key, target] of Object.entries(exits)) {
+      const hex = Number(key);
+      const path = `links.${tile}.${key}`;
+      const fromOk = checkEnd(tile, hex, path);
+      const toOk = checkEnd(target.tile, target.hex, path);
+      if (!fromOk || !toOk) continue;
+      const back = links[target.tile]?.[target.hex];
+      const there = `${target.tile}.${target.hex}`;
+      if (!back) errors.push(`${path} : pas de retour depuis ${there}`);
+      else if (back.tile !== tile || back.hex !== hex) {
+        errors.push(`${path} : le retour depuis ${there} mène à ${back.tile}.${back.hex}`);
+      }
+    }
+  }
+  return errors;
+}
+
+export function checkPlaces(content) {
+  const errors = [];
+  const taken = new Map();
+  for (const [id, place] of entriesOf(content, 'places')) {
+    const tile = content.tiles?.[place.tile];
+    // Tuile inconnue : déjà signalée par checkReferences.
+    if (!tile) continue;
+    const path = `places.${id}.hex`;
+    if (!isHex(place.hex) || !Object.hasOwn(tile.hexes ?? {}, place.hex)) {
+      errors.push(`${path} : ${place.hex} n'est pas un hexagone de la tuile ${place.tile}`);
+      continue;
+    }
+    // Hypothèse v2 : un seul lieu par hexagone, comme les lieux des tuiles v1.
+    const spot = `${place.tile}.${place.hex}`;
+    if (taken.has(spot)) {
+      errors.push(`${path} : hexagone ${place.hex} de ${place.tile} déjà pris par ${taken.get(spot)}`);
+    } else taken.set(spot, id);
+  }
+  return errors;
+}
+
+export function checkQuests(content) {
+  const errors = [];
+  for (const [id, quest] of entriesOf(content, 'quests')) {
+    const path = `quests.${id}`;
+    const steps = quest.steps ?? {};
+    const nextOf = (stepId) => (steps[stepId].next ?? []).filter((n) => Object.hasOwn(steps, n));
+
+    for (const [stepId, step] of Object.entries(steps)) {
+      (step.next ?? []).forEach((next, i) => {
+        if (!Object.hasOwn(steps, next)) {
+          errors.push(`${path}.steps.${stepId}.next[${i}] : étape inconnue « ${next} »`);
+        }
+      });
+      const type = step.objective?.type;
+      if (!OBJECTIVES.includes(type)) {
+        errors.push(`${path}.steps.${stepId}.objective.type : objectif inconnu « ${type} »`);
+      }
+    }
+    if (!Object.hasOwn(steps, quest.start)) {
+      errors.push(`${path}.start : étape inconnue « ${quest.start} »`);
+      continue;
+    }
+
+    const reachable = reach(quest.start, nextOf);
+    for (const stepId of Object.keys(steps)) {
+      if (!reachable.has(stepId)) errors.push(`${path}.steps.${stepId} : étape orpheline`);
+    }
+    // Une étape sans suite (next vide) est une fin ; on remonte depuis les fins.
+    const finishing = new Set(Object.keys(steps).filter((s) => (steps[s].next ?? []).length === 0));
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const stepId of Object.keys(steps)) {
+        if (!finishing.has(stepId) && nextOf(stepId).some((n) => finishing.has(n))) {
+          finishing.add(stepId);
+          grew = true;
+        }
+      }
+    }
+    const stuck = Object.keys(steps).filter((s) => reachable.has(s) && !finishing.has(s));
+    if (stuck.length) errors.push(`${path} : étapes sans issue vers une fin : ${stuck.join(', ')}`);
+  }
+  return errors;
+}
+
+export function checkDialogues(content) {
+  const errors = [];
+  for (const [id, dialogue] of entriesOf(content, 'dialogues')) {
+    const path = `dialogues.${id}`;
+    const nodes = dialogue.nodes ?? {};
+    const linksOf = (nodeId) =>
+      (nodes[nodeId].choices ?? []).map((c) => c.next).filter((n) => Object.hasOwn(nodes, n ?? ''));
+
+    for (const [nodeId, node] of Object.entries(nodes)) {
+      (node.choices ?? []).forEach((choice, i) => {
+        if (choice.next !== null && choice.next !== undefined && !Object.hasOwn(nodes, choice.next)) {
+          errors.push(`${path}.nodes.${nodeId}.choices[${i}].next : nœud inconnu « ${choice.next} »`);
+        }
+      });
+    }
+    if (!Object.hasOwn(nodes, dialogue.start)) {
+      errors.push(`${path}.start : nœud inconnu « ${dialogue.start} »`);
+      continue;
+    }
+    const reachable = reach(dialogue.start, linksOf);
+    for (const nodeId of Object.keys(nodes)) {
+      if (!reachable.has(nodeId)) errors.push(`${path}.nodes.${nodeId} : nœud orphelin`);
+    }
+  }
+  return errors;
+}
+
+// Ensemble des sommets atteints depuis start en suivant nextOf.
+function reach(start, nextOf) {
+  const seen = new Set([start]);
+  const queue = [start];
+  while (queue.length) {
+    for (const next of nextOf(queue.shift())) {
+      if (!seen.has(next)) {
+        seen.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  return seen;
+}
