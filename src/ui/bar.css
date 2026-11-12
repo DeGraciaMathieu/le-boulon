@@ -1,0 +1,279 @@
+/* Bandeau en pistes (direction plateau, lot L2 ; bar-view.js) : piste de PA à cubes en bois dans
+   des alvéoles, pistes à crans avec seuils marqués, pile de pièces. Matière « Table de l'abri » :
+   chargé après theme-abri.css, dont il reprend les variables. */
+
+#bandeau {
+  align-items: center;
+}
+
+/* Au réveil, le bandeau passe au-dessus de la couche du rapport : on voit les cubes revenir (A2). */
+body:has(#ecran[data-ecran="reveil"]:not([hidden])) #bandeau {
+  position: relative;
+  z-index: 21;
+}
+
+.piste {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: help;
+}
+
+.piste-titre {
+  font-family: var(--titre);
+  font-weight: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.piste-chiffre {
+  font-family: var(--titre);
+  font-size: 18px;
+  color: var(--papier);
+}
+
+/* ---------- Piste de PA ---------- */
+
+.piste-pa .piste-titre {
+  font-size: 22px;
+}
+
+.piste-pa .piste-chiffre {
+  min-width: 52px;
+  font-size: 14px;
+  color: var(--kraft);
+}
+
+.piste-pa .piste-chiffre strong {
+  font-size: 26px;
+  color: var(--ocre);
+}
+
+.alveoles {
+  display: flex;
+  gap: 4px;
+}
+
+.alveole {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 28px;
+  height: 40px;
+  padding-top: 4px;
+  border-radius: 4px;
+  background: var(--noyer-fonce);
+  box-shadow: inset 0 3px 6px rgb(0 0 0 / 0.7);
+}
+
+.alveole b {
+  position: absolute;
+  bottom: 1px;
+  font-size: 9px;
+  font-weight: normal;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.alveole.retenu b {
+  color: var(--rouille);
+  opacity: 1;
+}
+
+.cube {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #f0bf5a, var(--ocre) 55%, #9c6d1d);
+  box-shadow: 0 3px 3px rgb(0 0 0 / 0.6), inset -2px -2px 0 rgb(0 0 0 / 0.18);
+}
+
+/* Cube retenu par une pénalité : bois terni, barré de rouille. */
+.cube.retenu {
+  position: relative;
+  filter: grayscale(0.7) brightness(0.65);
+}
+
+.cube.retenu::after {
+  content: "";
+  position: absolute;
+  inset: 45% -3px auto;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rouille);
+  transform: rotate(-35deg);
+}
+
+.depenses {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 76px;
+  height: 40px;
+  padding: 3px 4px 1px;
+  border: 1px dashed rgb(239 229 201 / 0.35);
+  border-radius: 5px;
+}
+
+.depenses .bac {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+
+.depenses small {
+  font-size: 9px;
+  color: rgb(239 229 201 / 0.6);
+}
+
+.cube.mini {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.6);
+}
+
+.cube.perdu {
+  filter: grayscale(1) brightness(0.5);
+}
+
+/* ---------- Pistes à crans ---------- */
+
+.pistes-etat {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto;
+}
+
+.piste-crans,
+.piste-roubles {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 2px 8px;
+}
+
+.piste-crans .piste-titre,
+.piste-roubles .piste-titre {
+  grid-column: 1 / -1;
+  font-size: 11px;
+}
+
+.crans {
+  display: flex;
+  gap: 3px;
+  padding-bottom: 11px;
+}
+
+/* Seuils voisins (faim : 1 et 2 jours) : de quoi loger les deux étiquettes. */
+.piste-faim .crans {
+  gap: 20px;
+}
+
+.cran {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.cran i {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--noyer-fonce);
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.8);
+}
+
+.cran.allume i {
+  background: radial-gradient(circle at 35% 30%, #f0bf5a, var(--ocre) 70%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+.piste-blessures .cran.allume i,
+.piste-radiations .cran.allume i {
+  background: radial-gradient(circle at 35% 30%, #e38a64, var(--rouille-sombre) 70%);
+}
+
+.cran.seuil i {
+  outline: 1px solid var(--rouille);
+  outline-offset: 1px;
+}
+
+.cran small {
+  position: absolute;
+  top: 15px;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--rouille);
+  white-space: nowrap;
+}
+
+/* ---------- Pile de pièces ---------- */
+
+.pile {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: flex-start;
+  width: 24px;
+  height: 30px;
+}
+
+.piece {
+  display: block;
+  flex: none;
+  width: 22px;
+  height: 7px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 40% 30%, #e9d49a, #a98b45);
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.6), inset 0 -1px 0 #7d6630;
+}
+
+/* ---------- Animations (séquenceur, bar-view.js) ---------- */
+
+/* A1 : le cube retenu en cours de journée. */
+.alveole.retient {
+  animation: piste-tremble 350ms ease-in-out;
+}
+
+.alveole.retient b,
+.alveole.etiquette b {
+  animation: piste-etiquette 800ms ease-out;
+}
+
+/* A9 : la piste tremble, les crans gagnés s'allument, le seuil franchi clignote une fois. */
+.piste.tremble {
+  animation: piste-tremble 400ms ease-in-out;
+}
+
+.cran.touche i {
+  animation: piste-cran 400ms ease-out;
+}
+
+.cran.franchi small {
+  animation: piste-etiquette 400ms steps(2, jump-none) 2;
+}
+
+@keyframes piste-tremble {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(1px); }
+}
+
+@keyframes piste-cran {
+  0% { transform: scale(1.6); box-shadow: 0 0 10px 3px var(--rouille); }
+  100% { transform: none; }
+}
+
+@keyframes piste-etiquette {
+  0% { color: var(--papier); background: var(--rouille-sombre); }
+  100% { background: transparent; }
+}

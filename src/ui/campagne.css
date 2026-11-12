@@ -41,16 +41,6 @@ body {
   text-transform: uppercase;
 }
 
-.bandeau-pa .bandeau-valeur {
-  font-size: 44px;
-  line-height: 1;
-  color: var(--ocre);
-}
-
-.bandeau-item.alerte .bandeau-valeur {
-  color: var(--alerte);
-}
-
 .bandeau-emission {
   padding: 2px 8px;
   border: 1px solid var(--emission);
