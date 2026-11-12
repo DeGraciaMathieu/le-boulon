@@ -20,7 +20,7 @@ function memoryStorage() {
 test('bulles : chaque déclencheur a un id unique', () => {
   const all = TRIGGERS.map((trigger) => trigger.id);
   assert.equal(new Set(all).size, all.length);
-  assert.deepEqual([...all].sort(), ['carte-zone', 'combat', 'emission', 'pa-bas', 'rencontre', 'suspect', 'test']);
+  assert.deepEqual([...all].sort(), ['carte-zone', 'emission', 'pa-bas', 'rencontre', 'suspect', 'test']);
 });
 
 test('bulles : le « ! » proche passe avant le « ? », puis le « ? » le plus proche', () => {
@@ -61,17 +61,12 @@ test('bulles : premier test et première carte Zone, lus dans les événements d
   assert.equal(card.text, help('Carte Zone'));
 });
 
-test('bulles : Émission annoncée et combat pointent le bandeau et la fenêtre', () => {
+test('bulles : Émission annoncée pointe le bandeau', () => {
   const campaign = fresh();
   campaign.world.emission = { ...campaign.world.emission, today: true };
   const emission = nextBubble(TRIGGERS, ctxOf(campaign), ids());
   assert.equal(emission.id, 'emission');
   assert.equal(emission.text, help('Émission'));
-  campaign.combat = { enemies: [] };
-  const combat = nextBubble(TRIGGERS, ctxOf(campaign), ids());
-  assert.equal(combat.id, 'combat');
-  assert.match(combat.text, /^Tirer : 1d6 \+ Tir/);
-  assert.match(combat.text, /Fuir : 2 PA\.$/);
 });
 
 test('bulles : PA ≤ 3 loin du hub, le rappel de retour et la règle du bivouac forcé', () => {

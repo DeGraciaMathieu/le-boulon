@@ -44,9 +44,7 @@ export const STEPS = Object.freeze([
     needs: [is('quest-started', (e) => e.quest === MAIN_QUEST)],
     mutes: [],
     already: (campaign) => Boolean(campaign?.quests?.[MAIN_QUEST]),
-    target: ({ campaign }) => (campaign.dialogue
-      ? ['.fenetre-dialogue .cadre-fenetre', '.fenetre-dialogue']
-      : ['#commandes .donneur', hexOf(CAMP), '#objectif']),
+    target: () => ['#commandes .donneur', hexOf(CAMP), '#objectif'],
     text: 'Le Marchand du bunker a du travail. Parlez-lui et demandez « Tu as du travail ? » : il vous confie Le Guide, la quête qui mène au fond de la Zone.',
   },
   {

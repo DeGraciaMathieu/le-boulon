@@ -14,9 +14,28 @@ import { el } from './board.js';
 import { hexCenter } from './geometry.js';
 import { cardOutcomes, NO_OUTCOMES, placeCrop, placeScreen, tilePlaces } from './place.js';
 
-// Résultats des cartes jouées depuis le chargement de la page ; events déjà lus : même tableau.
+// Résultats des cartes jouées, gardés avec les sauvegardes (storage.js) : le moteur ne les garde
+// pas ; events déjà lus : même tableau.
 let outcomes = NO_OUTCOMES;
 let readEvents = null;
+
+function absorb(events) {
+  if (events === readEvents) return;
+  outcomes = cardOutcomes(outcomes, events);
+  readEvents = events;
+}
+
+// Résultats à sauvegarder, events de la dernière action compris.
+export function placeOutcomes(events = []) {
+  absorb(events);
+  return outcomes;
+}
+
+// Chargement d'une sauvegarde (saved : ceux de placeOutcomes) ou nouvelle partie (rien).
+export function restorePlaceOutcomes(saved) {
+  outcomes = saved?.cards && typeof saved.cards === 'object' ? { cards: saved.cards, combat: saved.combat ?? null } : NO_OUTCOMES;
+  readEvents = null;
+}
 
 function h(tag, attrs = {}, ...children) {
   const node = Object.assign(document.createElement(tag), attrs);
@@ -27,10 +46,7 @@ function h(tag, attrs = {}, ...children) {
 // tile : content.tiles[id] ; size : { width, height } de son image ; events : ceux de la
 // dernière action.
 export function renderPlace(section, campaign, { tile, size, dispatch, events = [] }) {
-  if (events !== readEvents) {
-    outcomes = cardOutcomes(outcomes, events);
-    readEvents = events;
-  }
+  absorb(events);
   const screen = placeScreen(campaign, outcomes);
   if (!screen) {
     section.replaceChildren();

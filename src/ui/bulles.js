@@ -32,13 +32,6 @@ const ENCOUNTER_RANGE = 2;
 
 export const TRIGGERS = Object.freeze([
   {
-    id: 'combat',
-    find: ({ campaign }) => campaign.combat && {
-      target: '.fenetre-combat .combat-etat',
-      text: `Tirer : ${help('Tirer')} Combattre : ${help('Combattre')}.`,
-    },
-  },
-  {
     id: 'emission',
     find: ({ campaign }) => campaign.world.emission?.today && {
       target: '#bandeau .bandeau-emission',

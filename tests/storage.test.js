@@ -34,6 +34,16 @@ test('autosave puis load rend la même campagne', () => {
   assert.deepEqual(store.load('auto').campaign, campaign);
 });
 
+test('les résultats des cartes de lieu reviennent avec la sauvegarde', () => {
+  const store = createSaveStore({ storage: fakeStorage() });
+  const campaign = createCampaign({ seed: 4 });
+  const places = { cards: { 'atp|main|1': { card: 'caisse', lines: [{ text: 'Rien trouvé', tone: 'neutre' }] } }, combat: null };
+  store.autosave(campaign, places);
+  assert.deepEqual(store.load('auto').places, places);
+  store.saveSlot(1, inHub(campaign));
+  assert.equal(store.load(1).places, null);
+});
+
 test('un emplacement manuel est refusé hors d’un hub', () => {
   const storage = fakeStorage();
   const store = createSaveStore({ storage });

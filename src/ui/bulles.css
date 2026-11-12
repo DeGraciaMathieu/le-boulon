@@ -1,6 +1,6 @@
 /* Bulles contextuelles (lot L7) : papier crème scotché, comme la bulle de la maquette 1 (Table de
-   l'abri). Posée en surimpression (position fixe), au-dessus des fenêtres ; bulles-view.js la place
-   et règle --fleche-x, l'abscisse de la flèche. */
+   l'abri). Posée en surimpression (position fixe), jamais pendant une fenêtre ; bulles-view.js la
+   place et règle --fleche-x et --fleche-y, la position de la flèche. */
 
 .bulle {
   --bulle-papier: var(--papier-clair, #fbf3dc);
@@ -54,6 +54,28 @@
   border-bottom: 0;
   border-top-color: var(--bulle-papier);
   filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.55));
+}
+
+/* Posée à côté de la cible (pour ne couvrir aucun bouton) : flèche sur le flanc, à --fleche-y. */
+.bulle.gauche::before,
+.bulle.droite::before {
+  top: calc(var(--fleche-y, 24px) - 12px);
+  border: 12px solid transparent;
+}
+
+.bulle.gauche::before {
+  left: auto;
+  right: -12px;
+  border-right: 0;
+  border-left-color: var(--bulle-papier);
+  filter: drop-shadow(2px 0 1px rgb(0 0 0 / 0.55));
+}
+
+.bulle.droite::before {
+  left: -12px;
+  border-left: 0;
+  border-right-color: var(--bulle-papier);
+  filter: drop-shadow(-2px 0 1px rgb(0 0 0 / 0.55));
 }
 
 @keyframes bulle-pose {
