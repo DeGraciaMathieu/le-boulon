@@ -1,0 +1,213 @@
+/* Écrans PDA et Inventaire (campagne.html) : fenêtres posées sur la table. Palette de board.css. */
+
+.ecrans-boutons {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ecrans-boutons button.actif,
+.onglets button.actif {
+  border-color: var(--phosphore);
+  background: var(--olive-sombre);
+  color: var(--phosphore);
+}
+
+.ecran {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  z-index: 10;
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 100px);
+  overflow: auto;
+  transform: translateX(-50%);
+  border: 1px solid var(--olive);
+  background: var(--pda);
+  box-shadow: 0 8px 30px #000a;
+  font-size: 13px;
+}
+
+.ecran-titre {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--olive-sombre);
+}
+
+.ecran-titre h2 {
+  margin: 0;
+  color: var(--phosphore);
+}
+
+.ecran-corps {
+  padding: 8px 12px 12px;
+}
+
+.ecran h3 {
+  margin: 12px 0 6px;
+  color: var(--sauge);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.ecran ul,
+.ecran ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ecran .vide {
+  color: var(--sauge-sombre);
+}
+
+.ecran .alerte {
+  color: var(--alerte);
+}
+
+/* PDA */
+.onglets {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--olive-sombre);
+}
+
+.onglets button {
+  border-bottom: none;
+}
+
+.quete {
+  margin-bottom: 8px;
+}
+
+.quete-nom,
+.fiche-valeur {
+  color: var(--ocre);
+  font-weight: bold;
+}
+
+.quete-lieu {
+  color: var(--sauge);
+}
+
+.factions th {
+  padding-right: 12px;
+  text-align: left;
+}
+
+.piste {
+  display: flex;
+  gap: 2px;
+}
+
+.cran {
+  width: 24px;
+  border: 1px solid var(--olive-sombre);
+  color: var(--sauge-sombre);
+  text-align: center;
+}
+
+.cran.zero {
+  border-color: var(--olive);
+}
+
+.cran.atteint {
+  background: var(--sauge);
+  color: var(--pda);
+  font-weight: bold;
+}
+
+.palier-hostile .cran.atteint {
+  background: var(--danger);
+}
+
+.palier-allié .cran.atteint {
+  background: var(--phosphore);
+}
+
+.factions .palier {
+  padding-left: 10px;
+}
+
+.fiche-rang {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.fiche-rang .fiche-valeur {
+  font-size: 22px;
+}
+
+.stats th {
+  width: 110px;
+  text-align: left;
+}
+
+.choix-savoir-faire li {
+  margin-bottom: 4px;
+  list-style: none;
+}
+
+/* Inventaire */
+.equipement th {
+  width: 140px;
+  text-align: left;
+  color: var(--sauge);
+}
+
+.ceinture {
+  display: flex;
+  gap: 8px;
+  padding: 0 !important;
+  list-style: none;
+}
+
+.emplacement {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+  padding: 6px;
+  border: 1px dashed var(--olive);
+}
+
+.emplacement.plein {
+  border-style: solid;
+  border-color: var(--electro);
+}
+
+.emplacement.vide {
+  color: var(--sauge-sombre);
+}
+
+.emplacement .effet {
+  color: var(--sauge);
+  font-size: 11px;
+}
+
+.grille {
+  display: grid;
+  grid-template-columns: repeat(var(--colonnes), 1fr);
+  gap: 3px;
+}
+
+.case {
+  height: 46px;
+  border: 1px solid var(--olive-sombre);
+}
+
+.objet {
+  z-index: 1;
+  padding: 3px;
+  overflow: hidden;
+  border: 1px solid var(--olive);
+  background: var(--jeton);
+  font-size: 11px;
+}
+
+.objet.equipable {
+  cursor: pointer;
+  border-color: var(--electro);
+}

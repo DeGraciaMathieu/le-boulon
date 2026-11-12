@@ -9,7 +9,7 @@
 //   clic sur le pion       { type: 'travel' } si le pion est sur un hexagone de liaison ;
 //   clic droit             { type: 'bolt', target }.
 //
-// ÉCRANS : seule la tuile existe ici. Les combats de rencontre se jouent en mode 'rapide'
+// ÉCRANS : la tuile, et les fenêtres PDA (pda-view.js) et Inventaire (inventory-view.js). Les combats de rencontre se jouent en mode 'rapide'
 // (Combattre / Fuir de la v1) tant que l'écran de combat v2 n'existe pas ; la nuit n'a que
 // le bouton Se réveiller, en attendant l'écran Réveil et nuit.
 //
@@ -26,6 +26,10 @@ import { hexCenter } from './geometry.js';
 import { describeEvent, ITEM_NAMES } from './journal.js';
 import { linkExits, tileQuestMarkers, topBar } from './world-map.js';
 import { renderWorld } from './world-view.js';
+import { mountPda } from './pda-view.js';
+import { mountInventory } from './inventory-view.js';
+import { PDA_LINES } from './pda.js';
+import { INVENTORY_LINES } from './inventory.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
 const USABLE = ['bandage', 'vodka', 'ration'];
@@ -52,6 +56,8 @@ const CAMPAIGN_LINES = {
   'quest-step': (e) => `Quête ${questName(e.quest)} : nouvelle étape`,
   'quest-completed': (e) => `Quête terminée : ${questName(e.quest)}`,
   'quest-failed': (e) => `Quête ratée : ${questName(e.quest)}`,
+  ...PDA_LINES,
+  ...INVENTORY_LINES,
 };
 
 const REFUSALS = { 'not-a-link': 'pas sur un hexagone de liaison', night: "c'est la nuit : se réveiller d'abord" };
@@ -65,6 +71,8 @@ const bar = document.getElementById('bandeau');
 const commandsPanel = document.getElementById('commandes');
 const journal = document.getElementById('journal');
 const preview = document.getElementById('apercu');
+const pda = mountPda(document.getElementById('pda'), document.getElementById('ouvrir-pda'), { dispatch });
+const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
 let board;
@@ -98,6 +106,8 @@ function render() {
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   renderBar();
   renderCommands(day);
+  pda.render(campaign);
+  inventory.render(campaign);
 }
 
 function mountTile(id) {
