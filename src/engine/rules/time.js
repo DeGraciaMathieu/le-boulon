@@ -40,7 +40,8 @@
 //   2. hooks de changement de jour, dans l'ordre DAY_HOOK_ORDER, chacun (draft, ctx) :
 //        npcs      PNJ itinérants (carte 19, rules/npcs.js)
 //        traders   restock des marchands (restockTraders de rules/traders.js)
-//        emission  calendrier de l'Émission (carte 8) : pose world.emission avant la Météo
+//        emission  calendrier de l'Émission (carte 8) : pose world.emission avant la Météo ;
+//                  puis vieillissement des rumeurs (ageRumors de rules/stashes.js, carte 23)
 //        quests    délais des quêtes (carte 15) ; renouvellement des contrats (carte 22,
 //                  renewContracts de rules/contracts.js)
 //        patrols   circulation des patrouilles (movePatrols de rules/patrols.js, LBL-49)
@@ -94,6 +95,7 @@ import { startCombat } from './combat.js';
 import { encounterCards } from './tile.js';
 import { setupZone } from './zone.js';
 import { scheduleEmission } from './emission.js';
+import { ageRumors } from './stashes.js';
 import { apBonus, beltRadiation } from './equipment.js';
 import { memberPerks } from './factions.js';
 import { stealthBonus } from './progression.js';
@@ -118,7 +120,7 @@ export const DAY_HOOK_ORDER = Object.freeze(['npcs', 'traders', 'emission', 'que
 export const DAY_HOOKS = Object.freeze({
   npcs: Object.freeze([]),
   traders: Object.freeze([restockTraders]),
-  emission: Object.freeze([scheduleEmission]),
+  emission: Object.freeze([scheduleEmission, ageRumors]),
   quests: Object.freeze([renewContracts]),
   patrols: Object.freeze([movePatrols]),
 });

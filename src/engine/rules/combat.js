@@ -55,7 +55,8 @@
 // ('peage' | 'echange' | 'fin') ; mort ('dead'). La rencontre est retirée de la tuile sauf
 // après une fuite ou la mort. Victoire : un trophée par mutant abattu qui en porte un (perdu
 // s'il ne tient pas dans la grille). Les mutants ne laissent pas de butin ; le butin des
-// humains vaincus revient à la carte Butin (11).
+// humains vaincus revient à la carte Butin (11). Humains vaincus : parfois un PDA qui révèle
+// une planque (dropPda de rules/stashes.js, carte 23, événement pda-found).
 //
 // ÉVÉNEMENTS (chaque jet est visible, §1 pilier 4) :
 //   { type: 'combat-started', hex, card, enemies: [{ name, threat, hp, damage, type }], absorb }
@@ -87,6 +88,7 @@ import { encounterCard } from './tile.js';
 import { activeWeapon, armorAbsorb, statBonus } from './equipment.js';
 import { addItem, createItem, removeItem, useCharge, wound } from './sheet.js';
 import { encounterStance, isMember, standing } from './factions.js';
+import { dropPda } from './stashes.js';
 
 export const COMBAT_MODES = Object.freeze(['rounds', 'rapide']);
 
@@ -312,6 +314,7 @@ function endCombat(draft, day, outcome, ctx) {
     ctx.emit({ type: 'encounter-removed', hex, card });
   }
   const trophies = outcome === 'victory' ? collectTrophies(enemies, day, ctx) : [];
+  if (outcome === 'victory') dropPda(draft, enemies, ctx);
   draft.combat = null;
   draft.screen = previousScreen;
   ctx.emit({ type: 'combat-ended', outcome, hex, card, trophies });
