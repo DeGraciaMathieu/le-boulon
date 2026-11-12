@@ -119,6 +119,7 @@ import { questsAfterStep } from './rules/quests.js';
 import { contractsAfterStep } from './rules/contracts.js';
 import { enterHub, enterHubOrPlace, leaveHub, chestPut, chestTake, useService, hubsAfterStep, HUB_OVERRIDES } from './rules/hubs.js';
 import { emissionAfterStep, dropEmissionCard } from './rules/emission.js';
+import { patrolsAfterStep } from './rules/patrols.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -143,7 +144,7 @@ export const CAMPAIGN_ACTIONS = {
 // emissionAfterStep après endDayOnExhaustion : elle lit la nuit que celle-ci vient de poser.
 // questsAfterStep en dernier : les objectifs de quête lisent tout ce que le step a produit ;
 // contractsAfterStep le suit pour les contrats qu'il a ratés.
-export const REACTIONS = [combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep, contractsAfterStep];
+export const REACTIONS = [patrolsAfterStep, combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep, contractsAfterStep];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);

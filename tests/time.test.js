@@ -382,7 +382,7 @@ test('nouveau jour : boisson énergétique de nouveau permise, paquet Zone remé
 // Hooks de changement de jour
 
 test('hooks de changement de jour dans l\'ordre documenté, avant la Météo', () => {
-  assert.deepEqual(DAY_HOOK_ORDER, ['npcs', 'traders', 'emission', 'quests']);
+  assert.deepEqual(DAY_HOOK_ORDER, ['npcs', 'traders', 'emission', 'quests', 'patrols']);
   const calls = [];
   const hook = (name) => (draft, ctx) => {
     calls.push([name, draft.day]);
@@ -395,7 +395,7 @@ test('hooks de changement de jour dans l\'ordre documenté, avant la Météo', (
   const events = [];
   newDay(draft, { rng: createRng(7), emit: (event) => events.push(event) }, hooks);
   assert.deepEqual(calls, DAY_HOOK_ORDER.map((name) => [name, 2]));
-  assert.deepEqual(types(events).slice(0, 5), ['hook-npcs', 'hook-traders', 'hook-emission', 'hook-quests', 'weather']);
+  assert.deepEqual(types(events).slice(0, 6), ['hook-npcs', 'hook-traders', 'hook-emission', 'hook-quests', 'hook-patrols', 'weather']);
   assert.equal(events.find((event) => event.type === 'weather').card, 'signes-emission');
 });
 

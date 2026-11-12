@@ -18,6 +18,7 @@
 //   loot     { [id]: table de butin } (src/content/butin.js)             carte 11
 //   traders  { [id]: marchand } (src/content/marchands.js)              carte 13 (Marchands)
 //   contracts { [id]: modèle de contrat } (src/content/contrats.js)     carte 22 (Contrats)
+//   patrols  { [id]: patrouille } (src/content/patrouilles.js)          LBL-49 (Patrouilles)
 //
 // src/engine/data/agroprom.js reste l'Agroprom v1 de l'interface et du banc ; la v2 est
 // src/content/tuiles/agroprom.js.
@@ -52,6 +53,7 @@ import rencontresEntrepots from './paquets/rencontres-entrepots.js';
 import loot from './butin.js';
 import traders from './marchands.js';
 import contracts from './contrats.js';
+import patrols from './patrouilles.js';
 import { deepFreeze } from './freeze.js';
 
 export default deepFreeze({
@@ -79,4 +81,5 @@ export default deepFreeze({
   quests,
   traders,
   contracts,
+  patrols,
 });

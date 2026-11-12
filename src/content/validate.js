@@ -110,6 +110,10 @@
 //       et sell ({ [catégorie]: n }) : nombres > 0. quantity : entier > 0. rank : id de RANKS
 //       (src/engine/rules/progression.js). item : objet à prix. lines : une réplique par clé
 //       de TRADER_LINES (src/engine/rules/traders.js les choisit).
+//   patrols (patrouilles.js, §10.2) { [patrolId]: { tile, name, threat, wounds, hp?, damage?,
+//                                type?, faction?, count? } }
+//       tile : tuile de départ. Le reste est une carte de rencontre (format des paquets de
+//       rencontres) ; tile et faction sont vérifiés par RÉFÉRENCES.
 //
 // RÉFÉRENCES : partout dans une entrée (sauf tiles et links, vérifiés à part), un champ de
 // REF_FIELDS désigne un id de la collection dite ; son pluriel (places, items…) désigne un

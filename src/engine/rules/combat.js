@@ -5,7 +5,7 @@
 // flee de encounters.js, relayés à la journée) ; le banc v1 joue toujours game.js. Une
 // campagne sans le champ (sauvegarde antérieure) joue en 'rounds'.
 //
-// ENNEMIS : une carte de rencontre (encounterCards de tile.js) au format v1 { name, threat,
+// ENNEMIS : une carte de rencontre (encounterCard de tile.js) au format v1 { name, threat,
 // wounds } accepte en plus, tous facultatifs (ENEMY_DEFAULTS sinon) :
 //   hp       PV de chaque ennemi, 1 à 4              damage   blessures par attaque réussie
 //   type     'humain' | 'mutant'                     faction  id de content.factions, ou null
@@ -83,7 +83,7 @@ import catalog from '../../content/objets.js';
 import { dayState, storeDay } from '../campaign.js';
 import { skillCheck } from '../game.js';
 import { COVER } from './encounters.js';
-import { encounterCards } from './tile.js';
+import { encounterCard } from './tile.js';
 import { activeWeapon, armorAbsorb, statBonus } from './equipment.js';
 import { addItem, createItem, removeItem, useCharge, wound } from './sheet.js';
 import { encounterStance, isMember, standing } from './factions.js';
@@ -110,7 +110,7 @@ const standingEnemies = (combat) => combat.enemies.filter((enemy) => enemy.hp > 
 
 export function startCombat(draft, { hex, card }, ctx) {
   const { tile } = draft.world.tiles[draft.world.currentTile];
-  const enemies = enemiesOf(encounterCards(tile)[card]);
+  const enemies = enemiesOf(encounterCard(tile, card));
   const absorb = armorAbsorb(draft.equipment);
   draft.combat = { hex, card, round: 1, enemies, cover: 0, absorb, previousScreen: draft.screen };
   draft.screen = 'combat';
