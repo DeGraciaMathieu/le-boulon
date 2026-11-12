@@ -14,8 +14,9 @@
 //   objectifs    (hypothèse v2, le brief ne dit que les 5 types de la v1) :
 //     livraison     'rapporter' { item: colis du modèle, npc } : un PNJ vivant de la tuile cible,
 //                   hors du hub ; le colis est remis à l'acceptation
-//     recuperation  'visiter' { place } un lieu de la tuile cible, puis 'rapporter'
-//                   { item du modèle, npc : le marchand du hub }
+//     recuperation  'explorer' { place, card } un lieu de la tuile cible (avec un paquet), la
+//                   carte contractCardId(item) de rules/places.js fixée en tête de son paquet
+//                   donne l'objet ; puis 'rapporter' { item du modèle, npc : le marchand du hub }
 //     elimination   'eliminer' { encounter, tile } : une carte de rencontre de la tuile cible
 //     escorte       'escorter' { npc, place } : un stalker vivant du hub vers un lieu de la cible
 //     cartographie  'cartographier' { tile }
@@ -50,6 +51,7 @@ import { encounterCards } from './tile.js';
 import { changeReputation } from './factions.js';
 import { RANKS } from './progression.js';
 import { createItem } from './sheet.js';
+import { contractCardId } from './places.js';
 import { usedSlots, inventorySlots } from './equipment.js';
 
 export { CONTRACT_TYPES } from '../../content/validate.js';
@@ -203,11 +205,11 @@ const TARGETS = {
     return npc && single({ type: 'rapporter', item: template.item, npc });
   },
   recuperation: (campaign, { hubId, tile, template, rng }) => {
-    const place = pickOrNull(rng, placesOn(tile));
+    const place = pickOrNull(rng, placesOn(tile).filter((id) => content.places[id].deck));
     const [npc] = aliveNpcs(campaign, (state, data) => state.place === hubId && data?.role === 'marchand');
     if (!place || !npc) return null;
     return {
-      aller: { objective: { type: 'visiter', place }, next: ['rapporter'] },
+      aller: { objective: { type: 'explorer', place, card: contractCardId(template.item) }, next: ['rapporter'] },
       rapporter: { objective: { type: 'rapporter', item: template.item, npc }, next: [] },
     };
   },

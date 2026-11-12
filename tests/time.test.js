@@ -419,3 +419,17 @@ test('la v1 garde sa défaite par la nuit', () => {
   assert.equal(night.status, 'night');
   assert.ok(events.some((event) => event.type === 'game-over' && event.outcome.cause === 'night'));
 });
+
+test('mort pendant la nuit (carte blessure) : pas de jour suivant, la réapparition reste possible', () => {
+  const marais = content.places['station-pompage'];
+  const { night } = campaignDrawing('blessure', marais.hex, 10, { tile: 'marais' });
+  const dying = jsonCopy(night);
+  dying.player.wounds = 5;
+  dying.lastHub = 'base-ciel-pur';
+  const { state, events } = step(dying, { type: 'wake' });
+  assert.ok(events.some((event) => event.type === 'died' && event.cause === 'nuit'));
+  assert.ok(!events.some((event) => event.type === 'day-started'));
+  assert.equal(state.day, night.day);
+  assert.equal(dayState(state).status, 'dead');
+  assert.equal(step(state, { type: 'respawn' }).events[0].type, 'respawned');
+});

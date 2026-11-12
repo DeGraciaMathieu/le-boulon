@@ -15,9 +15,10 @@
 //       runCampaignBench({ campaigns, days, seed, profiles }) -> rapport
 //       formatCampaignReport(rapport) -> texte
 //
-// Le banc n'utilise que createCampaign et step, en combat 'rapide' (résolution v1). Une
-// campagne s'arrête au matin du jour days + 1, à la mort (le moteur n'a pas encore la
-// réapparition du §15 : la mort finit la campagne), ou bloquée (aucune action acceptée).
+// Le banc n'utilise que createCampaign et step, en combat 'rapide' (résolution v1), en mode
+// normal. Une campagne s'arrête au matin du jour days + 1, ou bloquée (aucune action
+// acceptée). La mort ne la finit pas : l'IA joue respawn (rules/death.js, §15) et repart du
+// dernier hub ; le relevé compte les morts et les réapparitions.
 // Garde-fou : au-delà de MAX_ACTIONS_PER_DAY actions dans la journée, le banc force la fin de
 // journée (sortie du lieu ou du hub, bivouac) et le compte dans forcedNights.
 
@@ -48,7 +49,10 @@ export function playCampaign(seed, profileId, { days = DAYS } = {}) {
     profile: profileId,
     end: 'days',
     deathDay: null,
-    deathCause: null,
+    deaths: 0,
+    deathDays: [],
+    deathCauses: [],
+    respawns: 0,
     roubles: [campaign.player.roubles],
     acts: {},
     shoulderWeaponDay: null,
@@ -65,7 +69,8 @@ export function playCampaign(seed, profileId, { days = DAYS } = {}) {
   let refused = [];
   let actionsToday = 0;
 
-  while (campaign.day <= days) {
+  // Une mort de la dernière nuit est suivie de sa réapparition avant l'arrêt.
+  while (campaign.day <= days || dayState(campaign).status === 'dead') {
     const forced = actionsToday >= MAX_ACTIONS_PER_DAY;
     const list = forced ? FORCE_NIGHT : candidates(campaign, mind);
     const action = list.find((a) => !refused.some((r) => same(r, a)));
@@ -92,11 +97,6 @@ export function playCampaign(seed, profileId, { days = DAYS } = {}) {
       actionsToday = 0;
       if (campaign.day <= days) record.roubles.push(campaign.player.roubles);
     }
-    if (dayState(campaign).status === 'dead') {
-      record.end = 'dead';
-      record.deathDay = campaign.day;
-      break;
-    }
   }
 
   record.days = Math.min(campaign.day, days);
@@ -109,12 +109,18 @@ export function playCampaign(seed, profileId, { days = DAYS } = {}) {
 
 function note(record, campaign, events) {
   for (const event of events) {
-    if (event.type === 'died') record.deathCause ??= event.cause;
+    if (event.type === 'died') {
+      record.deaths += 1;
+      record.deathDays.push(campaign.day);
+      record.deathDay ??= campaign.day;
+      record.deathCauses.push(event.cause ?? 'inconnue');
+    } else if (event.type === 'respawned') record.respawns += 1;
     else if (event.type === 'quest-step' && event.quest === MAIN_QUEST) {
       const act = Number(event.step.match(/^a(\d)-/)?.[1]);
       for (let a = 1; a < act; a++) record.acts[a] ??= campaign.day;
-    } else if (event.type === 'quest-completed' && event.quest === MAIN_QUEST) {
-      for (let a = 1; a <= ACTS; a++) record.acts[a] ??= campaign.day;
+    } else if (event.type === 'quest-completed') {
+      record.questsDone += 1;
+      if (event.quest === MAIN_QUEST) for (let a = 1; a <= ACTS; a++) record.acts[a] ??= campaign.day;
     } else if (event.type === 'quest-failed') record.questsFailed += 1;
     else if (event.type === 'item-bought' && content.items[event.item].category === 'arme-epaule') {
       record.shoulderWeaponDay ??= campaign.day;
@@ -142,13 +148,12 @@ export function runCampaignBench({ campaigns = 50, days = DAYS, seed = 1, profil
 
 function summarize(records, days) {
   const n = records.length;
-  const dead = records.filter((r) => r.end === 'dead');
+  const deathDays = records.flatMap((r) => r.deathDays);
   const daysPlayed = records.reduce((total, r) => total + r.days, 0);
   const weeks = Math.ceil(days / 7);
   const deathsByWeek = Array.from({ length: weeks }, (_, w) => {
-    const alive = records.filter((r) => r.end !== 'dead' || r.deathDay > w * 7).length;
-    const died = dead.filter((r) => Math.ceil(r.deathDay / 7) === w + 1).length;
-    return { week: w + 1, alive, died, rate: alive ? round(died / alive) : null };
+    const died = deathDays.filter((d) => Math.ceil(d / 7) === w + 1).length;
+    return { week: w + 1, died, perCampaign: round(died / n) };
   });
   const acts = {};
   for (let a = 1; a <= ACTS; a++) {
@@ -163,10 +168,12 @@ function summarize(records, days) {
   const shoulder = records.map((r) => r.shoulderWeaponDay).filter((d) => d != null);
   return {
     campaigns: n,
-    survival: round((n - dead.length) / n),
-    deathsPer10Days: round((dead.length / daysPlayed) * 10),
+    survival: round(records.filter((r) => r.deaths === 0).length / n),
+    deaths: meanOrNull(records.map((r) => r.deaths)),
+    respawns: meanOrNull(records.map((r) => r.respawns)),
+    deathsPer10Days: round((deathDays.length / daysPlayed) * 10),
     deathsByWeek,
-    deathCauses: countBy(dead, (r) => r.deathCause ?? 'inconnue'),
+    deathCauses: countBy(records.flatMap((r) => r.deathCauses), (cause) => cause),
     stuck: records.filter((r) => r.end === 'stuck').length,
     roublesCurve,
     finalRoubles: meanOrNull(records.map((r) => r.finalRoubles)),
@@ -207,8 +214,9 @@ export function formatCampaignReport(report) {
     lines.push(
       '',
       `== IA ${id}`,
-      `Survie à ${report.days} jours    ${percent(p.survival)}   morts / 10 jours ${p.deathsPer10Days}`,
-      `Morts par semaine       ${p.deathsByWeek.map((w) => `S${w.week} ${percent(w.rate)}`).join('  ')}`,
+      `Sans mort en ${report.days} jours ${percent(p.survival)}   morts / 10 jours ${p.deathsPer10Days}`,
+      `Morts, réapparitions    ${p.deaths} et ${p.respawns} par campagne`,
+      `Morts par semaine       ${p.deathsByWeek.map((w) => `S${w.week} ${w.perCampaign}`).join('  ')} par campagne`,
       `Causes de mort          ${entries(p.deathCauses)}`,
       `Roubles (moyenne)       ${Object.entries(p.roublesCurve).filter(([d]) => d === '1' || d % 5 === 0).map(([d, v]) => `J${d} ${v}`).join('  ')}   fin ${p.finalRoubles}`,
       `Rangs en fin            ${entries(p.ranks)}`,

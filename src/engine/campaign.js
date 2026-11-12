@@ -110,9 +110,9 @@ import content from '../content/index.js';
 import { choose } from './rules/dialogue.js';
 import { join, startingReputation } from './rules/factions.js';
 import { emptyEquipment, outfit, equip, unequip } from './rules/equipment.js';
-import { raiseStat, learnPerk } from './rules/progression.js';
+import { raiseStat, learnPerk, xpAfterStep } from './rules/progression.js';
 import { COMBAT_MODES, combatOnReveal, combatRefusal, shoot, takeCover, grenade, heal, escape, parley } from './rules/combat.js';
-import { travel } from './rules/world.js';
+import { travel, campaignTile } from './rules/world.js';
 import { talkTo, startingNpcs } from './rules/npcs.js';
 import { explore, boltCard, leavePlace, placesAfterStep, PLACE_OVERRIDES } from './rules/places.js';
 import { sleep, camp, wake, endDayOnExhaustion, nightRefusal } from './rules/time.js';
@@ -145,16 +145,17 @@ export const CAMPAIGN_ACTIONS = {
 };
 
 // combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.
+// xpAfterStep après placesAfterStep : elle lit les lieux vidés de la visite.
 // emissionAfterStep après endDayOnExhaustion : elle lit la nuit que celle-ci vient de poser.
 // questsAfterStep en dernier : les objectifs de quête lisent tout ce que le step a produit ;
 // contractsAfterStep le suit pour les contrats qu'il a ratés.
-export const REACTIONS = [patrolsAfterStep, combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep, contractsAfterStep, rememberHub];
+export const REACTIONS = [patrolsAfterStep, combatOnReveal, placesAfterStep, xpAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep, contractsAfterStep, rememberHub];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);
   if (!COMBAT_MODES.includes(combatMode)) throw new Error(`combatMode inconnu : ${combatMode}`);
   if (!tiles[tile]) throw new Error(`tuile inconnue : ${tile}`);
-  const day = createGame({ seed, tile: tiles[tile] });
+  const day = createGame({ seed, tile: campaignTile(tile, tiles[tile]) });
   const campaign = {
     version: CAMPAIGN_VERSION,
     seed,

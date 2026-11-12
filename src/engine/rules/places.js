@@ -50,7 +50,8 @@
 //     emptied,     true quand tout est joué (lieu vidé)
 //     perkUsed,    exploration gratuite du savoir-faire Fouilleur déjà prise
 //     cleared,     occupants battus (approche 'combattre')
-//     known }      révélé par un effet « reveler » (carte de la tuile, PDA)
+//     known,       révélé par un effet « reveler » (carte de la tuile, PDA)
+//     discovered? } XP du premier vidage donnée (xpAfterStep de rules/progression.js)
 //
 // ACTIONS DE CAMPAGNE (CAMPAIGN_ACTIONS de campaign.js) :
 //   { type: 'enter-place', place, approach? }   0 PA : le pas sur l'hexagone du lieu a déjà
@@ -89,6 +90,10 @@
 //   PLACE_COMBAT.start(day, dctx, { place, encounter? })                combat
 //     Démarre la rencontre d'un lieu sur la journée v1 day (contexte dayContext de game.js) ;
 //     en mode 'rounds', combatOnReveal en fait un combat v2.
+//   contractCardId(item) -> cardId                                    carte 22 Contrats
+//     Carte d'un contrat de récupération, hors des paquets : une carte 'indice' qui donne
+//     l'objet à rapporter (effet 'donner'). L'objectif 'explorer' du contrat la fixe par
+//     fixCard dans le lieu cible, comme une carte réservée de quête.
 //   placeView(campaign) -> null | { place, approach, revealed, remaining, emptied }   carte 25
 //   PLACES, DECKS, LOOT : lieux, paquets et tables en plus du contenu (tests), lus avant lui.
 //
@@ -121,6 +126,10 @@ import { combatMode } from './combat.js';
 
 export const PLACES = {};
 export const DECKS = {};
+
+const CONTRACT_CARD = 'contrat-';
+
+export const contractCardId = (item) => `${CONTRACT_CARD}${item}`;
 export const LOOT = {};
 
 export const EXPLORE_COST = 1;
@@ -368,7 +377,7 @@ function settlePlaceCombat(draft, outcome, ctx) {
 export function fixCard(draft, id, cardId, position) {
   const place = placeOf(id);
   if (!place) return 'unknown-place';
-  if (!deckById(place.deck)?.cards.some((card) => card.id === cardId)) return 'unknown-card';
+  if (!contractCard(cardId) && !deckById(place.deck)?.cards.some((card) => card.id === cardId)) return 'unknown-card';
   if (!Number.isInteger(position) || position < 1) return 'bad-position';
 
   const state = placeState(draft, id);
@@ -492,7 +501,15 @@ function putBack(state, zone) {
 }
 
 function cardOf({ deck, card }) {
-  return deckById(deck).cards.find(({ id }) => id === card);
+  return deckById(deck).cards.find(({ id }) => id === card) ?? contractCard(card);
+}
+
+function contractCard(cardId) {
+  if (!cardId.startsWith(CONTRACT_CARD)) return undefined;
+  const item = cardId.slice(CONTRACT_CARD.length);
+  if (!content.items[item]) return undefined;
+  const text = `Au fond d’un placard, un conteneur plombé : ${content.items[item].name}, l’artefact du contrat.`;
+  return { id: cardId, type: 'indice', text, effects: [{ type: 'donner', item }] };
 }
 
 function visitRefusal(draft) {

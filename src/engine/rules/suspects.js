@@ -16,7 +16,9 @@
 //     tuile (src/engine/rules/tile.js ; par défaut 5 : 2 anomalies, type tiré au hasard
 //     parmi ceux de la tuile pour chacune, 2 artefacts, 1 rien). Chaque jeton est posé au
 //     d20, relancé hors de la tuile (20 compris), sur un hexagone déjà pris par un autre
-//     jeton suspect, sur l'entrée ou sous le joueur. Si un artefact n'est pas adjacent à une
+//     jeton suspect, sur l'entrée ou sous le joueur. Une anomalie est aussi relancée sur un
+//     hexagone de tile.noAnomaly (tuile de campagne : lieux et liaisons, campaignTile de
+//     rules/world.js ; la v1 n'a pas ce champ). Si un artefact n'est pas adjacent à une
 //     anomalie, on retire tout et on recommence. L'Émission (LBL-8) l'appelle avec
 //     { original: false }.
 //
@@ -109,8 +111,9 @@ export function placeSuspects(state, rng, { original = true } = {}) {
 
 function drawTokens(rng, tile, forbidden, original) {
   const taken = new Set(forbidden);
+  const noAnomaly = tile.noAnomaly ?? [];
   return suspectComposition(tile).map((kind) => {
-    const hex = rollFreeHex(rng, tile, taken);
+    const hex = rollFreeHex(rng, tile, kind === 'anomalie' ? new Set([...taken, ...noAnomaly]) : taken);
     taken.add(hex);
     const token = { hex, kind, revealed: false, original };
     if (kind === 'anomalie') token.anomaly = rng.pick(anomalyKinds(tile));

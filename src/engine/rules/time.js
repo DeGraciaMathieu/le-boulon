@@ -178,7 +178,8 @@ export function wake(draft, _action, ctx) {
   if (!draft.night.cardDrawn) {
     draft.night.cardDrawn = true;
     resolveNight(draft, ctx);
-    if (draft.combat) return;
+    // Mort pendant la nuit : pas de jour suivant, la réapparition (rules/death.js) prend la main.
+    if (draft.combat || dayState(draft).status === 'dead') return;
   }
   newDay(draft, ctx);
 }
