@@ -11,9 +11,9 @@
 //   clic droit             { type: 'bolt', target }.
 //
 // ÉCRANS : la tuile, le lieu (place-view.js, carte 25) et l'écran Hub de hub-view.js à la
-// place du plateau pendant une visite. Les combats de rencontre se jouent en mode 'rapide'
-// (Combattre / Fuir de la v1) tant que l'écran de combat v2 n'existe pas ; la nuit n'a que
-// le bouton Se réveiller, en attendant l'écran Réveil et nuit.
+// place du plateau pendant une visite ; par-dessus, les fenêtres Dialogue (dialogue-window.js,
+// ouverte par Parler à… sur l'hexagone d'un PNJ) et Combat v2 en rounds (combat-window.js).
+// La nuit n'a que le bouton Se réveiller, en attendant l'écran Réveil et nuit.
 //
 // GRAINE : ?seed=<entier> dans l'adresse, sinon une graine au hasard.
 
@@ -32,6 +32,10 @@ import { renderHub, HUB_LINES, HUB_REFUSALS } from './hub-view.js';
 import { hubAt } from '../engine/rules/hubs.js';
 import { PLACE_LINES, placeEntry, tilePlaces } from './place.js';
 import { renderPlace, renderPlaceMarks } from './place-view.js';
+import { mountDialogue } from './dialogue-window.js';
+import { dialogueLine, npcsHere } from './dialogue-screen.js';
+import { mountCombat } from './combat-window.js';
+import { combatLine } from './combat-screen.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
 const USABLE = ['bandage', 'vodka', 'ration'];
@@ -91,6 +95,7 @@ const placeSection = document.getElementById('lieu');
 let campaign;
 let board;
 let sizes;
+let lastEvents = [];
 
 function loadSize(src) {
   return new Promise((resolve, reject) => {
@@ -128,6 +133,8 @@ function render() {
   plateau.hidden = inHub;
   hubSection.hidden = !inHub;
   if (inHub) renderHub(hubSection, campaign, { dispatch, refresh: render });
+  dialogueWindow.render(campaign);
+  combatWindow.render(campaign, lastEvents);
 }
 
 function mountTile(id) {
@@ -188,7 +195,9 @@ function renderCommands(day) {
   if (campaign.screen === 'night') {
     lines.push(h('div', { className: 'alerte', textContent: 'La nuit tombe.' }), button('Se réveiller', { type: 'wake' }));
   } else if (campaign.combat) {
-    lines.push(h('div', { className: 'alerte', textContent: 'Combat en cours (écran de combat à venir)' }));
+    lines.push(h('div', { className: 'alerte', textContent: 'Combat en cours' }));
+  } else if (campaign.dialogue) {
+    lines.push(h('div', { className: 'alerte', textContent: 'Dialogue en cours' }));
   } else if (campaign.screen === 'hub') {
     lines.push(h('div', { className: 'aide', textContent: 'Dans le hub : onglets à gauche' }));
   } else if (day.status !== 'playing') {
@@ -210,6 +219,7 @@ function renderCommands(day) {
       enter.disabled = !option.enabled;
       lines.push(enter);
     }
+    for (const npc of npcsHere(campaign)) lines.push(button(`Parler à ${npc.name}`, { type: 'talk', npc: npc.id }));
     const token = tokenAt(day, day.player.hex);
     if (token?.revealed && token.kind === 'artefact') lines.push(button('Ramasser (1 PA)', { type: 'pickup' }));
     lines.push(...useButtons(button));
@@ -230,12 +240,14 @@ function useButtons(button) {
 
 function describe(event) {
   if (event.type === 'refused' && REFUSALS[event.reason]) return `Refusé : ${REFUSALS[event.reason]}`;
-  return CAMPAIGN_LINES[event.type]?.(event) ?? describeEvent(event);
+  return CAMPAIGN_LINES[event.type]?.(event) ?? combatLine(event) ?? dialogueLine(event) ?? describeEvent(event);
 }
 
 function appendEvents(events) {
   for (const event of events) {
-    const line = h('li', { textContent: `J${campaign.day} · ${describe(event)}` });
+    const text = describe(event);
+    if (!text) continue;
+    const line = h('li', { textContent: `J${campaign.day} · ${text}` });
     line.dataset.type = event.type;
     journal.append(line);
   }
@@ -245,6 +257,7 @@ function appendEvents(events) {
 function dispatch(action) {
   const result = step(campaign, action);
   campaign = result.state;
+  lastEvents = result.events;
   appendEvents(result.events);
   render();
 }
@@ -318,12 +331,16 @@ plateau.addEventListener('contextmenu', (event) => {
 });
 
 function start(seed) {
-  campaign = createCampaign({ seed, combatMode: 'rapide' });
+  campaign = createCampaign({ seed });
+  lastEvents = [];
   history.replaceState(null, '', `?seed=${seed}`);
   journal.replaceChildren();
   board = null;
   render();
 }
+
+const dialogueWindow = mountDialogue({ onChoose: dispatch });
+const combatWindow = mountCombat({ onAction: dispatch });
 
 document.getElementById('nouvelle').addEventListener('click', () => start(randomSeed()));
 
