@@ -173,7 +173,7 @@ test('marais : l\'échec passe par la piste de blessures (mort à 6)', () => {
     const { state, events } = step(start, { type: 'move', to: 19 });
     if (events.find((e) => e.type === 'check').success) continue;
     assert.equal(state.status, 'dead');
-    assert.deepEqual(events.at(-1), { type: 'died', cause: 'marais' });
+    assert.deepEqual(events.at(-2), { type: 'died', cause: 'marais' });
     return;
   }
   assert.fail('aucune graine ne rate le test de Survie');

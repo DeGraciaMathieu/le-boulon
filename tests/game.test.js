@@ -95,7 +95,7 @@ test('la journée finit à 0 PA', () => {
   const { state, events } = play(newGame(), actions);
   assert.equal(state.ap.left, 0);
   assert.equal(state.status, 'night');
-  assert.deepEqual(events.at(-1), { type: 'day-ended', reason: 'no-ap' });
+  assert.deepEqual(events.at(-2), { type: 'day-ended', reason: 'no-ap' });
   assert.equal(step(state, move(2)).events[0].reason, 'game-over');
 });
 
@@ -105,7 +105,7 @@ test('sortie possible seulement depuis un hexagone de bord', () => {
 
   const { state, events } = step(newGame(), { type: 'exit' });
   assert.equal(state.status, 'exited');
-  assert.deepEqual(events, [{ type: 'exited', hex: 8 }]);
+  assert.deepEqual(events[0], { type: 'exited', hex: 8 });
 });
 
 test('la position précédente est mémorisée', () => {

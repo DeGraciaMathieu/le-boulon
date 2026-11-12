@@ -25,7 +25,7 @@
 //     tokens, detector,            jetons suspects et détecteur (src/engine/rules/suspects.js)
 //     encounters, encounterDeck, combat   rencontres (src/engine/rules/encounters.js)
 //     zone                         paquet Zone et Émission (src/engine/rules/zone.js)
-//     mission                      réservé à la carte suivante
+//     mission, outcome             mission du jour et résultat final (src/engine/rules/mission.js)
 //   }
 //
 // ÉVÉNEMENTS (un objet { type, ... } par ligne de journal) :
@@ -41,6 +41,8 @@
 //   Rencontres et combat : en tête de src/engine/rules/encounters.js.
 //   Paquet Zone et Émission (pioche tous les 3 PA dépensés, refus 'fog') : en tête de
 //   src/engine/rules/zone.js.
+//   Mission, victoire, défaites et score (mission-progress, game-over…) : en tête de
+//   src/engine/rules/mission.js.
 //
 // BRANCHER UNE RÈGLE :
 //   - Nouvelle action (boulon, fouille, fuite…) : écrire un handler
@@ -61,6 +63,7 @@ import { exit } from './actions/exit.js';
 import { placeSuspects, bolt, pickup } from './rules/suspects.js';
 import { setupEncounters, combatRefusal, fight, flee } from './rules/encounters.js';
 import { setupZone, zoneRefusal, zoneAfterAction } from './rules/zone.js';
+import { setupMission, missionAfterStep } from './rules/mission.js';
 import { use, wound, irradiate, addItem, removeItem, useCharge, startingInventory } from './rules/sheet.js';
 
 export const BASE_AP = 10;
@@ -90,7 +93,7 @@ export function createGame({ seed, tile }) {
   const rng = createRng(state.rng);
   placeSuspects(state, rng);
   state.rng = rng.state();
-  return setupZone(setupEncounters(state));
+  return setupMission(setupZone(setupEncounters(state)));
 }
 
 export function step(state, action) {
@@ -127,6 +130,7 @@ export function step(state, action) {
   draft.turn += 1;
   draft.rng = rng.state();
   endDayIfExhausted(draft, ctx);
+  missionAfterStep(draft, events, ctx);
   return { state: draft, events };
 }
 
