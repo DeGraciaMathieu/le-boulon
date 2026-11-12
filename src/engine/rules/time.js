@@ -111,7 +111,7 @@ export const HUNGER_MALUS = 2;
 // « Deux jours de suite : en plus, 1 blessure » (§4.4).
 const STARVING_DAYS = 2;
 const STARVING_WOUNDS = 1;
-const WOUND_AP_MALUS = 1;
+export const WOUND_AP_MALUS = 1;
 const MEAL = 'ration';
 const UINT32_MAX = 0xffffffff;
 

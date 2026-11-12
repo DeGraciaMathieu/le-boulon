@@ -99,15 +99,12 @@ test('bandeau : jour, PA, pistes, faim, roubles, pas d\'Émission annoncée au d
   assert.equal(bar.tile, 'Cordon');
 });
 
-test('bandeau : Émission annoncée pour un jour à venir ou en cours, pas pour un jour passé', () => {
+test('bandeau : Émission seulement le jour même (today)', () => {
   const campaign = createCampaign({ seed: 1 });
   campaign.world.emission = { nextDay: 3, today: false };
-  assert.equal(topBar(campaign).emission, true);
+  assert.equal(topBar(campaign).emission, false);
   campaign.world.emission = { nextDay: null, today: true };
   assert.equal(topBar(campaign).emission, true);
-  campaign.day = 4;
-  campaign.world.emission = { nextDay: 3, today: false };
-  assert.equal(topBar(campaign).emission, false);
 });
 
 test('les lectures ne modifient pas la campagne', () => {

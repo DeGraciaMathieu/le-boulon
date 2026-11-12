@@ -1,12 +1,12 @@
 // Fenêtre Combat v2 (brief v2 §13, §16 ; carte 27) : ennemis avec PV et Menace, actions du
 // round, jets affichés. Lit combatWindow et combatLine (combat-screen.js) et envoie les
 // actions de rules/combat.js par onAction. Après la fin du combat, la fenêtre garde le
-// dernier round et son issue jusqu'au clic sur Continuer.
+// dernier round et son issue jusqu'au clic sur Continuer, qui appelle onClose.
 //
-//   mountCombat({ onAction }) -> { render(campaign, events) }   events : ceux du dernier step
+//   mountCombat({ onAction, onClose }) -> { render(campaign, events) }   events : ceux du dernier step
 
 import { el } from './board.js';
-import { combatLine, combatWindow } from './combat-screen.js';
+import { combatLine, combatWindow, shotOdds } from './combat-screen.js';
 
 const PIPS = { 1: [[2, 2]], 2: [[1, 1], [3, 3]], 3: [[1, 1], [2, 2], [3, 3]], 4: [[1, 1], [3, 1], [1, 3], [3, 3]],
   5: [[1, 1], [3, 1], [2, 2], [1, 3], [3, 3]], 6: [[1, 1], [3, 1], [1, 2], [3, 2], [1, 3], [3, 3]] };
@@ -41,14 +41,13 @@ function hpTrack(enemy) {
 }
 
 function enemyCard(enemy, onAction) {
-  const odds = enemy.toHit > 6 ? 'impossible' : `dé ≥ ${enemy.toHit}`;
   return h('li', { className: `ennemi${enemy.down ? ' abattu' : ''}` },
     h('div', { className: 'ennemi-nom', textContent: enemy.name }),
     h('div', { className: 'ennemi-pv' }, hpTrack(enemy), ` ${enemy.hp}/${enemy.maxHp} PV`),
     h('div', { className: 'ennemi-stats', textContent: `Menace ${enemy.threat} · dégâts ${enemy.damage} · ${enemy.type}` }),
     enemy.down
       ? h('div', { className: 'ennemi-etat', textContent: 'Abattu' })
-      : h('button', { type: 'button', textContent: `Tirer (${odds})`, onclick: () => onAction({ type: 'shoot', target: enemy.index }) }));
+      : h('button', { type: 'button', textContent: `Tirer · ${shotOdds(enemy.toHit)}`, onclick: () => onAction({ type: 'shoot', target: enemy.index }) }));
 }
 
 function statusLine(view) {
@@ -61,7 +60,9 @@ function statusLine(view) {
   return parts.join(' · ');
 }
 
-export function mountCombat({ onAction }) {
+const heading = (campaign) => (campaign.night ? 'Combat de nuit' : 'Combat');
+
+export function mountCombat({ onAction, onClose = () => {} }) {
   const root = h('div', { className: 'fenetre fenetre-combat', hidden: true });
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
@@ -80,7 +81,7 @@ export function mountCombat({ onAction }) {
         title = view.title;
         root.hidden = false;
         root.replaceChildren(h('div', { className: 'cadre-fenetre' },
-          h('h2', { textContent: `Combat : ${view.title}` }),
+          h('h2', { textContent: `${heading(campaign)} : ${view.title}` }),
           h('div', { className: 'combat-etat', textContent: statusLine(view) }),
           h('ol', { className: 'ennemis' }, ...view.enemies.map((enemy) => enemyCard(enemy, onAction))),
           h('div', { className: 'actions-round' }, ...view.actions.map((action) => h('button', {
@@ -97,10 +98,10 @@ export function mountCombat({ onAction }) {
         return;
       }
       root.replaceChildren(h('div', { className: 'cadre-fenetre' },
-        h('h2', { textContent: `Combat : ${title}` }),
+        h('h2', { textContent: `${heading(campaign)} : ${title}` }),
         h('div', { className: 'combat-issue', textContent: combatLine(ended) }),
         rollList(),
-        h('button', { type: 'button', textContent: 'Continuer', onclick: () => { root.hidden = true; } })));
+        h('button', { type: 'button', textContent: 'Continuer', onclick: () => { root.hidden = true; onClose(); } })));
       root.hidden = false;
     },
   };

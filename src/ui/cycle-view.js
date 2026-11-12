@@ -13,6 +13,8 @@
 //   renderEnding(section, ending, { close(), title() })
 
 import content from '../content/index.js';
+import { BASE_AP } from '../engine/game.js';
+import { HUNGER_MALUS } from '../engine/rules/time.js';
 
 const itemName = (kind) => content.items[kind]?.name ?? kind;
 
@@ -95,12 +97,17 @@ export function renderWake(section, report, on) {
   card(section, 'reveil',
     h('h2', { textContent: `Jour ${report.day}` }),
     report.night && line('Carte Nuit', report.night),
-    report.encounter && line('Nuit', 'rencontre repoussée', 'alerte'),
+    report.fight && line('Combat de nuit', report.fight),
     line('Météo', report.weather),
-    report.meal ? line('Repas', report.meal) : line('Faim', `${report.hunger} jour(s) sans manger`, 'alerte'),
+    report.meal
+      ? line('Mangé au réveil', `${report.meal} (sans repas : faim, −${HUNGER_MALUS} PA)`)
+      : line('Faim', `${report.hunger} jour(s) sans manger`, 'alerte'),
     report.wounds > 0 && line('Blessures', `+${report.wounds}`, 'alerte'),
     report.radiation > 0 && line('Radiations', `+${report.radiation}`, 'alerte'),
     h('div', { className: 'ecran-pa' }, h('span', { textContent: report.ap }), ' PA aujourd’hui'),
+    report.apChanges.length > 0 && h('div', { className: 'ecran-resume' },
+      line('Base', `${BASE_AP} PA`),
+      ...report.apChanges.map(({ amount, label }) => line(label, `${signed(amount)} PA`, amount < 0 ? 'alerte' : ''))),
     h('div', { className: 'ecran-boutons' }, button('Partir', on.close, { id: 'partir' })));
 }
 
@@ -134,5 +141,5 @@ export function renderEnding(section, ending, on) {
 }
 
 function signed(n) {
-  return n > 0 ? `+${n}` : `${n}`;
+  return n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0';
 }

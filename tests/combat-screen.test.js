@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createCampaign, step } from '../src/engine/campaign.js';
 import { startCombat } from '../src/engine/rules/combat.js';
 import { createItem } from '../src/engine/rules/sheet.js';
-import { COMBAT_OUTCOMES, combatLine, combatWindow } from '../src/ui/combat-screen.js';
+import { COMBAT_OUTCOMES, combatLine, combatWindow, shotOdds } from '../src/ui/combat-screen.js';
 
 const CARDS = {
   solo: { name: 'Pillard', threat: 3, wounds: 1, hp: 2, damage: 1, type: 'humain', faction: 'bandits' },
@@ -102,4 +102,12 @@ test('combatLine : riposte, couverture, fin, refus', () => {
   assert.equal(combatLine({ type: 'parley', outcome: 'peage', toll: 100 }), 'Parlementer : péage de 100 ₽');
   assert.equal(combatLine({ type: 'refused', reason: 'mutants' }), 'Refusé : les mutants ne parlementent pas');
   assert.equal(combatLine({ type: 'moved' }), undefined);
+});
+
+test('shotOdds : la chance de toucher en clair', () => {
+  assert.equal(shotOdds(1), 'touche à coup sûr');
+  assert.equal(shotOdds(2), '2+ sur le dé (83 %)');
+  assert.equal(shotOdds(4), '4+ sur le dé (50 %)');
+  assert.equal(shotOdds(6), '6+ sur le dé (17 %)');
+  assert.equal(shotOdds(7), 'impossible');
 });
