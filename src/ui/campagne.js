@@ -146,6 +146,8 @@ let dayEvents = [];
 let deathCause = null;
 // Mode ciblage du bouton Boulon : le prochain clic sur un voisin lance le boulon.
 let targeting = false;
+// Zone Soins du panneau de commandes : repliée par défaut, son état survit aux rendus.
+let careOpen = false;
 
 function loadSize(src) {
   return new Promise((resolve, reject) => {
@@ -277,6 +279,9 @@ function renderBar() {
   if (data.emission) bar.append(h('div', { className: 'bandeau-emission', textContent: "ÉMISSION AUJOURD'HUI : restez près d'un abri" }));
 }
 
+// Panneau de commandes en zones : « Ici » (ce que permet l'hexagone du pion), « Soins » repliée,
+// « Journée » (rappel de retour, Finir la journée). L'action qui sert la quête suivie (même
+// cible que l'encart Objectif) passe en tête de « Ici », mise en avant.
 function renderCommands(day) {
   const button = (label, action) => h('button', { type: 'button', textContent: label, onclick: () => dispatch(action) });
   const lines = [];
@@ -298,38 +303,72 @@ function renderCommands(day) {
       button('Fuir (2 PA)', { type: 'flee' }),
     );
   } else if (campaign.screen === 'place') {
-    lines.push(...useButtons(button));
+    lines.push(...careZone(button));
   } else {
-    const entry = placeEntry(campaign);
-    if (entry && !entry.occupied) lines.push(button(`Entrer : ${entry.name}`, { type: 'enter-place', place: entry.id }));
-    for (const option of entry?.options ?? []) {
-      const enter = button(`${entry.name} : ${option.label}`, { type: 'enter-place', place: entry.id, approach: option.approach });
-      enter.disabled = !option.enabled;
-      lines.push(enter);
-    }
-    const givers = giverMarkers(campaign).map((giver) => giver.npc);
-    for (const npc of npcsHere(campaign)) {
-      const talk = button(`${givers.includes(npc.id) ? '! ' : ''}Parler à ${npc.name}`, { type: 'talk', npc: npc.id });
-      if (givers.includes(npc.id)) talk.classList.add('donneur');
-      lines.push(talk);
-    }
-    const token = tokenAt(day, day.player.hex);
-    if (token?.revealed && token.kind === 'artefact') lines.push(button('Ramasser (1 PA)', { type: 'pickup' }));
-    lines.push(boltButton(day));
-    lines.push(...useButtons(button));
-    const target = travelTarget(campaign);
-    if (target) lines.push(button(`Passer à ${tileName(target.tile)} (1 PA)`, { type: 'travel' }));
-    const hub = hubAt(campaign);
-    if (hub) lines.push(button(`Entrer : ${content.places[hub].name}`, { type: 'enter-hub' }));
-    const reminder = returnReminder(campaign);
-    if (reminder) lines.push(h('div', { className: 'alerte rappel-hub', textContent: reminder.text }));
-    lines.push(h('button', { type: 'button', id: 'finir', textContent: 'Finir la journée', onclick: () => showLayer({ kind: 'camp' }) }));
+    lines.push(
+      zone('Ici', hereButtons(day, button)),
+      ...careZone(button),
+      zone('Journée', dayLines()),
+    );
     const help = targeting
       ? 'Boulon : cliquez un hexagone voisin · Échap : annuler'
       : 'Clic : se déplacer · clic sur le pion : entrer dans le lieu ou voyager · clic droit : boulon';
     lines.push(h('div', { className: 'aide', textContent: help }));
   }
   commandsPanel.replaceChildren(...lines);
+}
+
+function zone(title, children) {
+  return h('div', { className: 'zone' }, h('div', { className: 'zone-titre', textContent: title }), ...children);
+}
+
+// Actions de l'hexagone du pion ; celles qui servent la quête suivie en tête, mises en avant.
+function hereButtons(day, button) {
+  const focus = objectiveFocus(campaign);
+  const onTarget = focus.here && focus.hex === day.player.hex;
+  const items = [];
+  const add = (node, followed) => {
+    if (followed) node.classList.add('suivie');
+    items.push(node);
+  };
+  const entry = placeEntry(campaign);
+  if (entry && !entry.occupied) add(button(`Entrer : ${entry.name}`, { type: 'enter-place', place: entry.id }), onTarget);
+  for (const option of entry?.options ?? []) {
+    const enter = button(`${entry.name} : ${option.label}`, { type: 'enter-place', place: entry.id, approach: option.approach });
+    enter.disabled = !option.enabled;
+    add(enter, onTarget && option.enabled);
+  }
+  const hub = hubAt(campaign);
+  if (hub) add(button(`Entrer : ${content.places[hub].name}`, { type: 'enter-hub' }), onTarget);
+  const givers = giverMarkers(campaign).map((giver) => giver.npc);
+  for (const npc of npcsHere(campaign)) {
+    const giver = givers.includes(npc.id);
+    const talk = button(`${giver ? '! ' : ''}Parler à ${npc.name}`, { type: 'talk', npc: npc.id });
+    if (giver) talk.classList.add('donneur');
+    add(talk, giver);
+  }
+  const token = tokenAt(day, day.player.hex);
+  if (token?.revealed && token.kind === 'artefact') add(button('Ramasser (1 PA)', { type: 'pickup' }), false);
+  const target = travelTarget(campaign);
+  if (target) add(button(`Passer à ${tileName(target.tile)} (1 PA)`, { type: 'travel' }), !focus.here && target.tile === focus.tile);
+  const followed = items.filter((node) => node.classList.contains('suivie'));
+  return [...followed, ...items.filter((node) => !followed.includes(node)), boltButton(day)];
+}
+
+function careZone(button) {
+  const uses = useButtons(button);
+  if (!uses.length) return [];
+  const details = h('details', { className: 'zone soins', open: careOpen, ontoggle: () => { careOpen = details.open; } },
+    h('summary', { className: 'zone-titre', textContent: `Soins (${uses.length})` }), ...uses);
+  return [details];
+}
+
+function dayLines() {
+  const lines = [];
+  const reminder = returnReminder(campaign);
+  if (reminder) lines.push(h('div', { className: 'alerte rappel-hub', textContent: reminder.text }));
+  lines.push(h('button', { type: 'button', id: 'finir', textContent: 'Finir la journée', onclick: () => showLayer({ kind: 'camp' }) }));
+  return lines;
 }
 
 // Bouton Boulon : bascule le mode ciblage ; grisé sans boulon ou sans PA.
