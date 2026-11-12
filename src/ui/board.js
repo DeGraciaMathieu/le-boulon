@@ -1,14 +1,16 @@
-// Dessin du plateau SVG : tuile en fond, grille calée, jetons face cachée, pion.
+// Dessin du plateau SVG : tuile en fond, grille calée, jetons, pion.
 // Lecture seule : ce module ne modifie jamais l'état, il le dessine.
 //
 // COUCHES (dans l'ordre, de bas en haut) :
 //   fond    l'image de la tuile ;
 //   grille  un polygone transparent par hexagone, data-hex = numéro ;
-//   jetons  les jetons face cachée de state.tokens et state.encounters ;
+//   jetons  les jetons suspects (cachés ou révélés) et les rencontres ;
 //   pion    le joueur.
 
 import { HEXES, neighbors, isEdge } from '../engine/hex.js';
 import { entryCost } from '../engine/actions/move.js';
+import { ENCOUNTER_CARDS } from '../engine/rules/encounters.js';
+import { isBlocked } from '../engine/rules/suspects.js';
 import { hexCenter, hexPoints } from './geometry.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -36,16 +38,16 @@ export function mountBoard(svg, { image, calage }) {
   return { svg, grid, tokens, pawn, calage };
 }
 
-// Voisins où le joueur peut entrer avec les PA qui lui restent.
+// Voisins où le joueur peut entrer avec les PA qui lui restent : ni combat en cours, ni anomalie révélée.
 export function reachableHexes(state) {
-  if (state.status !== 'playing') return [];
+  if (state.status !== 'playing' || state.combat) return [];
   return neighbors(state.player.hex)
-    .filter((n) => entryCost(state.tile.hexes[n]) <= state.ap.left);
+    .filter((n) => entryCost(state.tile.hexes[n]) <= state.ap.left && !isBlocked(state, n));
 }
 
-// Sortie possible : partie en cours et pion sur un hexagone de bord.
+// Sortie possible : partie en cours, hors combat, pion sur un hexagone de bord.
 export function canExit(state) {
-  return state.status === 'playing' && isEdge(state.player.hex);
+  return state.status === 'playing' && !state.combat && isEdge(state.player.hex);
 }
 
 export function renderBoard(board, state) {
@@ -65,17 +67,36 @@ export function renderBoard(board, state) {
   board.svg.dataset.status = state.status;
 }
 
-// Forme supposée tant que les jetons n'existent pas dans le moteur : { hex, revealed? }.
-// Un jeton révélé n'est plus face cachée : il n'est pas dessiné ici.
+// Jetons suspects en haut de l'hexagone, rencontres en bas : les deux peuvent partager une case.
+//   suspect caché  carré « ? »            révélé  type lisible, anomalie bloquante marquée ✕
+//   rencontre      rond « ! » si cachée, nom de la carte une fois révélée
 function renderTokens(board, state) {
-  const hidden = [...(state.tokens ?? []), ...(state.encounters ?? [])]
-    .filter((token) => Number.isInteger(token?.hex) && !token.revealed);
   board.tokens.replaceChildren();
-  const size = board.calage.taille * 0.36;
-  for (const token of hidden) {
+  const size = board.calage.taille * 0.42;
+  for (const token of state.tokens ?? []) {
     const { x, y } = hexCenter(token.hex, board.calage);
-    el('rect', {
-      class: 'jeton', x: x - size / 2, y: y - board.calage.taille * 0.55, width: size, height: size, rx: 4,
-    }, board.tokens);
+    const kind = token.revealed ? token.kind : 'cache';
+    const group = el('g', { class: `jeton suspect ${kind}` }, board.tokens);
+    el('rect', { x: x - size / 2, y: y - board.calage.taille * 0.62, width: size, height: size, rx: 5 }, group);
+    label(group, x, y - board.calage.taille * 0.62 + size / 2, SUSPECT_LABELS[token.revealed ? (token.anomaly ?? token.kind) : 'cache']);
+    if (token.revealed && token.kind === 'anomalie') {
+      label(group, x, y - board.calage.taille * 0.62 - 10, 'BLOQUÉ', 'bloque');
+    }
   }
+  for (const encounter of state.encounters ?? []) {
+    const { x, y } = hexCenter(encounter.hex, board.calage);
+    const revealed = encounter.card !== null;
+    const group = el('g', { class: `jeton rencontre${revealed ? ' revelee' : ''}` }, board.tokens);
+    el('circle', { cx: x, cy: y + board.calage.taille * 0.48, r: size * 0.5 }, group);
+    label(group, x, y + board.calage.taille * 0.48, revealed ? ENCOUNTER_CARDS[encounter.card].name.split(' ')[0] : '!');
+  }
+}
+
+const SUSPECT_LABELS = {
+  cache: '?', artefact: 'ART', rien: '—', electro: 'ÉLEC', gravitationnelle: 'GRAV', bruleuse: 'BRÛL',
+};
+
+function label(parent, x, y, text, cls = '') {
+  const node = el('text', { x, y, class: cls, 'text-anchor': 'middle', 'dominant-baseline': 'central' }, parent);
+  node.textContent = text;
 }

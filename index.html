@@ -4,11 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Le Boulon</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="src/ui/board.css">
 </head>
 <body>
-  <svg id="plateau" xmlns="http://www.w3.org/2000/svg"></svg>
+  <main id="table">
+    <svg id="plateau" xmlns="http://www.w3.org/2000/svg"></svg>
+    <aside id="panneau"></aside>
+    <ol id="journal" aria-live="polite"></ol>
+  </main>
   <div id="apercu" hidden></div>
+  <div id="fin" hidden>
+    <div class="fin-boite">
+      <h1 id="fin-titre"></h1>
+      <p id="fin-cause"></p>
+      <p id="fin-score"></p>
+      <p id="fin-graine"></p>
+      <div class="fin-boutons">
+        <button type="button" id="rejouer">Rejouer (même graine)</button>
+        <button type="button" id="nouvelle">Nouvelle partie</button>
+      </div>
+    </div>
+  </div>
   <script type="module" src="src/ui/main.js"></script>
 </body>
 </html>
