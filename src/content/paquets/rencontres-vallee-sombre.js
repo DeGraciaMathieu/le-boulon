@@ -11,7 +11,7 @@ export default deepFreeze({
   cards: [
     { id: 'bandits', name: 'Bandits', threat: 4, wounds: 1, hp: 2, damage: 1, type: 'humain', faction: 'bandits', count: 2 },
     { id: 'chiens', name: 'Chiens aveugles', threat: 4, wounds: 1, hp: 1, damage: 1, type: 'mutant', trophy: 'queue-chien', count: 3 },
-    { id: 'sanglier', name: 'Sanglier muté', threat: 5, wounds: 2, hp: 3, damage: 2, type: 'mutant', trophy: 'sabot' },
+    { id: 'sanglier', name: 'Sanglier muté', threat: 5, wounds: 2, hp: 2, damage: 2, type: 'mutant', trophy: 'sabot' },
     { id: 'bandits-armes', name: 'Bandits armés', threat: 6, wounds: 2, hp: 2, damage: 2, type: 'humain', faction: 'bandits', count: 2 },
     { id: 'snork', name: 'Snork', threat: 6, wounds: 2, hp: 3, damage: 2, type: 'mutant' },
     { id: 'sangsue', name: 'Suceur de sang', threat: 7, wounds: 3, hp: 4, damage: 2, type: 'mutant' },

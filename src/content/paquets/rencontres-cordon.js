@@ -13,7 +13,7 @@ export default deepFreeze({
     { id: 'chiens', name: 'Chiens aveugles', threat: 3, wounds: 1, hp: 1, damage: 1, type: 'mutant', trophy: 'queue-chien', count: 2 },
     { id: 'chair', name: 'Chair', threat: 3, wounds: 1, hp: 2, damage: 1, type: 'mutant' },
     { id: 'bandits', name: 'Bandits', threat: 4, wounds: 1, hp: 2, damage: 1, type: 'humain', faction: 'bandits', count: 2 },
-    { id: 'sanglier', name: 'Sanglier muté', threat: 4, wounds: 2, hp: 3, damage: 2, type: 'mutant', trophy: 'sabot' },
+    { id: 'sanglier', name: 'Sanglier muté', threat: 4, wounds: 2, hp: 2, damage: 2, type: 'mutant', trophy: 'sabot' },
     { id: 'militaires', name: 'Patrouille militaire', threat: 5, wounds: 2, hp: 2, damage: 1, type: 'humain', faction: 'militaires', count: 2 },
   ],
 });

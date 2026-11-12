@@ -132,6 +132,18 @@ test('respawn : sur une autre tuile, la tuile de la mort est rendue et le hub re
   assert.equal(state.world.tiles.cordon.status, 'night');
 });
 
+test('respawn : hub sur une tuile jamais visitée, la tuile est créée à la réapparition', () => {
+  const campaign = deadCampaign();
+  campaign.lastHub = 'bar';
+  assert.equal(campaign.world.tiles.rostok, undefined);
+  const { state, events } = step(campaign, { type: 'respawn' });
+  assert.ok(types(events).includes('respawned'));
+  assert.equal(state.world.currentTile, 'rostok');
+  assert.equal(state.world.hex, content.places.bar.hex);
+  assert.equal(state.world.tiles.rostok.status, 'night');
+  assert.notEqual(state.world.tiles.cordon.status, 'dead');
+});
+
 test('respawn : mort la nuit (carte Nuit), l’action reste permise', () => {
   const campaign = deadCampaign();
   campaign.screen = 'night';

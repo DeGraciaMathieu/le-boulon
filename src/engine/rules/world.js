@@ -126,7 +126,7 @@ export function campaignTile(id, tile = content.tiles[id]) {
   return { ...structuredClone(tile), noAnomaly: [...new Set([...places, ...links])].sort((a, b) => a - b) };
 }
 
-function newTileState(target, ctx) {
+export function newTileState(target, ctx) {
   const tile = campaignTile(target.tile, content.tiles[target.tile]);
   const fresh = createGame({ seed: ctx.rng.int(0, UINT32_MAX), tile: { ...tile, entry: target.hex } });
   const { seed, rng, inventory, player: { hex, wounds, radiation, stats, ...player }, ...tileState } = fresh;

@@ -33,6 +33,7 @@ import content from '../../content/index.js';
 import { dayState, storeDay } from '../campaign.js';
 import { emptyEquipment } from './equipment.js';
 import { RANKS } from './progression.js';
+import { newTileState } from './world.js';
 
 export const START_HUB = 'camp-novices';
 export const XP_KEPT = 0.1;
@@ -77,6 +78,8 @@ export function respawn(draft, _action, ctx) {
   draft.combat = null;
 
   const { tile, hex } = content.places[hub];
+  // Hub sur une tuile jamais visitée (dernier hub retenu sans y être allé) : tuile neuve.
+  draft.world.tiles[tile] ??= newTileState({ tile, hex }, ctx);
   draft.world.currentTile = tile;
   draft.world.hex = hex;
   closeDay(draft);

@@ -24,10 +24,12 @@ export default deepFreeze({
     npc: 'marchand-bunker',
     place: 'camp-novices',
     coefficient: 1.2,
-    sell: { artefact: 1.6 },
+    sell: { artefact: 1.2 },
     stock: [
       { item: 'pistolet', quantity: 1 },
+      { item: 'fusil-pompe', quantity: 1, rank: 'experimente' }, // LBL-45, docs/equilibrage.md
       { item: 'munitions', quantity: 6 },
+      { item: 'cartouches-12', quantity: 2 },
       { item: 'boulons', quantity: 5 },
       { item: 'veste-cuir', quantity: 1 },
       { item: 'echo', quantity: 1 },
@@ -59,7 +61,9 @@ export default deepFreeze({
       { item: 'ours', quantity: 2, rank: 'experimente' },
       { item: 'veles', quantity: 1, rank: 'veteran' },
       { item: 'boulons', quantity: 5 },
+      { item: 'fusil-pompe', quantity: 1 }, // LBL-45, docs/equilibrage.md
       { item: 'munitions', quantity: 4 },
+      { item: 'cartouches-12', quantity: 2 },
       { item: 'bandage', quantity: 4 },
       { item: 'trousse-soins', quantity: 2 },
       { item: 'antirad', quantity: 3 },

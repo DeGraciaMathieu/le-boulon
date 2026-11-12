@@ -13,8 +13,9 @@
 // RÈGLES, par écran :
 //   mort       respawn (mode normal, rules/death.js) : réveil au dernier hub.
 //   nuit       wake.
-//   combat v2  (rencontre de nuit) soin si les blessures atteignent le seuil, sinon tir ;
-//              replis : fuite, couverture.
+//   combat v2  (rencontre de nuit) soin si les blessures atteignent le seuil ; parlemente
+//              (humains, péage) toujours pour la prudente, si la riposte peut tuer pour la
+//              gourmande ; sinon tir ; replis : fuite, couverture.
 //   combat v1  (mode 'rapide', tuile ou lieu) se bat si la chance de gagner atteint
 //              profile.fightOdds ou si la fuite est impossible ; sinon fuit. Fuit toujours
 //              si une défaite la tuerait.
@@ -75,6 +76,7 @@ export const PROFILES = Object.freeze({
     sleepInBed: true, // finit la journée au lit d'un hub quand il est à portée
     eveningAp: 3, // marge de PA gardée pour rejoindre le lit
     approach: ['payer', 'se-faufiler', 'combattre'],
+    parley: 'toujours', // parlemente avec les humains en combat v2
     stock: { bandage: 3, ration: 2, boulons: 6, ammoBoxes: 2 },
     reserve: 300, // roubles gardés après un achat d'équipement
     buyArmor: true,
@@ -93,6 +95,7 @@ export const PROFILES = Object.freeze({
     sleepInBed: false,
     eveningAp: 0,
     approach: ['combattre', 'se-faufiler', 'payer'],
+    parley: 'en-danger', // seulement si la riposte peut tuer
     stock: { bandage: 2, ration: 2, boulons: 4, ammoBoxes: 2 },
     reserve: 0,
     buyArmor: false,
@@ -124,7 +127,17 @@ export function candidates(campaign, mind) {
 
 function roundActions(campaign, profile) {
   const healing = campaign.player.wounds >= profile.healAt && hasCategory(campaign.inventory, 'soin');
-  return [...(healing ? [{ type: 'heal' }] : []), { type: 'shoot' }, { type: 'escape' }, { type: 'take-cover' }];
+  const parley = profile.parley === 'toujours' || campaign.player.wounds + riposte(campaign.combat) >= DEATH_AT;
+  return [
+    ...(healing ? [{ type: 'heal' }] : []),
+    ...(parley ? [{ type: 'parley' }] : []),
+    { type: 'shoot' }, { type: 'escape' }, { type: 'take-cover' },
+  ];
+}
+
+// Blessures si tous les ennemis debout touchent.
+function riposte(combat) {
+  return combat.enemies.filter((enemy) => enemy.hp > 0).reduce((sum, enemy) => sum + enemy.damage, 0);
 }
 
 function quickCombat(campaign, day, profile) {

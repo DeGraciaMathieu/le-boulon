@@ -17,11 +17,11 @@ const froid = (count) => ({ id: 'froid', type: 'blessure', count, amount: 1 });
 const rodeurs = (count) => ({ id: 'rodeurs', type: 'rencontre', count });
 
 export default deepFreeze({
-  'nuit-cordon': nuit('cordon', [calme(4), vent(1), rodeurs(1)]),
-  'nuit-marais': nuit('marais', [calme(3), froid(1), vent(1), rodeurs(1)]),
-  'nuit-decharge': nuit('decharge', [calme(3), vent(2), rodeurs(1)]),
-  'nuit-agroprom': nuit('agroprom', [calme(3), vent(1), froid(1), rodeurs(1)]),
-  'nuit-vallee-sombre': nuit('vallee-sombre', [calme(2), vent(1), froid(1), rodeurs(2)]),
-  'nuit-rostok': nuit('rostok', [calme(3), vent(1), rodeurs(2)]),
-  'nuit-entrepots': nuit('entrepots', [calme(2), vent(2, 2), froid(1), rodeurs(2)]),
+  'nuit-cordon': nuit('cordon', [calme(6), vent(1), rodeurs(1)]),
+  'nuit-marais': nuit('marais', [calme(5), froid(1), vent(1), rodeurs(1)]),
+  'nuit-decharge': nuit('decharge', [calme(5), vent(2), rodeurs(1)]),
+  'nuit-agroprom': nuit('agroprom', [calme(5), vent(1), froid(1), rodeurs(1)]),
+  'nuit-vallee-sombre': nuit('vallee-sombre', [calme(4), vent(1), froid(1), rodeurs(2)]),
+  'nuit-rostok': nuit('rostok', [calme(5), vent(1), rodeurs(2)]),
+  'nuit-entrepots': nuit('entrepots', [calme(4), vent(2, 2), froid(1), rodeurs(2)]),
 });
