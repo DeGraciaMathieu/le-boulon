@@ -5,6 +5,9 @@ import { createRng } from '../src/engine/rng.js';
 import { neighbors, distance } from '../src/engine/hex.js';
 import { placeSuspects, ARTEFACT_VALUE } from '../src/engine/rules/suspects.js';
 import { countCharges, createItem } from '../src/engine/rules/sheet.js';
+import { createCampaign } from '../src/engine/campaign.js';
+import { campaignTile } from '../src/engine/rules/world.js';
+import content from '../src/content/index.js';
 
 // Tuile factice tout en herbe, entrée 14 comme Agroprom.
 function fakeTile() {
@@ -200,4 +203,34 @@ test('ramasser : refus sans artefact révélé, inventaire plein ou sans PA', ()
   const tired = setup([{ ...hidden(1, 'artefact'), revealed: true }]);
   tired.ap.left = 0;
   assert.equal(step(tired, PICKUP).events[0].reason, 'not-enough-ap');
+});
+
+// LBL-55 (4) : en campagne, pas de jeton anomalie sur l'hexagone d'un lieu ou d'une liaison.
+
+const keptClear = (id) => [
+  ...Object.values(content.places).filter((place) => place.tile === id).map((place) => place.hex),
+  ...Object.keys(content.links[id] ?? {}).map(Number),
+];
+const anomalyHexes = (tokens) => tokens.filter((t) => t.kind === 'anomalie').map((t) => t.hex);
+
+test('campagne : aucune anomalie posée sur un lieu ou une liaison, sur chaque tuile', () => {
+  for (const id of Object.keys(content.tiles)) {
+    const clear = keptClear(id);
+    for (let seed = 1; seed <= 40; seed++) {
+      const state = createGame({ seed, tile: campaignTile(id) });
+      for (const hex of anomalyHexes(state.tokens)) assert.ok(!clear.includes(hex), `${id} ${seed} : ${hex}`);
+    }
+  }
+});
+
+test('campagne : la tuile de départ et les jetons reposés suivent la même règle', () => {
+  const clear = keptClear('cordon');
+  for (let seed = 1; seed <= 40; seed++) {
+    const campaign = createCampaign({ seed });
+    const tile = campaign.world.tiles.cordon;
+    for (const hex of anomalyHexes(tile.tokens)) assert.ok(!clear.includes(hex), `${seed} : ${hex}`);
+    const board = { tile: tile.tile, player: { hex: tile.tile.entry } };
+    placeSuspects(board, createRng(seed), { original: false });
+    for (const hex of anomalyHexes(board.tokens)) assert.ok(!clear.includes(hex), `reposé ${seed} : ${hex}`);
+  }
 });

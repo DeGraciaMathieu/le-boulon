@@ -26,6 +26,15 @@
 //                                 'decouverte' | 'combat'… (texte libre, repris dans l'événement)
 //   Les montants viennent des cartes qui l'appellent (récompenses de quête, contrats…).
 //
+// XP DES COMBATS ET DES DÉCOUVERTES (§11.1) : réaction xpAfterStep (REACTIONS de campaign.js).
+//   Hypothèse v2, montants XP_GAINS :
+//   combat gagné     combat v2 'combat-ended' en 'victory', combat rapide v1 'fight' gagné
+//                    -> XP_GAINS.combat, cause 'combat'
+//   artefact         'artefact-picked' -> XP_GAINS.artefact, cause 'decouverte'
+//   lieu vidé        'place-emptied', la première fois seulement (places[id].discovered) ;
+//                    un lieu rempli par l'Émission puis revidé ne redonne rien
+//                    -> XP_GAINS.lieu, cause 'decouverte'
+//
 // ACTIONS DE CAMPAGNE (CAMPAIGN_ACTIONS de src/engine/campaign.js), 0 PA, hors combat
 // (hypothèse v2) :
 //   { type: 'raise-stat', stat }  +1 à la stat. Endurance : +1 PA tout de suite au budget du
@@ -80,6 +89,7 @@ export const START_STATS = Object.freeze({ tir: 1, survie: 1, discretion: 1, end
 export const STAT_MAX = 4;
 
 const STEALTH_BONUS = 1;
+export const XP_GAINS = Object.freeze({ combat: 10, artefact: 15, lieu: 20 });
 
 const rankIndex = (rank) => RANKS.findIndex(({ id }) => id === rank);
 const sum = (values) => values.reduce((total, value) => total + value, 0);
@@ -115,6 +125,19 @@ export function gainXp(draft, n, cause, ctx) {
   const after = rankIndex(rankOf(player.xp));
   for (let i = before + 1; i <= after; i++) ctx.emit({ type: 'rank-up', rank: RANKS[i].id });
   player.rank = RANKS[after].id;
+}
+
+export function xpAfterStep(draft, events, ctx) {
+  for (const event of events) {
+    if ((event.type === 'combat-ended' && event.outcome === 'victory') || (event.type === 'fight' && event.won)) {
+      gainXp(draft, XP_GAINS.combat, 'combat', ctx);
+    } else if (event.type === 'artefact-picked') {
+      gainXp(draft, XP_GAINS.artefact, 'decouverte', ctx);
+    } else if (event.type === 'place-emptied' && !draft.places[event.place]?.discovered) {
+      draft.places[event.place] = { ...draft.places[event.place], discovered: true };
+      gainXp(draft, XP_GAINS.lieu, 'decouverte', ctx);
+    }
+  }
 }
 
 export function raiseStat(draft, { stat }, ctx) {

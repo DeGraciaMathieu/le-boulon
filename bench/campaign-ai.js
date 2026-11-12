@@ -11,6 +11,7 @@
 //       MAIN_QUEST
 //
 // RÈGLES, par écran :
+//   mort       respawn (mode normal, rules/death.js) : réveil au dernier hub.
 //   nuit       wake.
 //   combat v2  (rencontre de nuit) soin si les blessures atteignent le seuil, sinon tir ;
 //              replis : fuite, couverture.
@@ -108,6 +109,7 @@ export function candidates(campaign, mind) {
   const { profile } = mind;
   if (mind.day !== campaign.day) Object.assign(mind, { day: campaign.day, done: [] });
   const day = dayState(campaign);
+  if (day.status === 'dead') return [{ type: 'respawn' }];
   if (campaign.combat) return roundActions(campaign, profile);
   if (campaign.screen === 'night') return [{ type: 'wake' }];
   if (day.combat) return quickCombat(campaign, day, profile);

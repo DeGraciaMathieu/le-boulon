@@ -27,6 +27,12 @@
 //   travelTarget(campaign)        -> { tile, hex } | null   liaison sous le joueur
 //   knownTiles(campaign)          -> [id]   tuiles visitées (carte du monde, carte 24)
 //   daysAway(campaign, id)        -> nombre de jours depuis le départ de la tuile, 0 si jamais quittée
+//   campaignTile(id, tile)        -> copie de la tuile pour la campagne, avec noAnomaly : les
+//                                    hexagones de ses lieux et de ses liaisons, où placeSuspects
+//                                    (rules/suspects.js) ne pose pas de jeton anomalie (une
+//                                    anomalie ne bloque ni un lieu ni la seule route vers la
+//                                    tuile voisine). createCampaign et la première visite
+//                                    d'une tuile l'utilisent ; la v1 n'a pas ce champ.
 //
 // PATROUILLES (LBL-49) : à l'arrivée, après la repose, syncPatrols (rules/patrols.js) pose les
 // jetons des patrouilles présentes sur la tuile et retire ceux des autres tuiles.
@@ -114,11 +120,17 @@ export function travel(draft, _action, ctx) {
 
 // État v1 neuf de la tuile, jetons posés hors de l'hexagone d'arrivée, sans les champs tenus
 // par la campagne (voir storeDay).
+export function campaignTile(id, tile = content.tiles[id]) {
+  const places = Object.values(content.places).filter((place) => place.tile === id).map((place) => place.hex);
+  const links = Object.keys(content.links[id] ?? {}).map(Number);
+  return { ...structuredClone(tile), noAnomaly: [...new Set([...places, ...links])].sort((a, b) => a - b) };
+}
+
 function newTileState(target, ctx) {
-  const tile = content.tiles[target.tile];
+  const tile = campaignTile(target.tile, content.tiles[target.tile]);
   const fresh = createGame({ seed: ctx.rng.int(0, UINT32_MAX), tile: { ...tile, entry: target.hex } });
   const { seed, rng, inventory, player: { hex, wounds, radiation, stats, ...player }, ...tileState } = fresh;
-  return { ...tileState, tile: structuredClone(tile), player };
+  return { ...tileState, tile, player };
 }
 
 function resetEncounters(day, target, ctx) {
