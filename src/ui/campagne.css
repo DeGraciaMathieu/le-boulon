@@ -178,7 +178,11 @@ body {
 #table.campagne #panneau {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+}
+
+#table.campagne #panneau button {
+  padding: 6px 8px;
 }
 
 #table.campagne #panneau > * {
@@ -188,6 +192,21 @@ body {
 
 #table.campagne .ecrans-boutons {
   order: -1;
+}
+
+/* La carte du monde cède la hauteur qui manque, jusqu'à son seul titre : le panneau tient dans
+   l'écran sans défiler (vue complète dans le PDA). */
+#table.campagne #panneau > section:has(> #monde) {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 1;
+  min-height: 24px;
+  overflow: hidden;
+}
+
+#table.campagne #monde {
+  flex: 0 1 auto;
+  min-height: 0;
 }
 
 #table.campagne .ecrans-boutons button {
@@ -238,8 +257,15 @@ body {
   stroke-width: 2;
 }
 
-#nouvelle {
-  align-self: flex-start;
+/* Sauvegarde et Écran titre côte à côte : une ligne de moins dans le panneau. */
+.panneau-pied {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+#sauvegarde {
+  flex: 1;
 }
 
 /* Écran Hub et Marchand (hub-view.js), à la place du plateau. */
