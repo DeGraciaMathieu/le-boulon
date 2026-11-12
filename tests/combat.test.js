@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCampaign, step, dayState } from '../src/engine/campaign.js';
 import { createItem } from '../src/engine/rules/sheet.js';
-import { enemiesOf, startCombat, COMBAT_MODES } from '../src/engine/rules/combat.js';
+import { enemiesOf, startCombat, combatOdds, parleyTerms, COMBAT_MODES } from '../src/engine/rules/combat.js';
 import items from '../src/content/objets.js';
 import factions from '../src/content/factions.js';
 import AGROPROM_ENCOUNTERS from '../src/content/paquets/rencontres-agroprom.js';
@@ -436,4 +436,32 @@ test('pur et sérialisable : l’état reçu ne bouge pas, une copie JSON rejoue
     assert.deepEqual(step(copy, action), step(campaign, action));
   }
   assert.deepEqual(campaign, before);
+});
+
+test('combatOdds : bonus du tir, défense, arme, munitions ; null hors combat', () => {
+  assert.equal(combatOdds(newCampaign()), null);
+  const campaign = fighting('solo');
+  const { tir, weapon, cover, attack, defense, coverRounds, absorb, escapeCost } = combatOdds(campaign);
+  assert.equal(weapon.kind, 'pistolet');
+  assert.equal(weapon.charges, ammoLeft(campaign, weapon.ammo));
+  assert.equal(attack, tir + weapon.bonus + cover);
+  assert.equal(defense, 4);
+  assert.deepEqual([coverRounds, absorb, escapeCost], [0, 0, 2]);
+  const covered = step(campaign, { type: 'take-cover' }).state;
+  assert.equal(combatOdds(covered).defense, 6);
+  const unarmed = fighting('solo', (c) => {
+    c.inventory = c.inventory.filter((item) => item.kind !== weapon.ammo);
+  });
+  assert.deepEqual(combatOdds(unarmed).weapon, { kind: null, bonus: -1, damage: 1, ammo: null, charges: null });
+});
+
+test('parleyTerms : annonce le résultat de parley sans rien modifier', () => {
+  assert.deepEqual(parleyTerms(fighting('meute')), { refusal: 'mutants' });
+  assert.equal(parleyTerms(fighting('solo')).refusal, 'hostile');
+  const poor = fighting('patrouille');
+  assert.deepEqual(parleyTerms(poor), { faction: 'devoir', standing: 'neutre', outcome: 'peage', toll: 100, refusal: 'not-enough-roubles' });
+  const friendly = fighting('patrouille', (c) => {
+    c.reputation.devoir = 2;
+  });
+  assert.deepEqual(parleyTerms(friendly), { faction: 'devoir', standing: 'amical', outcome: 'echange' });
 });

@@ -51,6 +51,14 @@
 //   combatRefusal(campaign, action) -> 'in-combat' : pendant un combat v2, toute autre action
 //   est refusée (appelée par step de campaign.js).
 //
+// LECTURES (pures, pour l'écran de combat, carte 27) :
+//   combatOdds(campaign) -> null | { tir, weapon: { kind, bonus, damage, ammo, charges }, cover,
+//     attack, defense, coverRounds, absorb, escapeCost }
+//     attack : bonus du tir (Tir + arme + couverture du terrain), un tir touche si
+//     1d6 + attack ≥ Menace ; defense : défense du joueur contre la riposte de ce round.
+//   parleyTerms(campaign) -> { refusal?, faction?, standing?, outcome?, toll? } : ce que
+//     donnerait parlementer maintenant (refusal : la raison du refus de parley).
+//
 // FIN DU COMBAT : tous les ennemis abattus ('victory') ; fuite ('fled') ; parlementer
 // ('peage' | 'echange' | 'fin') ; mort ('dead'). La rencontre est retirée de la tuile sauf
 // après une fuite ou la mort. Victoire : un trophée par mutant abattu qui en porte un (perdu
@@ -248,25 +256,51 @@ function resolveEscape(day, _action, ctx, draft) {
 }
 
 function resolveParley(day, _action, ctx, draft) {
-  const enemies = standingEnemies(ctx.combat);
-  if (enemies.some((enemy) => enemy.type !== 'humain')) return 'mutants';
+  const { refusal, ...terms } = parleyTerms(draft);
+  if (refusal) return refusal;
+  if (terms.toll) draft.player.roubles -= terms.toll;
+  ctx.emit({ type: 'parley', ...terms });
+  endCombat(draft, day, terms.outcome, ctx);
+}
+
+export function parleyTerms(campaign) {
+  const enemies = standingEnemies(campaign.combat);
+  if (enemies.some((enemy) => enemy.type !== 'humain')) return { refusal: 'mutants' };
   const { faction } = enemies[0];
-  const tier = faction ? standing(draft, faction) : 'neutre';
-  if (tier === 'hostile') return 'hostile';
+  const tier = faction ? standing(campaign, faction) : 'neutre';
+  if (tier === 'hostile') return { refusal: 'hostile', faction, standing: tier };
 
   let outcome = 'peage';
-  if (faction && encounterStance(draft, faction) === 'echange') {
-    outcome = isMember(draft, faction) || tier === 'allie' ? 'fin' : 'echange';
+  if (faction && encounterStance(campaign, faction) === 'echange') {
+    outcome = isMember(campaign, faction) || tier === 'allie' ? 'fin' : 'echange';
   }
-  const event = { type: 'parley', faction, standing: tier, outcome };
+  const terms = { faction, standing: tier, outcome };
   if (outcome === 'peage') {
-    const toll = TOLL_PER_ENEMY * enemies.length;
-    if (draft.player.roubles < toll) return 'not-enough-roubles';
-    draft.player.roubles -= toll;
-    event.toll = toll;
+    terms.toll = TOLL_PER_ENEMY * enemies.length;
+    if (campaign.player.roubles < terms.toll) terms.refusal = 'not-enough-roubles';
   }
-  ctx.emit(event);
-  endCombat(draft, day, outcome, ctx);
+  return terms;
+}
+
+export function combatOdds(campaign) {
+  if (!campaign.combat) return null;
+  const day = dayState(campaign);
+  const weapon = activeWeapon(day.equipment, day.inventory) ?? UNARMED;
+  const charges = weapon.ammo
+    ? day.inventory.filter((item) => item.kind === weapon.ammo).reduce((sum, item) => sum + (item.charges ?? 0), 0)
+    : null;
+  const tir = day.player.stats.tir + statBonus(day.equipment, 'tir');
+  const cover = terrainCover(day);
+  return {
+    tir,
+    weapon: { kind: weapon.kind ?? null, bonus: weapon.bonus, damage: weapon.damage, ammo: weapon.ammo, charges },
+    cover,
+    attack: tir + weapon.bonus + cover,
+    defense: defenseOf(campaign.combat, day),
+    coverRounds: campaign.combat.cover,
+    absorb: campaign.combat.absorb,
+    escapeCost: ESCAPE_COST,
+  };
 }
 
 function terrainCover(day) {

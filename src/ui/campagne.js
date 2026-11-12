@@ -9,9 +9,9 @@
 //   clic sur le pion       { type: 'travel' } si le pion est sur un hexagone de liaison ;
 //   clic droit             { type: 'bolt', target }.
 //
-// ÉCRANS : seule la tuile existe ici. Les combats de rencontre se jouent en mode 'rapide'
-// (Combattre / Fuir de la v1) tant que l'écran de combat v2 n'existe pas ; la nuit n'a que
-// le bouton Se réveiller, en attendant l'écran Réveil et nuit.
+// ÉCRANS : la tuile, et par-dessus les fenêtres Dialogue (dialogue-window.js, ouverte par
+// Parler à… sur l'hexagone d'un PNJ) et Combat v2 en rounds (combat-window.js). La nuit n'a
+// que le bouton Se réveiller, en attendant l'écran Réveil et nuit.
 //
 // GRAINE : ?seed=<entier> dans l'adresse, sinon une graine au hasard.
 
@@ -26,6 +26,10 @@ import { hexCenter } from './geometry.js';
 import { describeEvent, ITEM_NAMES } from './journal.js';
 import { linkExits, tileQuestMarkers, topBar } from './world-map.js';
 import { renderWorld } from './world-view.js';
+import { mountDialogue } from './dialogue-window.js';
+import { dialogueLine, npcsHere } from './dialogue-screen.js';
+import { mountCombat } from './combat-window.js';
+import { combatLine } from './combat-screen.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
 const USABLE = ['bandage', 'vodka', 'ration'];
@@ -69,6 +73,7 @@ const preview = document.getElementById('apercu');
 let campaign;
 let board;
 let sizes;
+let lastEvents = [];
 
 function loadSize(src) {
   return new Promise((resolve, reject) => {
@@ -98,6 +103,8 @@ function render() {
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   renderBar();
   renderCommands(day);
+  dialogueWindow.render(campaign);
+  combatWindow.render(campaign, lastEvents);
 }
 
 function mountTile(id) {
@@ -158,7 +165,9 @@ function renderCommands(day) {
   if (campaign.screen === 'night') {
     lines.push(h('div', { className: 'alerte', textContent: 'La nuit tombe.' }), button('Se réveiller', { type: 'wake' }));
   } else if (campaign.combat) {
-    lines.push(h('div', { className: 'alerte', textContent: 'Combat en cours (écran de combat à venir)' }));
+    lines.push(h('div', { className: 'alerte', textContent: 'Combat en cours' }));
+  } else if (campaign.dialogue) {
+    lines.push(h('div', { className: 'alerte', textContent: 'Dialogue en cours' }));
   } else if (day.status !== 'playing') {
     lines.push(h('div', { className: 'alerte', textContent: day.status === 'dead' ? 'Mort dans la Zone.' : 'Journée finie.' }));
   } else if (day.combat) {
@@ -169,6 +178,7 @@ function renderCommands(day) {
       button('Fuir (2 PA)', { type: 'flee' }),
     );
   } else {
+    for (const npc of npcsHere(campaign)) lines.push(button(`Parler à ${npc.name}`, { type: 'talk', npc: npc.id }));
     const token = tokenAt(day, day.player.hex);
     if (token?.revealed && token.kind === 'artefact') lines.push(button('Ramasser (1 PA)', { type: 'pickup' }));
     for (const kind of USABLE) {
@@ -186,12 +196,14 @@ function renderCommands(day) {
 
 function describe(event) {
   if (event.type === 'refused' && REFUSALS[event.reason]) return `Refusé : ${REFUSALS[event.reason]}`;
-  return CAMPAIGN_LINES[event.type]?.(event) ?? describeEvent(event);
+  return CAMPAIGN_LINES[event.type]?.(event) ?? combatLine(event) ?? dialogueLine(event) ?? describeEvent(event);
 }
 
 function appendEvents(events) {
   for (const event of events) {
-    const line = h('li', { textContent: `J${campaign.day} · ${describe(event)}` });
+    const text = describe(event);
+    if (!text) continue;
+    const line = h('li', { textContent: `J${campaign.day} · ${text}` });
     line.dataset.type = event.type;
     journal.append(line);
   }
@@ -201,6 +213,7 @@ function appendEvents(events) {
 function dispatch(action) {
   const result = step(campaign, action);
   campaign = result.state;
+  lastEvents = result.events;
   appendEvents(result.events);
   render();
 }
@@ -256,12 +269,16 @@ plateau.addEventListener('contextmenu', (event) => {
 });
 
 function start(seed) {
-  campaign = createCampaign({ seed, combatMode: 'rapide' });
+  campaign = createCampaign({ seed });
+  lastEvents = [];
   history.replaceState(null, '', `?seed=${seed}`);
   journal.replaceChildren();
   board = null;
   render();
 }
+
+const dialogueWindow = mountDialogue({ onChoose: dispatch });
+const combatWindow = mountCombat({ onAction: dispatch });
 
 document.getElementById('nouvelle').addEventListener('click', () => start(randomSeed()));
 
