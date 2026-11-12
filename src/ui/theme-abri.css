@@ -359,8 +359,6 @@ html.animations-reduites *::after {
   transition: none !important;
 }
 
-html.animations-reduites .fx-trajet,
-html.animations-reduites .fx-impact,
 html.animations-reduites .fx-anomalie {
   opacity: 0.6;
 }

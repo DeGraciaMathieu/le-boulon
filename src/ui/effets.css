@@ -121,35 +121,6 @@
   100% { opacity: 0; }
 }
 
-/* Compte à rebours de l'Émission en cours, sous le bandeau du haut. */
-.fx-compteur {
-  position: absolute;
-  top: 72px;
-  left: calc((100vw - 316px) / 2);
-  transform: translateX(-50%);
-  padding: 4px 14px;
-  border: 2px solid var(--emission);
-  background: rgb(30 8 4 / 0.9);
-  color: var(--ocre);
-  font-size: 20px;
-  font-weight: bold;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.fx-compteur[hidden] {
-  display: none;
-}
-
-.fx-compteur.tic {
-  animation: compteur 0.5s ease-out;
-}
-
-@keyframes compteur {
-  0% { transform: translateX(-50%) scale(1.4); color: var(--danger); }
-  100% { transform: translateX(-50%) scale(1); }
-}
-
 /* Signe d'Émission annoncée dans le bandeau : il bat. */
 .bandeau-emission {
   animation: pulsation 1.6s ease-in-out infinite;
@@ -193,7 +164,6 @@
   #plateau.fx-transition,
   .lieu-pile > li.fx-revele,
   #ecran.fx-reveil .ecran-carte,
-  .fx-compteur.tic,
   .bandeau-emission {
     animation: none;
   }

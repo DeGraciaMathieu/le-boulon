@@ -27,13 +27,11 @@ test('effets : annonces de l’Émission, des signes du matin à la sortie', () 
   const effects = campaignEffects([
     { type: 'weather', card: 'signes-emission' },
     { type: 'emission-started', apLeftToShelter: 3 },
-    { type: 'emission-countdown', left: 2 },
     { type: 'emission-survived', hex: 5 },
     { type: 'emission-caught' },
   ]);
-  assert.deepEqual(effects.map((effect) => effect.tone ?? effect.kind), ['signes', 'emission', 'countdown', 'abri', 'emission']);
+  assert.deepEqual(effects.map((effect) => effect.tone ?? effect.kind), ['signes', 'emission', 'abri', 'emission']);
   assert.equal(effects[1].text, '3 PA pour rejoindre un abri');
-  assert.equal(effects[2].left, 2);
 });
 
 test('effets : un vrai réveil (camp puis wake) donne l’effet de réveil du nouveau jour', () => {

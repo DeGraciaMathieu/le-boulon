@@ -27,7 +27,8 @@
 //
 // SÉQUENCEUR (sequencer.js, lot L1) : l'état final est rendu d'abord, puis le séquenceur joue les
 // animations des événements du step l'une après l'autre, avec les pas du bandeau en pistes
-// (barBeats de bar.js, dessinés par bar-view.js, lot L2). Les jets roulent dans le bac à dés
+// (barBeats de bar.js, dessinés par bar-view.js, lot L2) et ceux du plateau vivant (boardBeats de
+// plateau.js, joués par plateau-view.js, lot L6). Les jets roulent dans le bac à dés
 // (bac-view.js, lot L3), au-dessus de « Ici » ; la fenêtre de combat l'accueille pendant un combat.
 // Pendant une séquence, tout clic ou toute touche l'accélère et n'atteint pas le jeu : pas de
 // seconde action avant la fin de la première.
@@ -79,6 +80,8 @@ import { barSnapshot, barBeats } from './bar.js';
 import { mountDiceTray } from './bac-view.js';
 import { mountFiche } from './fiche-view.js';
 import { ficheBeats } from './fiche.js';
+import { mountBoardMotion } from './plateau-view.js';
+import { boardBeats } from './plateau.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -114,6 +117,7 @@ const ficheView = mountFiche(document.getElementById('fiche'), sequencer, {
   onUse: (kind) => dispatch({ type: 'use', item: kind }),
   onBolt: () => setTargeting(!targeting),
 });
+const boardMotion = mountBoardMotion({ plateau, sequencer, board: () => board });
 const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
@@ -182,6 +186,7 @@ function renderTable() {
   pda.render(campaign);
   inventory.render(campaign);
   effects.ambience(campaign);
+  boardMotion.ambience(campaign, lastEvents);
 }
 
 function mountTile(id) {
@@ -506,7 +511,9 @@ function dispatch(action) {
   appendEvents(result.events);
   afterStep(result.events, rest);
   render();
-  sequencer.play(ficheBeats(barBeats(result.events, before, barSnapshot(campaign))));
+  const beats = boardBeats(ficheBeats(barBeats(result.events, before, barSnapshot(campaign))), campaign.world.currentTile);
+  boardMotion.stage(beats);
+  sequencer.play(beats);
 }
 
 // Pendant une séquence, un clic ou une touche l'accélère et s'arrête là (phase de capture).
