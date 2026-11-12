@@ -48,7 +48,7 @@
 //                                  (rules/hubs.js)                                   carte 12
 //     npcs: { [id]: { alive, tile, place, met, helped } }  (rules/npcs.js)          carte 19
 //     quests: { [id]: questState }  (rules/quests.js)                                carte 15
-//     contracts: { [hubId]: [...] }                                                  carte 22
+//     contracts: { [hubId]: [offre] }  tableaux des hubs (rules/contracts.js)         carte 22
 //     traders: { [id]: { stock, restockDay } }  (rules/traders.js)                   carte 13
 //     reputation: { [factionId]: -3..3 }  valeurs de départ du §9 (rules/factions.js) carte 16
 //     rumors, stashes,             []                                                carte 23
@@ -116,6 +116,7 @@ import { talkTo, startingNpcs } from './rules/npcs.js';
 import { explore, boltCard, leavePlace, placesAfterStep, PLACE_OVERRIDES } from './rules/places.js';
 import { sleep, camp, wake, endDayOnExhaustion, nightRefusal } from './rules/time.js';
 import { questsAfterStep } from './rules/quests.js';
+import { contractsAfterStep } from './rules/contracts.js';
 import { enterHub, enterHubOrPlace, leaveHub, chestPut, chestTake, useService, hubsAfterStep, HUB_OVERRIDES } from './rules/hubs.js';
 import { emissionAfterStep, dropEmissionCard } from './rules/emission.js';
 
@@ -140,8 +141,9 @@ export const CAMPAIGN_ACTIONS = {
 
 // combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.
 // emissionAfterStep après endDayOnExhaustion : elle lit la nuit que celle-ci vient de poser.
-// questsAfterStep en dernier : les objectifs de quête lisent tout ce que le step a produit.
-export const REACTIONS = [combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep];
+// questsAfterStep en dernier : les objectifs de quête lisent tout ce que le step a produit ;
+// contractsAfterStep le suit pour les contrats qu'il a ratés.
+export const REACTIONS = [combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep, contractsAfterStep];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);

@@ -18,6 +18,8 @@
 //                    paquet de rencontres de la tuile, tables de butin au niveau de la tuile
 //   checkTraders     marchand au comptoir de son hub, stock, rangs et répliques connus ; un
 //                    marchand par hub qui offre le service 'marchand'
+//   checkContracts   type connu, délai [min, max], hubs à contrats, objet de livraison et de
+//                    récupération
 // Une collection absente ou vide est valide : chaque règle s'active quand sa carte arrive.
 //
 // FORMAT DU CONTENU (src/content/index.js) : un objet gelé, une clé par collection. Les
@@ -80,9 +82,10 @@
 //       Objectif 'explorer' : { place, card } (carte fixée du paquet du lieu) ; 'parler' :
 //       { npc, node }.
 //   contracts (contrats.js, §8.4)
-//       { [templateId]: { type, faction, places, reward, deadline: [min, max] } }
-//       type : 'livraison' | 'recuperation' | 'elimination' | 'escorte' | 'cartographie'.
-//       places : hubs qui l'affichent.
+//       { [templateId]: { type, faction, places, reward, deadline: [min, max], item? } }
+//       type : CONTRACT_TYPES. places : hubs qui l'affichent (service 'contrats'). faction :
+//       celle du hub. reward : base en roubles. item : colis (livraison) ou objet à rapporter
+//       (récupération), requis pour ces deux types (src/engine/rules/contracts.js).
 //   factions (factions.js, §9) { [factionId]: { name, places, joinable, start, default?, act?,
 //                                rival? } }
 //       places : bases. joinable : on peut en être membre. start : réputation de départ,
@@ -138,6 +141,8 @@ export const OBJECTIVES = Object.freeze([
 ]);
 
 export const TRADER_LINES = Object.freeze(['premiere', 'quete', 'hostile', 'neutre', 'amical', 'allie']);
+export const CONTRACT_TYPES = Object.freeze(['livraison', 'recuperation', 'elimination', 'escorte', 'cartographie']);
+const CONTRACT_ITEM_TYPES = Object.freeze(['livraison', 'recuperation']);
 
 // Champ -> [collection, libellé de l'erreur].
 const REF_FIELDS = Object.freeze({
@@ -188,6 +193,7 @@ export function validateContent(content) {
     checkDialogues,
     checkDecks,
     checkTraders,
+    checkContracts,
   ].flatMap((check) => check(content));
 }
 
@@ -550,6 +556,26 @@ function checkPlaceDeck(content, id, place, errors) {
       }
     });
   }
+}
+
+export function checkContracts(content) {
+  const errors = [];
+  for (const [id, template] of entriesOf(content, 'contracts')) {
+    const path = `contracts.${id}`;
+    if (!CONTRACT_TYPES.includes(template.type)) errors.push(`${path}.type : type inconnu « ${template.type} »`);
+    const [min, max] = template.deadline ?? [];
+    if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || min > max) {
+      errors.push(`${path}.deadline : [min, max] attendu`);
+    }
+    (template.places ?? []).forEach((place, i) => {
+      const services = content.places?.[place]?.services ?? [];
+      if (!services.includes('contrats')) errors.push(`${path}.places[${i}] : « ${place} » n’affiche pas de contrats`);
+    });
+    if (CONTRACT_ITEM_TYPES.includes(template.type) && !template.item) {
+      errors.push(`${path}.item : objet requis pour ${template.type}`);
+    }
+  }
+  return errors;
 }
 
 // Ensemble des sommets atteints depuis start en suivant nextOf.

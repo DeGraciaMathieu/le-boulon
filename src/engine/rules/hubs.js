@@ -54,8 +54,10 @@ import { usedSlots, inventorySlots } from './equipment.js';
 import { memberPerks } from './factions.js';
 import { BED_PRICE } from './time.js';
 import { trade } from './traders.js';
+import { useContractBoard } from './contracts.js';
 
-export const HUB_SERVICES = { marchand: trade };
+// Handlers en déclarations de fonctions : ils existent avant l'évaluation des modules qui s'importent.
+export const HUB_SERVICES = { marchand: trade, contrats: useContractBoard };
 
 const refuseInHub = () => 'in-hub';
 
