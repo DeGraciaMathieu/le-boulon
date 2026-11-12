@@ -34,7 +34,8 @@
 //     equipment,                   emplacements d'équipement (rules/equipment.js)    carte 9
 //     world: {
 //       tiles: { [id]: tileState } état v1 de la tuile, SANS les champs de campagne
-//                                  (voir « Une seule source de vérité »)             cartes 2, 6
+//                                  (voir « Une seule source de vérité »), créé à la
+//                                  première visite, + lastVisit (rules/world.js)     cartes 2, 6
 //       currentTile,               id de la tuile courante (clé de content.tiles)    carte 6
 //       hex,                       hexagone du joueur sur la tuile courante (1-19)
 //       weather,                   null, carte Météo du matin                        carte 7
@@ -100,6 +101,7 @@ import { join, startingReputation } from './rules/factions.js';
 import { emptyEquipment, outfit, equip, unequip } from './rules/equipment.js';
 import { raiseStat, learnPerk } from './rules/progression.js';
 import { COMBAT_MODES, combatOnReveal, combatRefusal, shoot, takeCover, grenade, heal, escape, parley } from './rules/combat.js';
+import { travel } from './rules/world.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -115,6 +117,7 @@ const START_ROUBLES = 0;
 export const CAMPAIGN_ACTIONS = {
   talk, choose, join, equip, unequip, 'raise-stat': raiseStat, 'learn-perk': learnPerk,
   shoot, 'take-cover': takeCover, grenade, heal, escape, parley,
+  travel,
 };
 
 export const REACTIONS = [combatOnReveal];

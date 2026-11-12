@@ -26,7 +26,8 @@
 //       radiation?, repaire?, faction?, pnj? } }, les 19 numéros de hex.js. terrain : TERRAINS
 //       (coûts dans src/engine/actions/move.js). lieu : étiquette ukrainienne du lieu de
 //       places posé sur l'hexagone. repaire, faction, pnj : symboles de la légende (§3.3).
-//       entry : hexagone d'arrivée v1. level : 1-4 (§5.3). calage : { cx, cy, taille } de
+//       entry : hexagone de départ v1 (l'arrivée d'un voyage est la liaison empruntée :
+//       src/engine/rules/world.js). level : 1-4 (§5.3). calage : { cx, cy, taille } de
 //       l'image. encounterCards : paquet de rencontres (src/engine/rules/tile.js).
 //   links (§3.2)             { [tileId]: { [hex]: { tile, hex } } }
 //       Les sorties de chaque tuile : sortir par l'hexagone de bord `hex` de `tileId` mène à
