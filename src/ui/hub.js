@@ -23,6 +23,9 @@
 //     forSale : rumeurs à vendre sans leur contenu (§10.3), index pour l'achat ;
 //     known : rumeurs achetées, fraîches ou périmées (stale, après l'Émission) ; opened : planque
 //     déjà fouillée (rumeur de planque seulement).
+//   knownRumors(campaign)   -> la liste known ci-dessus, lue aussi par l'onglet Rumeurs du PDA
+//   RUMOR_NAMES, rumorText(rumor), rumorAge(rumor) : nom du type, contenu (§10.3) et fraîcheur
+//     d'une rumeur, lue de knownRumors ou d'un événement du moteur
 //
 // Les refus sont recalculés ici pour griser les objets ; le moteur reste seul juge à l'action.
 
@@ -154,8 +157,28 @@ export function barmanScreen(campaign) {
       const price = rumorPrice(rumor);
       return { index, type: rumor.type, price, refusal: roubles < price ? 'not-enough-roubles' : null };
     }),
-    known: campaign.rumors.filter(({ known }) => known).map((rumor) => describeRumor(campaign, rumor)),
+    known: knownRumors(campaign),
   };
+}
+
+export const RUMOR_NAMES = Object.freeze({ planque: 'Planque', artefact: 'Artefact rare', raccourci: 'Raccourci', patrouille: 'Patrouille' });
+
+export function knownRumors(campaign) {
+  return campaign.rumors.filter(({ known }) => known).map((rumor) => describeRumor(campaign, rumor));
+}
+
+export function rumorText(rumor) {
+  const where = content.tiles[rumor.tile]?.name ?? rumor.tile;
+  if (rumor.type === 'planque') return `planque à ${where}, hexagone ${rumor.hex}${rumor.opened ? ' (fouillée)' : ''}`;
+  if (rumor.type === 'artefact') return `${itemName(rumor.item)} à ${where}, hexagone ${rumor.hex}`;
+  if (rumor.type === 'raccourci') return `raccourci à ${where} : ${rumor.path.join(' → ')}`;
+  return `patrouille à ${where}, hexagone ${rumor.hex}`;
+}
+
+export function rumorAge(rumor) {
+  if (rumor.stale) return 'Périmée : une Émission est passée';
+  if (rumor.expires === null) return `Fraîche (jour ${rumor.day})`;
+  return `Fraîche jusqu’à l’Émission du jour ${rumor.expires}`;
 }
 
 function describeRumor(campaign, rumor) {

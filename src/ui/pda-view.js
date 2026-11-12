@@ -1,22 +1,26 @@
-// Écran PDA (brief v2 §16, §8.5 ; carte 28) : onglets Quêtes, Journal, Factions, Fiche. Lit les
-// lectures de pda.js ; les seules actions envoyées sont celles de la fiche, raise-stat et
-// learn-perk (rules/progression.js).
+// Écran PDA (brief v2 §16, §8.5 ; cartes 28 et 32) : onglets Quêtes, Carte du monde, Journal,
+// Rumeurs, Factions, Fiche. Lit les lectures de pda.js ; la carte du monde est dessinée par
+// drawWorld (renderWorld de world-view.js, passé par campagne.js). Les seules actions envoyées
+// sont celles de la fiche, raise-stat et learn-perk (rules/progression.js).
 
 import { h, mountScreen } from './screen.js';
-import { PDA_TABS, pdaQuests, pdaJournal, pdaFactions, pdaSheet } from './pda.js';
+import { PDA_TABS, pdaQuests, pdaJournal, pdaRumors, pdaFactions, pdaSheet } from './pda.js';
 import { REPUTATION_MIN, REPUTATION_MAX } from '../engine/rules/factions.js';
 
 const empty = (text) => h('p', { className: 'vide', textContent: text });
 
 const TABS = {
   quetes: renderQuests,
+  carte: renderMap,
   journal: renderJournal,
+  rumeurs: renderRumors,
   factions: renderFactions,
   fiche: renderSheet,
 };
 
-// dispatch(action) : envoie une action à la campagne (campagne.js).
-export function mountPda(root, toggle, { dispatch }) {
+// dispatch(action) : envoie une action à la campagne (campagne.js) ;
+// drawWorld(svg, campaign) : dessine la carte du monde dans svg.
+export function mountPda(root, toggle, { dispatch, drawWorld }) {
   const screen = mountScreen(root, toggle, 'PDA');
   const tabs = h('nav', { className: 'onglets' });
   const content = h('div', { className: 'onglet-contenu' });
@@ -32,7 +36,7 @@ export function mountPda(root, toggle, { dispatch }) {
       textContent: label,
       onclick: () => { current = id; render(); },
     })));
-    content.replaceChildren(...TABS[current](campaign, dispatch));
+    content.replaceChildren(...TABS[current](campaign, { dispatch, drawWorld }));
   }
   return { render };
 }
@@ -56,6 +60,22 @@ function renderQuests(campaign) {
   ];
 }
 
+function renderMap(campaign, { drawWorld }) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('pda-monde');
+  drawWorld(svg, campaign);
+  return [svg, h('p', { className: 'vide', textContent: 'Grisées : tuiles jamais visitées · losanges : cibles de quête · point : vous.' })];
+}
+
+function renderRumors(campaign) {
+  const rumors = pdaRumors(campaign);
+  if (rumors.length === 0) return [empty('Aucune rumeur connue : le barman d’un hub en vend.')];
+  return [h('ul', { className: 'pda-rumeurs' }, ...rumors.map((rumor) => h('li', { className: rumor.stale ? 'perimee' : '' },
+    h('div', { className: 'quete-nom', textContent: `${rumor.name} · ${rumor.tileName}` }),
+    h('div', { textContent: `▸ ${rumor.text}` }),
+    h('div', { className: rumor.stale ? 'alerte' : 'quete-lieu', textContent: rumor.age }))))];
+}
+
 function renderJournal(campaign) {
   const lines = pdaJournal(campaign);
   if (lines.length === 0) return [empty('Journal vide.')];
@@ -77,7 +97,7 @@ function renderFactions(campaign) {
       h('td', { className: 'palier', textContent: faction.standing }))))];
 }
 
-function renderSheet(campaign, dispatch) {
+function renderSheet(campaign, { dispatch }) {
   const sheet = pdaSheet(campaign);
   const button = (label, action) => h('button', { type: 'button', textContent: label, onclick: () => dispatch(action) });
   const xp = sheet.nextRank ? `${sheet.xp} / ${sheet.nextRank.xp} XP (${sheet.nextRank.name})` : `${sheet.xp} XP`;

@@ -1,0 +1,207 @@
+/* Retours visuels de la campagne (effets-view.js) : transitions entre tuiles, révélation des
+   cartes de lieu, réveil, annonce globale de l'Émission, montée de rang. Palette et typographie
+   de terminal de la v1 (board.css). Rien ici ne capte la souris. */
+
+.effets {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  font-family: var(--mono);
+}
+
+/* Passage d'une tuile à l'autre : la nouvelle tuile sort d'un fondu vert délavé. */
+#plateau.fx-transition {
+  animation: transition-tuile 0.7s ease-out;
+}
+
+@keyframes transition-tuile {
+  0% { opacity: 0; filter: sepia(0.8) hue-rotate(40deg) brightness(0.4) blur(3px); }
+  100% { opacity: 1; filter: none; }
+}
+
+.fx-tuile {
+  position: absolute;
+  top: 40%;
+  left: calc((100vw - 316px) / 2);
+  transform: translateX(-50%);
+  padding: 6px 18px;
+  border-top: 1px solid var(--olive);
+  border-bottom: 1px solid var(--olive);
+  background: rgb(16 20 12 / 0.85);
+  color: var(--phosphore);
+  font-size: 24px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: etiquette 1s ease-out forwards;
+}
+
+@keyframes etiquette {
+  0% { opacity: 0; letter-spacing: 0.6em; }
+  25% { opacity: 1; letter-spacing: 0.25em; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Carte de lieu révélée : elle se retourne sur la pile. */
+.lieu-pile > li.fx-revele {
+  animation: revele 0.5s ease-out;
+  transform-origin: left center;
+}
+
+@keyframes revele {
+  0% { opacity: 0; transform: perspective(600px) rotateY(-80deg); background: var(--jeton); }
+  60% { opacity: 1; }
+  100% { transform: none; }
+}
+
+/* Réveil : l'écran sort du noir. */
+#ecran.fx-reveil .ecran-carte {
+  animation: reveil 0.9s ease-out;
+}
+
+@keyframes reveil {
+  0% { opacity: 0; filter: brightness(0); transform: translateY(8px); }
+  100% { opacity: 1; filter: none; transform: none; }
+}
+
+/* Annonce globale de l'Émission : une bande en travers de l'écran. */
+.fx-annonce {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 16px;
+  border-top: 2px solid var(--emission);
+  border-bottom: 2px solid var(--emission);
+  background: rgb(30 8 4 / 0.9);
+  box-shadow: 0 0 40px rgb(255 90 40 / 0.5);
+  color: var(--papier);
+  text-align: center;
+  animation: annonce-bande 2.6s ease-out forwards;
+}
+
+.fx-annonce strong {
+  color: var(--emission);
+  font-size: 30px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.fx-annonce.signes {
+  border-color: var(--rouille);
+  background: rgb(28 20 8 / 0.9);
+  box-shadow: 0 0 40px rgb(217 119 47 / 0.35);
+}
+
+.fx-annonce.signes strong {
+  color: var(--rouille);
+}
+
+.fx-annonce.abri {
+  border-color: var(--phosphore);
+  background: rgb(10 22 8 / 0.9);
+  box-shadow: 0 0 40px rgb(159 227 106 / 0.35);
+}
+
+.fx-annonce.abri strong {
+  color: var(--phosphore);
+}
+
+@keyframes annonce-bande {
+  0% { opacity: 0; transform: scaleY(0.1); }
+  12% { opacity: 1; transform: scaleY(1.1); }
+  18% { transform: none; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Compte à rebours de l'Émission en cours, sous le bandeau du haut. */
+.fx-compteur {
+  position: absolute;
+  top: 72px;
+  left: calc((100vw - 316px) / 2);
+  transform: translateX(-50%);
+  padding: 4px 14px;
+  border: 2px solid var(--emission);
+  background: rgb(30 8 4 / 0.9);
+  color: var(--ocre);
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.fx-compteur[hidden] {
+  display: none;
+}
+
+.fx-compteur.tic {
+  animation: compteur 0.5s ease-out;
+}
+
+@keyframes compteur {
+  0% { transform: translateX(-50%) scale(1.4); color: var(--danger); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* Signe d'Émission annoncée dans le bandeau : il bat. */
+.bandeau-emission {
+  animation: pulsation 1.6s ease-in-out infinite;
+}
+
+/* Montée de rang : un tampon au centre. */
+.fx-rang {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 26px;
+  border: 3px double var(--ocre);
+  background: rgb(16 20 12 / 0.9);
+  color: var(--ocre);
+  transform: translate(-50%, -50%) rotate(-4deg);
+  animation: tampon 1.6s ease-out forwards;
+}
+
+.fx-rang small {
+  color: var(--sauge);
+  text-transform: uppercase;
+}
+
+.fx-rang strong {
+  font-size: 32px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+@keyframes tampon {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-4deg) scale(2.2); }
+  20% { opacity: 1; transform: translate(-50%, -50%) rotate(-4deg) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #plateau.fx-transition,
+  .lieu-pile > li.fx-revele,
+  #ecran.fx-reveil .ecran-carte,
+  .fx-compteur.tic,
+  .bandeau-emission {
+    animation: none;
+  }
+
+  .fx-tuile,
+  .fx-annonce,
+  .fx-rang {
+    animation-duration: 0.01s;
+    animation-delay: 0.9s;
+  }
+}

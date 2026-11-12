@@ -20,6 +20,9 @@
 // SAUVEGARDE (storage.js) : autosave à chaque day-started ; emplacements 1 à 3 dans un hub ;
 // export à tout moment ; en hardcore, la mort efface les sauvegardes de la campagne.
 //
+// RETOURS VISUELS (effets-view.js, carte 32) : joués après chaque rendu, à partir des événements
+// du step ; l'ambiance d'Émission suit la campagne à chaque rendu.
+//
 // DÉMARRAGE : écran titre ; ?seed=<entier> dans l'adresse lance tout de suite une partie normale.
 
 import { createCampaign, step, dayState } from '../engine/campaign.js';
@@ -49,6 +52,7 @@ import { deathView } from '../engine/rules/death.js';
 import { canManualSave } from '../engine/rules/save.js';
 import { saves, MANUAL_SLOTS } from './storage.js';
 import { parseSeed, titleSlots, campPreview, nightView, wakeReport, daySummary, endingView } from './cycle.js';
+import { mountEffects } from './effets-view.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -110,7 +114,11 @@ const journal = document.getElementById('journal');
 const preview = document.getElementById('apercu');
 const table = document.getElementById('table');
 const placeSection = document.getElementById('lieu');
-const pda = mountPda(document.getElementById('pda'), document.getElementById('ouvrir-pda'), { dispatch });
+const pda = mountPda(document.getElementById('pda'), document.getElementById('ouvrir-pda'), {
+  dispatch,
+  drawWorld: (svg, current) => renderWorld(svg, current, { tiles: content.tiles, sizes }),
+});
+const effects = mountEffects({ plateau, place: placeSection, layer: layerSection });
 const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
@@ -170,6 +178,7 @@ function renderTable() {
   combatWindow.render(campaign, lastEvents);
   pda.render(campaign);
   inventory.render(campaign);
+  effects.ambience(campaign);
 }
 
 function mountTile(id) {
@@ -374,6 +383,7 @@ function dispatch(action) {
   appendEvents(result.events);
   afterStep(result.events);
   render();
+  effects.play(result.events);
 }
 
 const hexOf = (event) => Number(event.target.closest('[data-hex]')?.dataset.hex) || null;
@@ -452,6 +462,7 @@ function start(loaded) {
   layer = null;
   dayEvents = [];
   deathCause = null;
+  effects.reset();
   render();
 }
 
