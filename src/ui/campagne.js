@@ -32,6 +32,10 @@
 // Pendant une séquence, tout clic ou toute touche l'accélère et n'atteint pas le jeu : pas de
 // seconde action avant la fin de la première.
 //
+// FICHE (fiche-view.js, lot L4) : fiche de personnage dans la colonne de gauche ; sa ceinture de
+// soins joue { type: 'use' } comme la zone Soins, sa réserve de boulons ouvre le mode ciblage.
+// Ses pas (ficheBeats de fiche.js) suivent ceux du bandeau dans la file du séquenceur.
+//
 // OBJECTIF (objectif.js) : encart en haut du panneau, la quête suivie et sa cible ; un clic
 // met en évidence l'hexagone cible sur la tuile, ou la carte du monde si la cible est ailleurs.
 // Marqueur « ! » sur le donneur de la quête principale tant qu'elle n'est pas prise.
@@ -73,6 +77,8 @@ import { createSequencer } from './sequencer.js';
 import { mountBar } from './bar-view.js';
 import { barSnapshot, barBeats } from './bar.js';
 import { mountDiceTray } from './bac-view.js';
+import { mountFiche } from './fiche-view.js';
+import { ficheBeats } from './fiche.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -104,6 +110,10 @@ const sequencer = createSequencer();
 const effects = mountEffects({ plateau, place: placeSection, layer: layerSection, sequencer });
 const barView = mountBar(bar, sequencer);
 const diceTray = mountDiceTray(document.getElementById('bac-place'), sequencer);
+const ficheView = mountFiche(document.getElementById('fiche'), sequencer, {
+  onUse: (kind) => dispatch({ type: 'use', item: kind }),
+  onBolt: () => setTargeting(!targeting),
+});
 const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
@@ -159,6 +169,7 @@ function renderTable() {
   renderPlace(placeSection, campaign, { tile, size: sizes[campaign.world.currentTile], dispatch, events: lastEvents });
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   barView.render(campaign);
+  ficheView.render(campaign, ficheGestures(day));
   renderObjective();
   renderCommands(day);
   renderSaves();
@@ -337,6 +348,14 @@ function boltButton(day) {
   return node;
 }
 
+// Gestes permis depuis la fiche : les soins quand la zone Soins est offerte, le boulon quand
+// son bouton l'est (sur la tuile, avec de quoi payer).
+function ficheGestures(day) {
+  const open = campaign.screen !== 'night' && campaign.screen !== 'hub' && !campaign.combat && !campaign.dialogue
+    && day.status === 'playing' && !day.combat;
+  return { open, bolt: open && campaign.screen !== 'place' && day.ap.left >= BOLT_COST, targeting };
+}
+
 function setTargeting(next) {
   targeting = next;
   render();
@@ -487,7 +506,7 @@ function dispatch(action) {
   appendEvents(result.events);
   afterStep(result.events, rest);
   render();
-  sequencer.play(barBeats(result.events, before, barSnapshot(campaign)));
+  sequencer.play(ficheBeats(barBeats(result.events, before, barSnapshot(campaign))));
 }
 
 // Pendant une séquence, un clic ou une touche l'accélère et s'arrête là (phase de capture).

@@ -48,10 +48,22 @@ body {
   font-weight: bold;
 }
 
+/* Grille de la table : fiche de personnage à gauche (fiche.css), plateau et journal au centre,
+   panneau à droite. */
 #table.campagne {
   flex: 1;
   height: auto;
   min-height: 0;
+  grid-template-columns: 228px minmax(0, 1fr) 300px;
+  grid-template-areas: "fiche plateau panneau" "fiche journal panneau";
+}
+
+@media (max-width: 800px) {
+  #table.campagne {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto 160px;
+    grid-template-areas: "plateau" "fiche" "panneau" "journal";
+  }
 }
 
 /* Tuile : liaisons et cibles de quête. */
