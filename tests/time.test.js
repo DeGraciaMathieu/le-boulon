@@ -374,7 +374,8 @@ test('nouveau jour : boisson énergétique de nouveau permise, paquet Zone remé
   const day = dayState(state);
   assert.equal(day.ap.boosted, undefined);
   assert.equal(day.zone.deck.length, createCampaign({ seed: 1 }).world.tiles.cordon.zone.deck.length);
-  assert.ok(day.zone.deck.includes('emission'));
+  // Carte 8 : hors du jour annoncé, le paquet du jour n'a pas de carte Émission (tests/emission.test.js).
+  assert.ok(!day.zone.deck.includes('emission'));
   assert.equal(day.zone.emissionPassed, false);
 });
 

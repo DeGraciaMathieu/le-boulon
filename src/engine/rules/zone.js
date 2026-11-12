@@ -20,7 +20,9 @@
 //     carte piochée), élargies à nbPioches - 1 si nbPioches ≥ 2 pour garder au moins 2 positions.
 //   Exemple : 10 PA -> 3 pioches -> Émission en 2e ou 3e pioche.
 //
-// MISE EN PLACE : setupZone(game) -> game   mélange le paquet (avance game.rng)
+// MISE EN PLACE : setupZone(game, { emission = true }) -> game   mélange le paquet (avance
+//   game.rng) ; emission false : paquet sans la carte Émission (jours sans Émission de la
+//   campagne, rules/emission.js).
 //
 // BRANCHEMENT (src/engine/game.js) :
 //   zoneRefusal(state, action) -> 'fog' | undefined   boulon refusé sous le brouillard
@@ -78,11 +80,13 @@ const CACHE_ITEMS = ['bandage', 'vodka', 'ration'];
 
 export const ZONE_DECK_SIZE = TILE_DEFAULTS.zone.length + 1;
 
-export function setupZone(game) {
+export function setupZone(game, { emission = true } = {}) {
   const rng = createRng(game.rng);
   const deck = rng.shuffle(zoneCards(game.tile));
-  const { first, last } = emissionPositions(game.ap.max, deck.length + 1);
-  deck.splice(rng.int(first - 1, last - 1), 0, 'emission');
+  if (emission) {
+    const { first, last } = emissionPositions(game.ap.max, deck.length + 1);
+    deck.splice(rng.int(first - 1, last - 1), 0, 'emission');
+  }
   game.zone = { deck, fog: false, emission: null, emissionPassed: false };
   game.rng = rng.state();
   return game;
