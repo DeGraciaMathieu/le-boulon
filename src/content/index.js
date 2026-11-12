@@ -10,6 +10,7 @@
 //   perks    { [id]: savoir-faire } (src/content/savoir-faire.js)       carte 17 (Progression)
 //   links    liaisons entre tuiles (§3.2)                                carte 5
 //   places   lieux des tuiles (§3.4)                                     carte 5
+//   decks    { [id]: paquet } (src/content/paquets/) : Nuit, Météo       carte 7 (Temps)
 //
 // src/engine/data/agroprom.js reste l'Agroprom v1 de l'interface et du banc ; la v2 est
 // src/content/tuiles/agroprom.js.
@@ -28,6 +29,8 @@ import places from './lieux.js';
 import factions from './factions.js';
 import items from './objets.js';
 import perks from './savoir-faire.js';
+import nuit from './paquets/nuit.js';
+import meteo from './paquets/meteo.js';
 import { deepFreeze } from './freeze.js';
 
 export default deepFreeze({
@@ -37,4 +40,5 @@ export default deepFreeze({
   factions,
   items,
   perks,
+  decks: { ...nuit, ...meteo },
 });

@@ -29,7 +29,7 @@
 //
 // ACTION JOUEUR { type: 'use', item } : tout objet du catalogue avec un champ use. 1 PA (ou
 //   use.cost), consomme l'objet. Soins : blessures (bandage : 2 avec Infirmier) ; antiradiations : radiations ;
-//   nourriture : sans effet tant que la faim n'existe pas (carte 7) ; boisson énergétique :
+//   nourriture : sans effet en journée, le repas se prend au réveil (rules/time.js) ; boisson énergétique :
 //   +2 PA restants, une fois par jour (ap.boosted, remis à zéro avec le budget de PA).
 //   Refus : 'not-usable' | 'no-item' | 'not-enough-ap' | 'once-per-day'.
 //
@@ -51,8 +51,8 @@ const TOUGH_TRACK_MAX = 7;
 const THICK_SKIN = 1;
 const MEDIC_BANDAGE_WOUNDS = -2;
 export const INVENTORY_SLOTS = BASE_INVENTORY_SLOTS;
-const WOUND_PENALTY_AT = 4;
-const RADIATION_RESET = 3;
+export const WOUND_PENALTY_AT = 4;
+export const RADIATION_RESET = 3;
 
 export const ITEMS = catalog;
 

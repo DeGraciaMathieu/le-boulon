@@ -53,9 +53,9 @@
 //   infirmier     le bandage soigne 2 blessures (pas la trousse)
 //                                                use, rules/sheet.js
 //   mule          +3 cases                       inventorySlots, rules/equipment.js
+//   fantome       +1 Discrétion la nuit ou sous la pluie
+//                                                conditionsBonus, rules/time.js (skillCheck)
 // SAVOIR-FAIRE EXPOSÉS, À BRANCHER PAR LEUR CARTE :
-//   fantome       stealthBonus(state, { night, rain }) à ajouter au test de Discrétion
-//                 (ctx.check('discretion', extra)) quand la nuit et la météo existent (carte 7).
 //   fouilleur     carte 10 (lieux) : le premier « explorer » de chaque lieu coûte 0 PA si
 //                 hasPerk(campaign, 'fouilleur') ; marquer le lieu dans places[id] (l'état du
 //                 lieu dit si la gratuité est prise).
