@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="src/ui/campagne.css">
   <link rel="stylesheet" href="src/ui/lieu.css">
   <link rel="stylesheet" href="src/ui/fenetres.css">
+  <link rel="stylesheet" href="src/ui/pda.css">
 </head>
 <body>
   <header id="bandeau" aria-live="polite"></header>
@@ -22,11 +23,17 @@
         <svg id="monde" xmlns="http://www.w3.org/2000/svg"></svg>
       </section>
       <section id="commandes" class="commandes"></section>
+      <div class="ecrans-boutons">
+        <button type="button" id="ouvrir-pda">PDA</button>
+        <button type="button" id="ouvrir-inventaire">Inventaire</button>
+      </div>
       <button type="button" id="nouvelle">Nouvelle campagne</button>
     </aside>
     <ol id="journal" aria-live="polite"></ol>
   </main>
   <div id="apercu" hidden></div>
+  <section id="pda" hidden></section>
+  <section id="inventaire" hidden></section>
   <script type="module" src="src/ui/campagne.js"></script>
 </body>
 </html>

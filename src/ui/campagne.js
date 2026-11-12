@@ -12,8 +12,9 @@
 //
 // ÉCRANS : la tuile, le lieu (place-view.js, carte 25) et l'écran Hub de hub-view.js à la
 // place du plateau pendant une visite ; par-dessus, les fenêtres Dialogue (dialogue-window.js,
-// ouverte par Parler à… sur l'hexagone d'un PNJ) et Combat v2 en rounds (combat-window.js).
-// La nuit n'a que le bouton Se réveiller, en attendant l'écran Réveil et nuit.
+// ouverte par Parler à… sur l'hexagone d'un PNJ), Combat v2 en rounds (combat-window.js),
+// PDA (pda-view.js) et Inventaire (inventory-view.js). La nuit n'a que le bouton Se réveiller,
+// en attendant l'écran Réveil et nuit.
 //
 // GRAINE : ?seed=<entier> dans l'adresse, sinon une graine au hasard.
 
@@ -36,6 +37,10 @@ import { mountDialogue } from './dialogue-window.js';
 import { dialogueLine, npcsHere } from './dialogue-screen.js';
 import { mountCombat } from './combat-window.js';
 import { combatLine } from './combat-screen.js';
+import { mountPda } from './pda-view.js';
+import { mountInventory } from './inventory-view.js';
+import { PDA_LINES } from './pda.js';
+import { INVENTORY_LINES } from './inventory.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
 const USABLE = ['bandage', 'vodka', 'ration'];
@@ -65,6 +70,8 @@ const CAMPAIGN_LINES = {
   'quest-failed': (e) => `Quête ratée : ${questName(e.quest)}`,
   ...HUB_LINES,
   ...PLACE_LINES,
+  ...PDA_LINES,
+  ...INVENTORY_LINES,
 };
 
 const REFUSALS = {
@@ -91,6 +98,8 @@ const journal = document.getElementById('journal');
 const preview = document.getElementById('apercu');
 const table = document.getElementById('table');
 const placeSection = document.getElementById('lieu');
+const pda = mountPda(document.getElementById('pda'), document.getElementById('ouvrir-pda'), { dispatch });
+const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
 let board;
@@ -135,6 +144,8 @@ function render() {
   if (inHub) renderHub(hubSection, campaign, { dispatch, refresh: render });
   dialogueWindow.render(campaign);
   combatWindow.render(campaign, lastEvents);
+  pda.render(campaign);
+  inventory.render(campaign);
 }
 
 function mountTile(id) {
