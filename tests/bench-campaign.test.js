@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCampaign, step, dayState, storeDay } from '../src/engine/campaign.js';
 import { candidates, createMind, PROFILES } from '../bench/campaign-ai.js';
+import { startCombat } from '../src/engine/rules/combat.js';
 import { playCampaign, runCampaignBench, formatCampaignReport } from '../bench/campaign.js';
 
 const SHORT = { campaigns: 2, days: 4, seed: 3 };
@@ -77,4 +78,31 @@ test('banc de campagne : les morts réapparaissent, la campagne continue et le r
   for (const p of Object.values(report.profiles)) {
     assert.ok('deaths' in p && 'respawns' in p);
   }
+});
+
+// LBL-56 : la nuit, la fuite coûte 1 blessure et 0 PA ; l'IA s'en sert.
+
+function nightFight(card, wounds) {
+  const campaign = createCampaign({ seed: 1, combatMode: 'rapide' });
+  campaign.screen = 'night';
+  campaign.night = { rest: 'decouvert', cardDrawn: true };
+  campaign.player.wounds = wounds;
+  startCombat(campaign, { hex: campaign.world.hex, card }, { emit() {} });
+  return campaign;
+}
+
+test('IA de campagne : en combat de nuit, la prudente fuit, la gourmande seulement en danger', () => {
+  const fleesFirst = (campaign, profile) => {
+    const types = candidates(campaign, createMind(PROFILES[profile])).map((action) => action.type);
+    return types.indexOf('escape') < types.indexOf('shoot');
+  };
+  assert.equal(fleesFirst(nightFight('chiens', 0), 'prudente'), true);
+  assert.equal(fleesFirst(nightFight('chiens', 0), 'gourmande'), false);
+  assert.equal(fleesFirst(nightFight('chiens', 4), 'gourmande'), true);
+  // La blessure de la fuite tuerait : l'IA se bat.
+  assert.equal(fleesFirst(nightFight('chiens', 5), 'prudente'), false);
+  // Le jour, rien ne change : le tir passe avant la fuite.
+  const day = createCampaign({ seed: 1, combatMode: 'rapide' });
+  startCombat(day, { hex: day.world.hex, card: 'chiens' }, { emit() {} });
+  assert.equal(fleesFirst(day, 'prudente'), false);
 });

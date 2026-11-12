@@ -361,6 +361,47 @@ test('fuir sans 2 PA : not-enough-ap', () => {
   assert.equal(refusal(campaign, { type: 'escape' }), 'not-enough-ap');
 });
 
+// LBL-56 : la nuit, la fuite est toujours permise, sans PA ni test, contre 1 blessure.
+const atNight = (c) => {
+  c.screen = 'night';
+  c.night = { rest: 'decouvert', cardDrawn: true };
+  c.world.tiles.test.ap.left = 0;
+  c.world.tiles.test.status = 'playing';
+};
+
+test('fuir de nuit : 0 PA, 1 blessure, pas de test, retour à l’écran nuit sur place', () => {
+  const campaign = fighting('patrouille', atNight);
+  const { state, events } = step(campaign, { type: 'escape' });
+  assert.equal(one(events, 'check'), undefined);
+  assert.equal(ofType(events, 'enemy-attack').length, 0);
+  assert.deepEqual(one(events, 'wounded'), { type: 'wounded', amount: 1, cause: 'fuite' });
+  assert.deepEqual(one(events, 'fled'), { type: 'fled', from: START_HEX, to: START_HEX, cost: 0, wounds: 1 });
+  assert.equal(one(events, 'combat-ended').outcome, 'fled');
+  assert.equal(state.player.wounds, campaign.player.wounds + 1);
+  assert.equal(state.world.hex, START_HEX);
+  assert.equal(dayState(state).ap.left, 0);
+  assert.equal(state.combat, null);
+  assert.equal(state.screen, 'night');
+  assert.equal(step(state, { type: 'wake' }).state.screen, 'tile');
+});
+
+test('fuir de nuit : la blessure peut tuer', () => {
+  const campaign = fighting('solo', (c) => {
+    atNight(c);
+    c.player.wounds = 5;
+  });
+  const { events } = step(campaign, { type: 'escape' });
+  assert.equal(one(events, 'died').cause, 'fuite');
+  assert.equal(one(events, 'combat-ended').outcome, 'dead');
+});
+
+test('fuir de jour : la règle ne change pas', () => {
+  const campaign = fighting('solo');
+  assert.equal(combatOdds(campaign).escapeWounds, 0);
+  assert.equal(combatOdds(fighting('solo', atNight)).escapeCost, 0);
+  assert.equal(combatOdds(fighting('solo', atNight)).escapeWounds, 1);
+});
+
 test('victoire : rencontre retirée, écran rendu, pas de riposte', () => {
   const campaign = fighting('solo');
   const { state, events } = stepUntil(campaign, SHOOT, (e) => one(e, 'shot').hit);

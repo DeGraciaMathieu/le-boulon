@@ -15,7 +15,8 @@
 //   nuit       wake.
 //   combat v2  (rencontre de nuit) soin si les blessures atteignent le seuil ; parlemente
 //              (humains, péage) toujours pour la prudente, si la riposte peut tuer pour la
-//              gourmande ; sinon tir ; replis : fuite, couverture.
+//              gourmande ; puis fuite (1 blessure la nuit, LBL-56) selon profile.nightEscape,
+//              jamais si cette blessure tue ; sinon tir ; replis : fuite, couverture.
 //   combat v1  (mode 'rapide', tuile ou lieu) se bat si la chance de gagner atteint
 //              profile.fightOdds ou si la fuite est impossible ; sinon fuit. Fuit toujours
 //              si une défaite la tuerait.
@@ -77,6 +78,7 @@ export const PROFILES = Object.freeze({
     eveningAp: 3, // marge de PA gardée pour rejoindre le lit
     approach: ['payer', 'se-faufiler', 'combattre'],
     parley: 'toujours', // parlemente avec les humains en combat v2
+    nightEscape: 'toujours', // fuit un combat de nuit (1 blessure)
     stock: { bandage: 3, ration: 2, boulons: 6, ammoBoxes: 2 },
     reserve: 300, // roubles gardés après un achat d'équipement
     buyArmor: true,
@@ -96,6 +98,7 @@ export const PROFILES = Object.freeze({
     eveningAp: 0,
     approach: ['combattre', 'se-faufiler', 'payer'],
     parley: 'en-danger', // seulement si la riposte peut tuer
+    nightEscape: 'en-danger',
     stock: { bandage: 2, ration: 2, boulons: 4, ammoBoxes: 2 },
     reserve: 0,
     buyArmor: false,
@@ -127,10 +130,15 @@ export function candidates(campaign, mind) {
 
 function roundActions(campaign, profile) {
   const healing = campaign.player.wounds >= profile.healAt && hasCategory(campaign.inventory, 'soin');
-  const parley = profile.parley === 'toujours' || campaign.player.wounds + riposte(campaign.combat) >= DEATH_AT;
+  const { wounds } = campaign.player;
+  const danger = wounds + riposte(campaign.combat) >= DEATH_AT;
+  const parley = profile.parley === 'toujours' || danger;
+  const night = campaign.combat.previousScreen === 'night';
+  const flee = night && wounds + 1 < DEATH_AT && (profile.nightEscape === 'toujours' || danger);
   return [
     ...(healing ? [{ type: 'heal' }] : []),
     ...(parley ? [{ type: 'parley' }] : []),
+    ...(flee ? [{ type: 'escape' }] : []),
     { type: 'shoot' }, { type: 'escape' }, { type: 'take-cover' },
   ];
 }
