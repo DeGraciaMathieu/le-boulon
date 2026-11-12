@@ -33,21 +33,18 @@ import { encounterCards } from '../engine/rules/tile.js';
 import content from '../content/index.js';
 import { mountBoard, renderBoard, reachableHexes, el } from './board.js';
 import { hexCenter } from './geometry.js';
-import { describeEvent, ITEM_NAMES } from './journal.js';
+import { journalLine, journalLevel, ITEM_NAMES } from './journal.js';
 import { linkExits, tileQuestMarkers, topBar } from './world-map.js';
 import { renderWorld } from './world-view.js';
-import { renderHub, HUB_LINES, HUB_REFUSALS } from './hub-view.js';
+import { renderHub } from './hub-view.js';
 import { hubAt } from '../engine/rules/hubs.js';
-import { PLACE_LINES, placeEntry, tilePlaces } from './place.js';
+import { placeEntry, tilePlaces } from './place.js';
 import { renderPlace, renderPlaceMarks } from './place-view.js';
 import { mountDialogue } from './dialogue-window.js';
-import { dialogueLine, npcsHere } from './dialogue-screen.js';
+import { npcsHere } from './dialogue-screen.js';
 import { mountCombat } from './combat-window.js';
-import { combatLine } from './combat-screen.js';
 import { mountPda } from './pda-view.js';
 import { mountInventory } from './inventory-view.js';
-import { PDA_LINES } from './pda.js';
-import { INVENTORY_LINES } from './inventory.js';
 import { deathView } from '../engine/rules/death.js';
 import { canManualSave } from '../engine/rules/save.js';
 import { saves, MANUAL_SLOTS } from './storage.js';
@@ -59,46 +56,6 @@ const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Mar
 const USABLE = ['bandage', 'vodka', 'ration'];
 
 const tileName = (id) => content.tiles[id].name;
-// Un contrat est une quête générée : son nom est dans la campagne (rules/contracts.js).
-const questName = (id) => content.quests[id]?.name ?? campaign.quests[id]?.quest?.name ?? id;
-
-// Lignes du journal pour les événements de campagne ; les autres passent par la v1.
-const CAMPAIGN_LINES = {
-  traveled: (e) => `Voyage : ${tileName(e.from.tile)} → ${tileName(e.to.tile)} (${e.cost} PA)${e.firstVisit ? ', première visite' : ''}`,
-  'encounter-revealed': (e) => {
-    const card = encounterCards(content.tiles[campaign.world.currentTile])[e.card];
-    return `Rencontre : ${card?.name ?? e.card} (Menace ${card?.threat}) · combat !`;
-  },
-  'encounters-reset': (e) => `${tileName(e.tile)} : les rencontres ont bougé`,
-  'day-ended': () => 'La journée est finie',
-  'night-card': (e) => `Carte Nuit : ${e.card}`,
-  'night-encounter': () => 'Rencontre de nuit',
-  weather: (e) => `Météo : ${e.card}`,
-  meal: (e) => `Repas : ${ITEM_NAMES[e.item] ?? e.item}`,
-  hunger: (e) => `Faim : ${e.days} jour(s) sans manger`,
-  'day-started': (e) => `Jour ${e.day} : ${e.ap} PA`,
-  'quest-started': (e) => `Quête : ${questName(e.quest)}`,
-  'quest-step': (e) => `Quête ${questName(e.quest)} : nouvelle étape`,
-  'quest-completed': (e) => `Quête terminée : ${questName(e.quest)}`,
-  'quest-failed': (e) => `Quête ratée : ${questName(e.quest)}`,
-  respawned: (e) => `Réveil au ${content.places[e.hub].name} : inventaire perdu, XP ${e.xp.before} → ${e.xp.after}`,
-  ...HUB_LINES,
-  ...PLACE_LINES,
-  ...PDA_LINES,
-  ...INVENTORY_LINES,
-};
-
-const REFUSALS = {
-  ...HUB_REFUSALS,
-  'not-a-link': 'pas sur un hexagone de liaison',
-  night: "c'est la nuit : se réveiller d'abord",
-  'in-place': "dans un lieu : le quitter d'abord",
-  'place-occupied': 'lieu occupé : combattre, se faufiler ou payer',
-  'not-enough-roubles': 'pas assez de roubles',
-  'not-enough-ap': 'pas assez de PA',
-  'no-bolt': 'plus de boulons',
-  fog: 'brouillard : le boulon ne sert à rien',
-};
 
 const params = new URLSearchParams(location.search);
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
@@ -111,6 +68,7 @@ const commandsPanel = document.getElementById('commandes');
 const savePanel = document.getElementById('sauvegarde');
 const layerSection = document.getElementById('ecran');
 const journal = document.getElementById('journal');
+const journalFilter = document.getElementById('journal-filtre');
 const preview = document.getElementById('apercu');
 const table = document.getElementById('table');
 const placeSection = document.getElementById('lieu');
@@ -243,7 +201,7 @@ function renderCommands(day) {
   } else if (campaign.dialogue) {
     lines.push(h('div', { className: 'alerte', textContent: 'Dialogue en cours' }));
   } else if (campaign.screen === 'hub') {
-    lines.push(h('div', { className: 'aide', textContent: 'Dans le hub : onglets à gauche' }));
+    lines.push(h('div', { className: 'aide', textContent: 'Dans le hub : onglets en haut' }));
   } else if (day.status !== 'playing') {
     lines.push(h('div', { className: 'alerte', textContent: day.status === 'dead' ? 'Mort dans la Zone.' : 'Journée finie.' }));
   } else if (day.combat) {
@@ -294,7 +252,7 @@ function renderSaves() {
 }
 
 function report(result, success) {
-  appendLine(result.ok ? success : `Refusé : ${result.error}`, 'save');
+  appendLine(result.ok ? success : `Refusé : ${result.error}`, 'save', result.ok ? 'detail' : 'important');
 }
 
 function renderLayer() {
@@ -357,24 +315,34 @@ function afterStep(events) {
   if (events.some((event) => event.type === 'quest-completed' && event.quest === 'le-guide')) layer = { kind: 'ending' };
 }
 
-function describe(event) {
-  if (event.type === 'refused' && REFUSALS[event.reason]) return `Refusé : ${REFUSALS[event.reason]}`;
-  return CAMPAIGN_LINES[event.type]?.(event) ?? combatLine(event) ?? dialogueLine(event) ?? describeEvent(event);
-}
-
 function appendEvents(events) {
   for (const event of events) {
-    const text = describe(event);
-    if (text) appendLine(text, event.type);
+    const text = journalLine(event, campaign);
+    if (text) appendLine(text, event.type, journalLevel(event));
   }
 }
 
-function appendLine(text, type) {
+function appendLine(text, type, level = 'detail') {
   const line = h('li', { textContent: `J${campaign.day} · ${text}` });
   line.dataset.type = type;
+  line.dataset.level = level;
   journal.append(line);
   journal.scrollTop = journal.scrollHeight;
 }
+
+// Filtre Tout / Important : les lignes de détail restent dans le journal, masquées.
+function filterJournal(choice) {
+  journal.classList.toggle('importants', choice === 'important');
+  for (const button of journalFilter.querySelectorAll('button')) {
+    button.setAttribute('aria-pressed', String(button.dataset.filtre === choice));
+  }
+  journal.scrollTop = journal.scrollHeight;
+}
+
+journalFilter.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-filtre]');
+  if (button) filterJournal(button.dataset.filtre);
+});
 
 function dispatch(action) {
   const result = step(campaign, action);

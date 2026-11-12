@@ -311,3 +311,45 @@ body {
 .hub-contrat.perimee {
   opacity: 0.5;
 }
+
+/* Journal à deux niveaux : l'important ressort, le détail reste en gris (filtre Important). */
+#journal li[data-level="detail"] {
+  color: var(--sauge-sombre);
+  text-shadow: none;
+}
+
+#journal li[data-level="important"] {
+  font-weight: bold;
+}
+
+#journal li[data-type^="quest"] {
+  color: var(--ocre);
+}
+
+#journal.importants li[data-level="detail"] {
+  display: none;
+}
+
+#journal-filtre {
+  grid-area: journal;
+  align-self: start;
+  justify-self: end;
+  display: flex;
+  gap: 4px;
+  margin: 4px 18px 0 0;
+  z-index: 1;
+}
+
+#journal-filtre button {
+  padding: 1px 8px;
+  border: 1px solid var(--olive-sombre);
+  background: var(--pda);
+  color: var(--sauge-sombre);
+  font: 11px var(--mono);
+  cursor: pointer;
+}
+
+#journal-filtre button[aria-pressed="true"] {
+  border-color: var(--phosphore);
+  color: var(--phosphore);
+}
