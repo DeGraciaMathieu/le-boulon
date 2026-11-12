@@ -48,12 +48,10 @@ export function tileQuestMarkers(campaign) {
     .map(({ hex, quest, name }) => ({ hex, quest, name }));
 }
 
-// Hypothèse v2 : l'Émission est « annoncée » dès que son jour est fixé et pas encore passé,
-// et pendant le jour même.
+// Le bandeau ne s'allume que le jour même (world.emission.today) : la carte Météo l'annonce le matin.
 export function topBar(campaign) {
   const { ap } = dayState(campaign);
   const { player, world } = campaign;
-  const { nextDay, today } = world.emission ?? {};
   return {
     day: campaign.day,
     tile: content.tiles[world.currentTile].name,
@@ -63,7 +61,7 @@ export function topBar(campaign) {
     radiation: player.radiation,
     hunger: player.hunger,
     roubles: player.roubles,
-    emission: Boolean(today) || (nextDay != null && nextDay >= campaign.day),
+    emission: Boolean(world.emission?.today),
   };
 }
 

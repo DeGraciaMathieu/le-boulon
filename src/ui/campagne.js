@@ -51,7 +51,7 @@ import { INVENTORY_LINES } from './inventory.js';
 import { deathView } from '../engine/rules/death.js';
 import { canManualSave } from '../engine/rules/save.js';
 import { saves, MANUAL_SLOTS } from './storage.js';
-import { parseSeed, titleSlots, campPreview, nightView, wakeReport, daySummary, endingView } from './cycle.js';
+import { parseSeed, titleSlots, campPreview, nightView, wakeReport, daySummary, endingView, returnReminder } from './cycle.js';
 import { mountEffects } from './effets-view.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
@@ -126,7 +126,9 @@ let board;
 let sizes;
 let lastEvents = [];
 // Écran de la couche choisi par l'interface : { kind: 'title', error? } | { kind: 'camp' }
-// | { kind: 'wake', report } | { kind: 'ending' } ; la nuit et la mort viennent de la campagne.
+// | { kind: 'night-fight' } | { kind: 'wake', report } | { kind: 'ending' } ; la nuit et la mort
+// viennent de la campagne. 'night-fight' : combat de nuit ouvert par le réveil ; l'écran nuit reste
+// caché et Continuer, à la fin du combat, finit le réveil (un seul « Se réveiller »).
 let layer = null;
 // Événements depuis le dernier réveil : le résumé de la journée à l'écran nuit.
 let dayEvents = [];
@@ -230,7 +232,7 @@ function renderBar() {
     item('Faim', data.hunger, data.hunger > 0 ? 'alerte' : ''),
     item('Roubles', data.roubles),
   );
-  if (data.emission) bar.append(h('div', { className: 'bandeau-emission', textContent: 'ÉMISSION ANNONCÉE' }));
+  if (data.emission) bar.append(h('div', { className: 'bandeau-emission', textContent: "ÉMISSION AUJOURD'HUI : restez près d'un abri" }));
 }
 
 function renderCommands(day) {
@@ -271,6 +273,8 @@ function renderCommands(day) {
     if (target) lines.push(button(`Passer à ${tileName(target.tile)} (1 PA)`, { type: 'travel' }));
     const hub = hubAt(campaign);
     if (hub) lines.push(button(`Entrer : ${content.places[hub].name}`, { type: 'enter-hub' }));
+    const reminder = returnReminder(campaign);
+    if (reminder) lines.push(h('div', { className: 'alerte rappel-hub', textContent: reminder.text }));
     lines.push(h('button', { type: 'button', id: 'finir', textContent: 'Finir la journée', onclick: () => showLayer({ kind: 'camp' }) }));
     lines.push(h('div', { className: 'aide', textContent: 'Clic : se déplacer · clic sur le pion : entrer dans le lieu ou voyager · clic droit : boulon' }));
   }
@@ -309,6 +313,7 @@ function chooseLayer() {
   if (death) return () => renderDeath(layerSection, death, deathCause, { respawn: () => dispatch({ type: 'respawn' }), title: () => showLayer({ kind: 'title' }) });
   if (layer?.kind === 'ending') return () => renderEnding(layerSection, endingView(campaign), { close: () => showLayer(null), title: () => showLayer({ kind: 'title' }) });
   const night = nightView(campaign);
+  if (night && layer?.kind === 'night-fight') return null;
   if (night) return () => renderNight(layerSection, night, daySummary(dayEvents), { wake: () => dispatch({ type: 'wake' }) });
   if (layer?.kind === 'camp') return () => renderCamp(layerSection, campPreview(campaign), { confirm: () => { layer = null; dispatch({ type: 'camp' }); }, cancel: () => showLayer(null) });
   if (layer?.kind === 'wake') return () => renderWake(layerSection, layer.report, { close: () => showLayer(null) });
@@ -340,21 +345,30 @@ const titleHandlers = {
 
 // Après chaque action : rapport du réveil et autosave, cause de la mort (hardcore : effacement),
 // fin de campagne.
-function afterStep(events) {
-  const wake = wakeReport(events);
+function afterStep(events, rest) {
+  const wake = wakeReport([...dayEvents, ...events], { campaign, rest });
   if (wake) {
     dayEvents = [];
     layer = { kind: 'wake', report: wake };
     report(saves.autosave(campaign), 'Sauvegarde automatique');
   } else {
     dayEvents.push(...events);
+    if (events.some((event) => event.type === 'night-encounter')) layer = { kind: 'night-fight' };
   }
   const died = events.find((event) => event.type === 'died');
   if (died) {
     deathCause = died.cause;
+    if (layer?.kind === 'night-fight') layer = null;
     if (campaign.mode === 'hardcore') report(saves.eraseCampaign(campaign), 'Hardcore : sauvegarde effacée');
   }
   if (events.some((event) => event.type === 'quest-completed' && event.quest === 'le-guide')) layer = { kind: 'ending' };
+}
+
+// Continuer à la fin d'un combat de nuit : le réveil reprend, jusqu'au rapport du matin.
+function finishNightFight() {
+  if (layer?.kind !== 'night-fight' || campaign.screen !== 'night' || campaign.combat) return;
+  layer = null;
+  dispatch({ type: 'wake' });
 }
 
 function describe(event) {
@@ -377,11 +391,12 @@ function appendLine(text, type) {
 }
 
 function dispatch(action) {
+  const rest = campaign.night?.rest;
   const result = step(campaign, action);
   campaign = result.state;
   lastEvents = result.events;
   appendEvents(result.events);
-  afterStep(result.events);
+  afterStep(result.events, rest);
   render();
   effects.play(result.events);
 }
@@ -467,7 +482,7 @@ function start(loaded) {
 }
 
 const dialogueWindow = mountDialogue({ onChoose: dispatch });
-const combatWindow = mountCombat({ onAction: dispatch });
+const combatWindow = mountCombat({ onAction: dispatch, onClose: finishNightFight });
 
 document.getElementById('nouvelle').addEventListener('click', () => showLayer({ kind: 'title' }));
 

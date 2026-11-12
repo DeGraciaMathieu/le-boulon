@@ -12,6 +12,8 @@
 //     rules/combat.js, sauf Tirer qui se joue sur chaque ennemi debout.
 //   combatLine(event) -> ligne d'un jet ou d'un événement de combat, undefined s'il n'est
 //     pas de ce module ; sert à la fenêtre (jets du round) et au journal.
+//   shotOdds(toHit) -> chance de toucher en clair : « touche à coup sûr », « 4+ sur le dé
+//     (50 %) », « impossible ».
 //   COMBAT_OUTCOMES : libellés des fins de combat.
 
 import content from '../content/index.js';
@@ -41,6 +43,12 @@ const isHealing = (kind) => content.items[kind]?.category === 'soin';
 
 // Dé minimal pour que 1d6 + bonus ≥ seuil ; 7 : aucun dé ne suffit.
 const needed = (threshold, bonus) => Math.min(7, Math.max(1, threshold - bonus));
+
+export function shotOdds(toHit) {
+  if (toHit <= 1) return 'touche à coup sûr';
+  if (toHit > 6) return 'impossible';
+  return `${toHit}+ sur le dé (${Math.round(((7 - toHit) / 6) * 100)} %)`;
+}
 
 export function combatWindow(campaign) {
   const odds = combatOdds(campaign);

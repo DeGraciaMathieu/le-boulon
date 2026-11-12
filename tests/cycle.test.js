@@ -5,7 +5,9 @@ import { OPEN_AIR_MALUS } from '../src/engine/rules/time.js';
 import content from '../src/content/index.js';
 import {
   parseSeed, titleSlots, campPreview, nightView, wakeReport, daySummary, endingView, isEnding,
+  returnReminder, RETURN_REMINDER_AP,
 } from '../src/ui/cycle.js';
+import { neighbors } from '../src/engine/hex.js';
 
 const jsonCopy = (value) => JSON.parse(JSON.stringify(value));
 
@@ -80,11 +82,12 @@ test('wakeReport : carte Nuit, Météo, repas et budget du jour', () => {
   assert.deepEqual(report, {
     day: 3,
     ap: 9,
+    apChanges: [],
     night: 'Vent radioactif',
     weather: 'Pluie : Discrétion +1, détecteur −1',
     meal: 'Ration',
     hunger: null,
-    encounter: false,
+    fight: null,
     wounds: 0,
     radiation: 1,
   });
@@ -102,6 +105,77 @@ test('wakeReport : faim, rencontre, et null sans day-started', () => {
   assert.equal(report.meal, null);
   assert.equal(report.hunger, 2);
   assert.equal(report.wounds, 1);
+});
+
+test('wakeReport : la nuit seule (après day-ended), combat de nuit compris', () => {
+  const report = wakeReport([
+    { type: 'wounded', amount: 2, cause: 'combat' },
+    { type: 'day-ended', reason: 'camp', rest: 'decouvert' },
+    { type: 'night-card', deck: 'nuit-cordon', card: 'rodeurs' },
+    { type: 'night-encounter', card: 'chair' },
+    { type: 'wounded', amount: 3, cause: 'combat' },
+    { type: 'combat-ended', outcome: 'victory' },
+    { type: 'weather', card: 'calme' },
+    { type: 'meal', item: 'ration' },
+    { type: 'day-started', day: 2, ap: 7, weather: 'calme' },
+  ]);
+  assert.equal(report.night, 'Rôdeurs');
+  assert.equal(report.fight, 'Victoire');
+  assert.equal(report.wounds, 3);
+});
+
+test('wakeReport : chaque PA en moins a sa cause', () => {
+  const campaign = jsonCopy(createCampaign({ seed: 1 }));
+  campaign.player.wounds = 4;
+  const events = [
+    { type: 'weather', card: 'calme' },
+    { type: 'hunger', days: 1, ap: -2, wounds: 0 },
+    { type: 'day-started', day: 2, ap: 5, weather: 'calme' },
+  ];
+  assert.deepEqual(wakeReport(events, { campaign, rest: 'decouvert' }).apChanges, [
+    { amount: -2, label: 'faim : rien à manger au réveil' },
+    { amount: -OPEN_AIR_MALUS, label: 'nuit à découvert' },
+    { amount: -1, label: '4 blessures ou plus' },
+  ]);
+  assert.deepEqual(wakeReport(events, { campaign, rest: 'abri' }).apChanges.map((c) => c.amount), [-2, -1]);
+});
+
+test('wakeReport : une blessure de faim posée après le budget ne coûte pas de PA ce jour-là', () => {
+  const campaign = jsonCopy(createCampaign({ seed: 1 }));
+  campaign.player.wounds = 4;
+  campaign.player.stats.endurance = 1;
+  const report = wakeReport([
+    { type: 'weather', card: 'calme' },
+    { type: 'hunger', days: 2, ap: -2, wounds: 1 },
+    { type: 'wounded', amount: 1, cause: 'faim' },
+    { type: 'day-started', day: 3, ap: 9, weather: 'calme' },
+  ], { campaign, rest: 'lit' });
+  assert.deepEqual(report.apChanges, [
+    { amount: 1, label: 'Endurance' },
+    { amount: -2, label: 'faim : rien à manger au réveil' },
+  ]);
+});
+
+function withAp(hex, left) {
+  const campaign = standOn(hex);
+  campaign.world.tiles.cordon.ap.left = left;
+  return campaign;
+}
+
+// Cordon : le Camp des novices (lit) est sur l'hexagone 5.
+test('returnReminder : rien avec plus de PA que le seuil, ni à portée du hub', () => {
+  assert.equal(returnReminder(withAp(SHELTER_HEX, RETURN_REMINDER_AP + 1)), null);
+  assert.equal(returnReminder(withAp(5, 1)), null);
+  assert.equal(returnReminder(withAp(neighbors(5)[0], 1)), null);
+});
+
+test('returnReminder : le hub hors de portée, avec son coût en PA', () => {
+  const reminder = returnReminder(withAp(SHELTER_HEX, 1));
+  assert.equal(reminder.hub, 'Camp des novices');
+  assert.ok(reminder.cost > 1);
+  assert.equal(reminder.text, `Le hub est à ${reminder.cost} PA (Camp des novices) : le lit soigne et évite la carte Nuit.`);
+  const night = step(withAp(SHELTER_HEX, 1), { type: 'camp' }).state;
+  assert.equal(returnReminder(night), null);
 });
 
 test('daySummary : le résumé de la veille', () => {

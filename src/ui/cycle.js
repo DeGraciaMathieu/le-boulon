@@ -8,8 +8,14 @@
 //                                 entries : saves.list() de src/ui/storage.js
 //   campPreview(campaign)      -> { rest, label, malus, apLost }  avant de finir la journée
 //   nightView(campaign)        -> null | { rest, label, place, cardDrawn }  écran nuit (hors combat)
-//   wakeReport(events)         -> null | { day, ap, night, weather, meal, hunger, encounter,
-//                                          wounds, radiation }  événements du wake qui a lancé le jour
+//   wakeReport(events, budget?) -> null | { day, ap, apChanges: [{ amount, label }], night,
+//                                          weather, meal, hunger, fight, wounds, radiation }
+//                                 events : ceux de la nuit (après le dernier day-ended), combat de
+//                                 nuit compris, jusqu'au wake qui a lancé le jour ; budget :
+//                                 { campaign, rest } (campagne après le wake, repos de la nuit),
+//                                 sans lui apChanges est vide. apChanges : écarts à BASE_AP.
+//   returnReminder(campaign)   -> null | { hub, cost, text }  ≤ RETURN_REMINDER_AP PA restants et
+//                                 lit de hub le plus proche hors de portée (coût en PA, liaisons comprises)
 //   daySummary(events)         -> { moves, tiles, roubles, xp, wounds, radiation, items,
 //                                   victories, quests }  résumé de la veille : événements de la journée
 //   isEnding(campaign)         la quête principale « Le Guide » est finie
@@ -17,13 +23,22 @@
 
 import content from '../content/index.js';
 import { dayState } from '../engine/campaign.js';
-import { OPEN_AIR_MALUS } from '../engine/rules/time.js';
+import { BASE_AP } from '../engine/game.js';
+import { neighbors } from '../engine/hex.js';
+import { entryCost } from '../engine/actions/move.js';
+import { HUNGER_MALUS, OPEN_AIR_MALUS, WOUND_AP_MALUS } from '../engine/rules/time.js';
+import { WOUND_PENALTY_AT } from '../engine/rules/sheet.js';
+import { apBonus } from '../engine/rules/equipment.js';
+import { isBlocked } from '../engine/rules/suspects.js';
+import { TRAVEL_COST } from '../engine/rules/world.js';
+import { COMBAT_OUTCOMES } from './combat-screen.js';
 import { MANUAL_SLOTS } from './storage.js';
 import { RANK_NAMES } from './hub.js';
 
 const MAIN_QUEST = 'le-guide';
 const MARSH_ARC = 'souvenir-du-guide';
 const SEED_MAX = 2 ** 32 - 1;
+export const RETURN_REMINDER_AP = 3;
 
 const REST_LABELS = { lit: 'Lit du hub', abri: 'Bivouac dans un abri', decouvert: 'Bivouac à découvert' };
 const NIGHT_LABELS = { 'nuit-calme': 'Nuit calme', 'vent-radioactif': 'Vent radioactif', froid: 'Froid', rodeurs: 'Rôdeurs' };
@@ -67,21 +82,84 @@ export function nightView(campaign) {
   return { rest, label: REST_LABELS[rest], place: place ? content.places[place].name : null, cardDrawn };
 }
 
-export function wakeReport(events) {
-  const started = events.find((e) => e.type === 'day-started');
+export function wakeReport(events, budget = null) {
+  const night = events.slice(events.findLastIndex((e) => e.type === 'day-ended') + 1);
+  const started = night.find((e) => e.type === 'day-started');
   if (!started) return null;
-  const card = events.find((e) => e.type === 'night-card')?.card;
+  const card = night.find((e) => e.type === 'night-card')?.card;
+  const fight = night.some((e) => e.type === 'night-encounter') ? night.find((e) => e.type === 'combat-ended') : null;
   return {
     day: started.day,
     ap: started.ap,
+    apChanges: budget ? apChanges(night, budget) : [],
     night: card ? NIGHT_LABELS[card] ?? card : null,
     weather: WEATHER_LABELS[started.weather] ?? started.weather,
-    meal: itemName(events.find((e) => e.type === 'meal')?.item) ?? null,
-    hunger: events.find((e) => e.type === 'hunger')?.days ?? null,
-    encounter: events.some((e) => e.type === 'night-encounter'),
-    wounds: sumOf(events, 'wounded'),
-    radiation: sumOf(events, 'irradiated'),
+    meal: itemName(night.find((e) => e.type === 'meal')?.item) ?? null,
+    hunger: night.find((e) => e.type === 'hunger')?.days ?? null,
+    fight: fight ? COMBAT_OUTCOMES[fight.outcome] ?? fight.outcome : null,
+    wounds: sumOf(night, 'wounded'),
+    radiation: sumOf(night, 'irradiated'),
   };
+}
+
+// Les termes du budget de newDay (rules/time.js), dans l'ordre de leur calcul.
+function apChanges(events, { campaign, rest }) {
+  const { endurance } = campaign.player.stats;
+  const belt = apBonus(campaign.equipment);
+  return [
+    endurance !== 0 && { amount: endurance, label: 'Endurance' },
+    belt !== 0 && { amount: belt, label: 'artefacts à la ceinture' },
+    events.some((e) => e.type === 'hunger') && { amount: -HUNGER_MALUS, label: 'faim : rien à manger au réveil' },
+    rest === 'decouvert' && { amount: -OPEN_AIR_MALUS, label: 'nuit à découvert' },
+    woundsAtBudget(events, campaign) >= WOUND_PENALTY_AT && { amount: -WOUND_AP_MALUS, label: `${WOUND_PENALTY_AT} blessures ou plus` },
+  ].filter(Boolean);
+}
+
+// Le budget est fixé juste après le repas : les blessures suivantes (faim, ceinture) n'y comptent pas.
+function woundsAtBudget(events, campaign) {
+  const meal = events.findIndex((e) => e.type === 'meal' || e.type === 'hunger');
+  return campaign.player.wounds - sumOf(events.slice(meal + 1), 'wounded');
+}
+
+export function returnReminder(campaign) {
+  if (campaign.screen !== 'tile') return null;
+  const day = dayState(campaign);
+  if (day.status !== 'playing' || day.combat || day.ap.left > RETURN_REMINDER_AP) return null;
+  const nearest = nearestBed(campaign, day);
+  if (!nearest || nearest.cost <= day.ap.left) return null;
+  const hub = content.places[nearest.hub].name;
+  return { hub, cost: nearest.cost, text: `Le hub est à ${nearest.cost} PA (${hub}) : le lit soigne et évite la carte Nuit.` };
+}
+
+// Plus court chemin en PA (Dijkstra) sur les hexagones de toutes les tuiles, liaisons comprises.
+// Seules les anomalies révélées de la tuile courante bloquent.
+function nearestBed(campaign, day) {
+  const beds = Object.entries(content.places)
+    .filter(([, place]) => place.tags.includes('hub') && place.services?.includes('lit'));
+  const hexesOf = (tile) => (tile === campaign.world.currentTile ? day.tile.hexes : content.tiles[tile].hexes);
+  const key = (tile, hex) => `${tile}:${hex}`;
+  const costs = new Map([[key(campaign.world.currentTile, campaign.world.hex), 0]]);
+  const queue = [{ tile: campaign.world.currentTile, hex: campaign.world.hex, cost: 0 }];
+  const done = new Set();
+  while (queue.length) {
+    queue.sort((a, b) => a.cost - b.cost);
+    const { tile, hex, cost } = queue.shift();
+    if (done.has(key(tile, hex))) continue;
+    done.add(key(tile, hex));
+    const bed = beds.find(([, place]) => place.tile === tile && place.hex === hex);
+    if (bed) return { hub: bed[0], cost };
+    const steps = neighbors(hex)
+      .filter((n) => hexesOf(tile)[n] && !(tile === campaign.world.currentTile && isBlocked(day, n)))
+      .map((n) => ({ tile, hex: n, cost: cost + entryCost(hexesOf(tile)[n], day) }));
+    const link = content.links[tile]?.[hex];
+    if (link) steps.push({ tile: link.tile, hex: link.hex, cost: cost + TRAVEL_COST });
+    for (const next of steps) {
+      if (next.cost >= (costs.get(key(next.tile, next.hex)) ?? Infinity)) continue;
+      costs.set(key(next.tile, next.hex), next.cost);
+      queue.push(next);
+    }
+  }
+  return null;
 }
 
 export function daySummary(events) {
