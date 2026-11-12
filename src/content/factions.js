@@ -21,23 +21,23 @@ export default deepFreeze({
     joinable: true, default: true, start: 2,
   },
   devoir: {
-    id: 'devoir', name: 'Devoir', places: ['bar-100-rads'],
+    id: 'devoir', name: 'Devoir', places: ['bar'],
     joinable: true, act: 4, rival: 'liberte', start: 0,
   },
   liberte: {
-    id: 'liberte', name: 'Liberté', places: ['base-entrepots'],
+    id: 'liberte', name: 'Liberté', places: ['base-liberte'],
     joinable: true, act: 4, rival: 'devoir', start: 0,
   },
   'ciel-pur': {
-    id: 'ciel-pur', name: 'Ciel Pur', places: ['base-marais'],
+    id: 'ciel-pur', name: 'Ciel Pur', places: ['base-ciel-pur'],
     joinable: false, start: 0,
   },
   bandits: {
-    id: 'bandits', name: 'Bandits', places: ['usine-vallee-sombre', 'barrage-decharge'],
+    id: 'bandits', name: 'Bandits', places: ['usine-vallee', 'barrage'],
     joinable: false, start: -2,
   },
   militaires: {
-    id: 'militaires', name: 'Militaires', places: ['avant-poste-cordon', 'institut-agroprom'],
+    id: 'militaires', name: 'Militaires', places: ['avant-poste', 'institut-agroprom'],
     joinable: false, start: -2,
   },
 });

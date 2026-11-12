@@ -60,7 +60,7 @@ test('départ : pistolet en arme de poing, détecteur Écho, ceinture vide', () 
   assert.deepEqual(campaign.equipment.belt, []);
   assert.ok(!kinds(campaign.inventory).includes('pistolet'));
   assert.deepEqual(dayState(campaign).equipment, campaign.equipment);
-  assert.ok(!('equipment' in campaign.world.tiles.agroprom));
+  assert.ok(!('equipment' in campaign.world.tiles[campaign.world.currentTile]));
 });
 
 test('équiper range l\'objet à son emplacement et rend l\'ancien à l\'inventaire', () => {
@@ -96,7 +96,7 @@ test('refus d\'équipement', () => {
   assert.equal(refusal(belted, equipAction('gouttelette')), 'belt-full');
 
   const fighting = structuredClone(campaign);
-  fighting.world.tiles.agroprom.combat = { hex: 1, card: 'pillard' };
+  fighting.world.tiles[fighting.world.currentTile].combat = { hex: 1, card: 'pillard' };
   assert.equal(refusal(fighting, equipAction('meduse')), 'in-combat');
 });
 

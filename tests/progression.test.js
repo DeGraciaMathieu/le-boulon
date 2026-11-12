@@ -156,7 +156,7 @@ test('la campagne reste sérialisable et les savoir-faire ne fuient pas dans la 
   const { state } = step(draft, learn('pied-leger'));
   assert.deepEqual(jsonCopy(state), state);
   const moved = step(state, { type: 'move', to: 15 }).state;
-  assert.equal(moved.world.tiles.agroprom.player.perks, undefined);
+  assert.equal(moved.world.tiles[moved.world.currentTile].player.perks, undefined);
   assert.deepEqual(moved.player.perks, ['pied-leger']);
 });
 

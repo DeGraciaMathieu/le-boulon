@@ -20,10 +20,14 @@
 // l'entrée est facultatif et doit valoir la clé). Les clés suivent les noms de l'état de
 // campagne (src/engine/campaign.js) ; entre parenthèses, le fichier du brief §17.2.
 //
-//   tiles (tuiles/<id>.js)   { [tileId]: { name, entry, level?, hexes } }
+//   tiles (tuiles/<id>.js)   { [tileId]: { name, label?, image?, calage?, entry, level?,
+//                              encounterCards?, hexes } }
 //       Format v1 de src/engine/data/agroprom.js. hexes : { 1..19 : { terrain, lieu?, abri?,
-//       radiation? } }, les 19 numéros de hex.js. terrain : TERRAINS (coûts dans
-//       src/engine/actions/move.js). entry : hexagone d'arrivée v1. level : 1-4 (§5.3).
+//       radiation?, repaire?, faction?, pnj? } }, les 19 numéros de hex.js. terrain : TERRAINS
+//       (coûts dans src/engine/actions/move.js). lieu : étiquette ukrainienne du lieu de
+//       places posé sur l'hexagone. repaire, faction, pnj : symboles de la légende (§3.3).
+//       entry : hexagone d'arrivée v1. level : 1-4 (§5.3). calage : { cx, cy, taille } de
+//       l'image. encounterCards : paquet de rencontres (src/engine/rules/tile.js).
 //   links (§3.2)             { [tileId]: { [hex]: { tile, hex } } }
 //       Les sorties de chaque tuile : sortir par l'hexagone de bord `hex` de `tileId` mène à
 //       l'hexagone de bord `hex` de `tile`. Chaque liaison est écrite des deux côtés et le

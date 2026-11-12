@@ -76,7 +76,8 @@ test('la tuile courante porte une journée v1 et le joueur est sur son entrée',
 });
 
 test('une seule source de vérité : la tuile stockée ne double pas les champs de campagne', () => {
-  const tile = createCampaign({ seed: 3 }).world.tiles.agroprom;
+  const campaign = createCampaign({ seed: 3 });
+  const tile = campaign.world.tiles[campaign.world.currentTile];
   for (const key of ['seed', 'rng', 'inventory']) assert.ok(!(key in tile), `tile.${key} en double`);
   for (const key of ['hex', 'wounds', 'radiation', 'stats']) {
     assert.ok(!(key in tile.player), `tile.player.${key} en double`);
@@ -123,7 +124,8 @@ test('step est pur : la campagne reçue ne change pas', () => {
 
 test('un refus v1 rend la même campagne et un seul événement refused', () => {
   const campaign = createCampaign({ seed: 2 });
-  const far = { type: 'move', to: 1 };
+  // Le Cordon commence au Camp des novices (5) : 10 est de l'autre côté de la tuile.
+  const far = { type: 'move', to: 10 };
   const { state, events } = step(campaign, far);
   assert.equal(state, campaign);
   assert.deepEqual(events, [{ type: 'refused', action: far, reason: 'not-adjacent' }]);
