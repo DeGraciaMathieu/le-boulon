@@ -140,7 +140,7 @@ export function step(state, action) {
 // campagne ajoute ses bonus de stat (src/engine/rules/equipment.js).
 const CHECK_TARGET = 5;
 
-function skillCheck(draft, stat, extra, ctx) {
+export function skillCheck(draft, stat, extra, ctx) {
   const roll = ctx.rng.d6();
   const bonus = draft.player.stats[stat] + statBonus(draft.equipment, stat) + extra;
   const success = roll + bonus >= CHECK_TARGET;

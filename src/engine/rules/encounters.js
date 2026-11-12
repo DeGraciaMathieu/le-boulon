@@ -55,7 +55,7 @@ const FLEE_COST = 2;
 export const ENCOUNTER_CARDS = DEFAULT_ENCOUNTER_CARDS;
 
 const WEAPON_BONUS = { loaded: 1, empty: -1 };
-const COVER = { foret: 1, batiment: 2 };
+export const COVER = { foret: 1, batiment: 2 };
 const STEALTH_BONUS = { foret: 1 };
 
 export function setupEncounters(game) {
