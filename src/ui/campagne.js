@@ -25,6 +25,10 @@
 // RETOURS VISUELS (effets-view.js, carte 32) : joués après chaque rendu, à partir des événements
 // du step ; l'ambiance d'Émission suit la campagne à chaque rendu.
 //
+// SÉQUENCEUR (sequencer.js, lot L1) : l'état final est rendu d'abord, puis le séquenceur joue les
+// animations des événements du step l'une après l'autre. Pendant une séquence, tout clic ou toute
+// touche l'accélère et n'atteint pas le jeu : pas de seconde action avant la fin de la première.
+//
 // OBJECTIF (objectif.js) : encart en haut du panneau, la quête suivie et sa cible ; un clic
 // met en évidence l'hexagone cible sur la tuile, ou la carte du monde si la cible est ailleurs.
 // Marqueur « ! » sur le donneur de la quête principale tant qu'elle n'est pas prise.
@@ -62,6 +66,7 @@ import { canManualSave } from '../engine/rules/save.js';
 import { saves, MANUAL_SLOTS } from './storage.js';
 import { parseSeed, titleSlots, campPreview, nightView, wakeReport, daySummary, endingView, returnReminder } from './cycle.js';
 import { mountEffects } from './effets-view.js';
+import { createSequencer } from './sequencer.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -89,7 +94,8 @@ const pda = mountPda(document.getElementById('pda'), document.getElementById('ou
   dispatch,
   drawWorld: (svg, current) => renderWorld(svg, current, { tiles: content.tiles, sizes }),
 });
-const effects = mountEffects({ plateau, place: placeSection, layer: layerSection });
+const sequencer = createSequencer();
+const effects = mountEffects({ plateau, place: placeSection, layer: layerSection, sequencer });
 const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
@@ -476,6 +482,7 @@ journalFilter.addEventListener('click', (event) => {
 });
 
 function dispatch(action) {
+  if (sequencer.busy) return;
   targeting = false;
   const rest = campaign.night?.rest;
   const result = step(campaign, action);
@@ -484,7 +491,17 @@ function dispatch(action) {
   appendEvents(result.events);
   afterStep(result.events, rest);
   render();
-  effects.play(result.events);
+  sequencer.play(result.events);
+}
+
+// Pendant une séquence, un clic ou une touche l'accélère et s'arrête là (phase de capture).
+for (const type of ['click', 'contextmenu', 'keydown']) {
+  window.addEventListener(type, (event) => {
+    if (!sequencer.busy) return;
+    sequencer.skip();
+    event.preventDefault();
+    event.stopPropagation();
+  }, { capture: true });
 }
 
 const hexOf = (event) => Number(event.target.closest('[data-hex]')?.dataset.hex) || null;
@@ -582,6 +599,7 @@ function start(loaded) {
   dayEvents = [];
   deathCause = null;
   targeting = false;
+  sequencer.skip();
   effects.reset();
   render();
 }
