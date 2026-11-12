@@ -10,6 +10,7 @@ import {
   checkPlaces,
   checkQuests,
   checkDialogues,
+  checkTraders,
 } from '../src/content/validate.js';
 import { deepFreeze } from '../src/content/freeze.js';
 
@@ -30,7 +31,7 @@ function fixture() {
     places: {
       camp: {
         name: 'Camp des novices', label: 'Табір новачків', tile: 'cordon', hex: 1,
-        tags: ['hub'], faction: 'solitaires', deck: 'camp', loot: 'n1',
+        tags: ['hub'], faction: 'solitaires', deck: 'camp', loot: 'n1', services: ['marchand'],
       },
       atp: { name: 'ATP', label: 'АТП', tile: 'cordon', hex: 8, tags: ['abri'], deck: 'atp', loot: 'n1' },
     },
@@ -43,7 +44,7 @@ function fixture() {
       n1: { level: 1, entries: [{ item: 'munitions-9', weight: 3 }, { item: 'pistolet', weight: 1 }] },
     },
     npcs: {
-      marchand: { name: 'Le Marchand', faction: 'solitaires', place: 'camp', dialogue: 'marchand' },
+      marchand: { name: 'Le Marchand', faction: 'solitaires', place: 'camp', dialogue: 'marchand', role: 'marchand' },
     },
     dialogues: {
       marchand: {
@@ -102,6 +103,13 @@ function fixture() {
     },
     perks: {
       'pied-leger': { name: 'Pied léger', effect: 'La forêt coûte 1 PA' },
+    },
+    traders: {
+      bunker: {
+        npc: 'marchand', place: 'camp', coefficient: 1, sell: { artefact: 1.5 },
+        stock: [{ item: 'pistolet', quantity: 1, rank: 'experimente' }, { item: 'munitions-9', quantity: 4 }],
+        lines: { premiere: 'Salut.', quete: 'Alors ?', hostile: 'Dehors.', neutre: 'Oui ?', amical: 'Ah !', allie: 'Mon ami.' },
+      },
     },
   };
 }
@@ -284,4 +292,26 @@ test('validateContent réunit les erreurs de toutes les règles', () => {
   }));
   hasError(errors, /^places\.atp\.hex/);
   hasError(errors, /^npcs\.marchand\.dialogue : dialogue inconnu « barman »/);
+});
+
+test('marchands : comptoir, stock, rangs et répliques vérifiés', () => {
+  const errors = checkTraders(broken((c) => {
+    c.npcs.marchand.role = 'stalker';
+    c.traders.bunker.coefficient = 0;
+    c.traders.bunker.stock[0].rank = 'general';
+    c.traders.bunker.stock[1].quantity = 0;
+    c.traders.bunker.stock.push({ item: 'pda', quantity: 1 });
+    delete c.traders.bunker.lines.quete;
+  }));
+  hasError(errors, /^traders\.bunker\.npc : « marchand » n'est pas le marchand de camp/);
+  hasError(errors, /^traders\.bunker\.coefficient : 0 n'est pas un nombre > 0/);
+  hasError(errors, /^traders\.bunker\.stock\[0\]\.rank : rang inconnu « general »/);
+  hasError(errors, /^traders\.bunker\.stock\[1\]\.quantity : 0 n'est pas un entier > 0/);
+  hasError(errors, /^traders\.bunker\.stock\[2\]\.item : « pda » n'a pas de prix/);
+  hasError(errors, /^traders\.bunker\.lines\.quete : réplique manquante/);
+});
+
+test('marchands : un hub au service marchand en veut exactement un', () => {
+  hasError(checkTraders(broken((c) => { delete c.traders.bunker; })), /^places\.camp\.services : 0 marchand\(s\) au lieu d'un/);
+  hasError(checkTraders(broken((c) => { c.places.camp.services = []; })), /^traders\.bunker\.place : « camp » n'offre pas le service marchand/);
 });

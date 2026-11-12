@@ -39,7 +39,7 @@
 //   1. day + 1
 //   2. hooks de changement de jour, dans l'ordre DAY_HOOK_ORDER, chacun (draft, ctx) :
 //        npcs      PNJ itinérants (carte 19, rules/npcs.js)
-//        traders   restock des marchands (carte 13)
+//        traders   restock des marchands (restockTraders de rules/traders.js)
 //        emission  calendrier de l'Émission (carte 8) : pose world.emission avant la Météo
 //        quests    délais des quêtes (carte 15)
 //      DAY_HOOKS est vide : chaque carte ajoute sa fonction dans son tableau ci-dessous.
@@ -94,6 +94,7 @@ import { apBonus, beltRadiation } from './equipment.js';
 import { memberPerks } from './factions.js';
 import { stealthBonus } from './progression.js';
 import { TRACK_MAX, RADIATION_RESET, WOUND_PENALTY_AT, irradiate, wound } from './sheet.js';
+import { restockTraders } from './traders.js';
 import content from '../../content/index.js';
 
 export const BED_PRICE = 50;
@@ -110,7 +111,7 @@ export const DAY_HOOK_ORDER = Object.freeze(['npcs', 'traders', 'emission', 'que
 
 export const DAY_HOOKS = Object.freeze({
   npcs: Object.freeze([]),
-  traders: Object.freeze([]),
+  traders: Object.freeze([restockTraders]),
   emission: Object.freeze([]),
   quests: Object.freeze([]),
 });
