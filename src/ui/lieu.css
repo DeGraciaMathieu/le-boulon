@@ -94,6 +94,18 @@
   font-style: italic;
 }
 
+.carte-resultat {
+  margin: 6px 0 0;
+  padding: 4px 0 0;
+  border-top: 1px dashed var(--olive-sombre);
+  list-style: none;
+  font-weight: bold;
+}
+
+.carte-resultat .bon { color: var(--phosphore); }
+.carte-resultat .mauvais { color: var(--danger); }
+.carte-resultat .neutre { color: var(--texte); }
+
 .carte.interieur {
   background: #0b0d08;
 }

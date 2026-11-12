@@ -5,11 +5,16 @@
 //                              lieux explorables de la tuile courante (les hubs ont leur écran)
 //   placeEntry(campaign)    -> null | { id, name, faction, occupied, options: [{ approach,
 //                              label, enabled }] }   lieu explorable sous le pion
-//   placeScreen(campaign)   -> null | { id, name, hex, faction, approach, cards, remaining,
-//                              emptied, combat, explore: { cost, enabled }, bolt: { bolts,
-//                              enabled }, leave: { enabled } }   pendant une visite seulement
-//     cards : [{ position, zone, id, type, label, detail, text }] dans l'ordre joué, paquet
-//     du lieu puis paquet intérieur (zone 'inner').
+//   placeScreen(campaign, outcomes?) -> null | { id, name, hex, faction, approach, cards,
+//                              remaining, emptied, combat, explore: { cost, enabled }, bolt:
+//                              { bolts, enabled }, leave: { enabled } }   pendant une visite
+//     cards : [{ position, zone, id, type, label, detail, text, outcome }] dans l'ordre joué,
+//     paquet du lieu puis paquet intérieur (zone 'inner') ; outcome : lignes de cardOutcomes
+//     ou [] (carte jouée avant le chargement de la page).
+//   cardOutcomes(outcomes, events) -> outcomes   résultats des cartes lus dans les événements
+//     d'une action : { cards: { 'lieu|zone|position': { card, lines: [{ text, tone }] } },
+//     combat } ; tone 'bon' | 'mauvais' | 'neutre'. Le moteur ne garde pas ces résultats :
+//     l'écran les accumule action après action (NO_OUTCOMES au départ).
 //   placeCrop(hex, calage, size) -> { x, y, width, height }   portion de l'image de la tuile
 //   PLACE_LINES               lignes du journal pour les événements des lieux
 
@@ -33,9 +38,15 @@ const BOLT_COST = 1;
 // Hypothèse v2 : l'illustration montre 3 hexagones de large autour du lieu.
 const CROP_HEXES = 3;
 
+const STAT_NAMES = { tir: 'Tir', survie: 'Survie', discretion: 'Discrétion', endurance: 'Endurance' };
+const PARLEY_OUTCOMES = ['peage', 'echange', 'fin'];
+
+export const NO_OUTCOMES = Object.freeze({ cards: {}, combat: null });
+
 const factionName = (id) => (id ? content.factions[id]?.name ?? id : null);
 const itemName = (id) => content.items[id]?.name ?? id;
 const placeName = (id) => content.places[id]?.name ?? id;
+const questName = (id) => content.quests[id]?.name ?? id;
 
 export function tilePlaces(campaign) {
   return Object.entries(content.places)
@@ -68,7 +79,7 @@ export function placeEntry(campaign) {
   return { id: place.id, name: place.name, faction: place.faction, occupied: place.occupied, options };
 }
 
-export function placeScreen(campaign) {
+export function placeScreen(campaign, outcomes = NO_OUTCOMES) {
   const view = placeView(campaign);
   if (!view) return null;
   const place = content.places[view.place];
@@ -87,7 +98,7 @@ export function placeScreen(campaign) {
     cards: [
       ...state.revealed.map((id, i) => cardInfo(place.deck, id, i + 1, 'main', day.tile)),
       ...(state.inner?.revealed ?? []).map((id, i) => cardInfo(state.inner.deck, id, i + 1, 'inner', day.tile)),
-    ],
+    ].map((card) => ({ ...card, outcome: outcomeOf(outcomes, view.place, card) })),
     remaining: view.remaining,
     emptied: view.emptied,
     combat,
@@ -108,6 +119,80 @@ export function placeCrop(hex, { cx, cy, taille }, { width, height }) {
     width: side,
     height: side,
   };
+}
+
+// Les lignes d'une carte suivent son événement 'place-card' dans la même action ; l'issue d'un
+// combat d'occupant arrive plus tard (combat v2 en rounds), d'où combat : clé de la carte.
+export function cardOutcomes(outcomes, events) {
+  const cards = { ...outcomes.cards };
+  let { combat } = outcomes;
+  let current = null;
+  const add = (key, text, tone) => {
+    if (key && cards[key]) cards[key] = { ...cards[key], lines: [...cards[key].lines, { text, tone }] };
+  };
+  for (const event of events) {
+    if (event.type === 'place-card' || event.type === 'card-defused') {
+      current = outcomeKey(event.place, event.zone, event.position);
+      cards[current] = { card: event.card, lines: [] };
+      if (event.type === 'card-defused') add(current, 'Désamorcée au boulon', 'bon');
+      continue;
+    }
+    if (event.type === 'place-left') {
+      current = null;
+      combat = null;
+      continue;
+    }
+    const settled = combatSettled(event);
+    if (settled && combat) {
+      add(combat, ...settled);
+      combat = null;
+      continue;
+    }
+    const line = OUTCOME_LINES[event.type]?.(event);
+    if (line) add(current, ...line);
+    if (event.type === 'encounter-revealed' && current) combat = current;
+  }
+  return { cards, combat };
+}
+
+const OUTCOME_LINES = {
+  check: (e) => [`Test de ${STAT_NAMES[e.stat] ?? e.stat} : ${e.roll + e.bonus} sur ${e.target}, ${e.success ? 'réussi' : 'raté'}`, e.success ? 'bon' : 'mauvais'],
+  'loot-found': (e) => (e.items.length
+    ? [`Obtenu : ${e.items.map(({ item, stored }) => `${itemName(item)}${stored ? '' : ' (pas de place)'}`).join(', ')}`, 'bon']
+    : ['Rien trouvé', 'neutre']),
+  'trap-triggered': (e) => [e.trap === 'bruit' ? 'Piège : du bruit, on vient' : 'Piège : blessure', 'mauvais'],
+  'anomaly-avoided': () => ['Anomalie évitée', 'bon'],
+  'anomaly-triggered': () => ['Anomalie déclenchée', 'mauvais'],
+  wounded: (e) => [`+${e.amount} blessure${e.amount > 1 ? 's' : ''}`, 'mauvais'],
+  'encounter-revealed': () => ['Combat engagé', 'mauvais'],
+  'clue-found': () => ['Indice trouvé', 'bon'],
+  'quest-started': (e) => [`Quête commencée : ${questName(e.quest)}`, 'bon'],
+  'quest-step': (e) => [`Quête avancée : ${questName(e.quest)}`, 'bon'],
+  'quest-completed': (e) => [`Quête accomplie : ${questName(e.quest)}`, 'bon'],
+  'passage-opened': () => ['Passage ouvert : paquet intérieur', 'bon'],
+  'dialogue-started': (e) => [`Conversation avec ${content.npcs[e.npc]?.name ?? e.npc}`, 'neutre'],
+};
+
+// Issue d'un combat d'occupant : combat v2 (combat-ended), combat v1 (fight gagné, fled).
+function combatSettled(event) {
+  if (event.type === 'combat-ended') {
+    if (event.outcome === 'victory') return ['Occupant battu', 'bon'];
+    if (PARLEY_OUTCOMES.includes(event.outcome)) return ['Accord avec l’occupant', 'neutre'];
+    if (event.outcome === 'fled') return ['Fuite', 'mauvais'];
+  }
+  if (event.type === 'fight' && event.won) return ['Occupant battu', 'bon'];
+  if (event.type === 'fled' && event.place) return ['Fuite', 'mauvais'];
+  return null;
+}
+
+function outcomeKey(place, zone, position) {
+  return `${place}|${zone}|${position}`;
+}
+
+// Une clé ne vaut que pour la même carte (une carte d'occupant fuie revient dans le paquet).
+function outcomeOf(outcomes, place, card) {
+  const entry = outcomes.cards[outcomeKey(place, card.zone, card.position)];
+  return entry?.card === card.id ? entry.lines : [];
 }
 
 export const PLACE_LINES = Object.freeze({

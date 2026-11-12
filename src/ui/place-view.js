@@ -5,13 +5,18 @@
 // ÉCRAN (section #lieu, à la place du plateau quand campaign.screen = 'place') :
 //   illustration  portion de l'image de la tuile autour du lieu, agrandie (placeCrop) ;
 //   paquet        dos de carte et nombre de cartes restantes, « vidé » à la fin ;
-//   pile          cartes révélées, la dernière en haut ;
+//   pile          cartes révélées, la dernière en haut, chacune avec son résultat (butin,
+//                 test, quête, combat) accumulé par cardOutcomes depuis les événements ;
 //   boutons       Explorer (1 PA), Boulon (1 PA), Quitter. Un combat dans le lieu se joue
 //                 par les commandes du panneau (Combattre / Fuir).
 
 import { el } from './board.js';
 import { hexCenter } from './geometry.js';
-import { placeCrop, placeScreen, tilePlaces } from './place.js';
+import { cardOutcomes, NO_OUTCOMES, placeCrop, placeScreen, tilePlaces } from './place.js';
+
+// Résultats des cartes jouées depuis le chargement de la page ; events déjà lus : même tableau.
+let outcomes = NO_OUTCOMES;
+let readEvents = null;
 
 function h(tag, attrs = {}, ...children) {
   const node = Object.assign(document.createElement(tag), attrs);
@@ -19,9 +24,14 @@ function h(tag, attrs = {}, ...children) {
   return node;
 }
 
-// tile : content.tiles[id] ; size : { width, height } de son image.
-export function renderPlace(section, campaign, { tile, size, dispatch }) {
-  const screen = placeScreen(campaign);
+// tile : content.tiles[id] ; size : { width, height } de son image ; events : ceux de la
+// dernière action.
+export function renderPlace(section, campaign, { tile, size, dispatch, events = [] }) {
+  if (events !== readEvents) {
+    outcomes = cardOutcomes(outcomes, events);
+    readEvents = events;
+  }
+  const screen = placeScreen(campaign, outcomes);
   if (!screen) {
     section.replaceChildren();
     return;
@@ -80,6 +90,8 @@ function pile(cards) {
   const items = [...cards].reverse().map((card) => h('li', { className: `carte ${card.type}${card.zone === 'inner' ? ' interieur' : ''}` },
     h('div', { className: 'carte-type', textContent: `${card.zone === 'inner' ? 'Intérieur ' : ''}${card.position} · ${card.label}` }),
     card.detail ? h('div', { className: 'carte-detail', textContent: card.detail }) : null,
-    card.text ? h('div', { className: 'carte-texte', textContent: card.text }) : null));
+    card.text ? h('div', { className: 'carte-texte', textContent: card.text }) : null,
+    card.outcome.length ? h('ul', { className: 'carte-resultat' },
+      ...card.outcome.map(({ text, tone }) => h('li', { className: tone, textContent: text }))) : null));
   return h('ol', { className: 'lieu-pile' }, ...items);
 }

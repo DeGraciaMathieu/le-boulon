@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCampaign, step } from '../src/engine/campaign.js';
 import content from '../src/content/index.js';
-import { HUB_TABS, hubTabs, hubScreen, traderScreen, chestScreen, contractsScreen, barmanScreen } from '../src/ui/hub.js';
+import { HUB_TABS, hubTabs, hubScreen, traderScreen, chestScreen, contractsScreen, barmanScreen, rumorText } from '../src/ui/hub.js';
 
 // La campagne part sur l'hexagone du Camp des novices (Cordon, hexagone 5).
 function inCamp({ roubles = 0 } = {}) {
@@ -202,4 +202,12 @@ test('barman : une rumeur d’artefact rare dit l’objet et l’hexagone', () =
   assert.equal(known.itemName, content.items.meduse.name);
   assert.equal(known.opened, null);
   assert.equal(known.expires, null);
+});
+
+test('rumeurs : position lisible sur la tuile, sans numéro d’hexagone', () => {
+  const where = content.tiles.cordon.name;
+  assert.equal(rumorText({ type: 'artefact', tile: 'cordon', hex: 19, item: 'meduse' }), `${content.items.meduse.name} à ${where}, au bord nord`);
+  assert.equal(rumorText({ type: 'planque', tile: 'cordon', hex: 3, opened: true }), `planque à ${where}, à l'est (fouillée)`);
+  assert.equal(rumorText({ type: 'patrouille', tile: 'cordon', hex: 1 }), `patrouille à ${where}, au centre`);
+  assert.equal(rumorText({ type: 'raccourci', tile: 'cordon', path: [6, 1, 3] }), `raccourci à ${where} : partir à l'ouest, puis vers l'est, vers l'est`);
 });

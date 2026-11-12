@@ -37,6 +37,7 @@ import { rumorsForSale, rumorPrice } from '../engine/rules/stashes.js';
 import { standing } from '../engine/rules/factions.js';
 import { RANKS } from '../engine/rules/progression.js';
 import { usedSlots, inventorySlots } from '../engine/rules/equipment.js';
+import { tileArea, towards } from './hex-hints.js';
 
 // Onglets dans l'ordre du §16, avec le service du §6.1 qui les ouvre.
 export const HUB_TABS = Object.freeze([
@@ -167,12 +168,21 @@ export function knownRumors(campaign) {
   return campaign.rumors.filter(({ known }) => known).map((rumor) => describeRumor(campaign, rumor));
 }
 
+// Sans numéro d'hexagone (ils ne sont pas dessinés sur la tuile) : position et directions.
 export function rumorText(rumor) {
   const where = content.tiles[rumor.tile]?.name ?? rumor.tile;
-  if (rumor.type === 'planque') return `planque à ${where}, hexagone ${rumor.hex}${rumor.opened ? ' (fouillée)' : ''}`;
-  if (rumor.type === 'artefact') return `${itemName(rumor.item)} à ${where}, hexagone ${rumor.hex}`;
-  if (rumor.type === 'raccourci') return `raccourci à ${where} : ${rumor.path.join(' → ')}`;
-  return `patrouille à ${where}, hexagone ${rumor.hex}`;
+  if (rumor.type === 'planque') return `planque à ${where}, ${atArea(rumor.hex)}${rumor.opened ? ' (fouillée)' : ''}`;
+  if (rumor.type === 'artefact') return `${itemName(rumor.item)} à ${where}, ${atArea(rumor.hex)}`;
+  if (rumor.type === 'raccourci') {
+    const steps = rumor.path.slice(1).map((hex, i) => towards(rumor.path[i], hex));
+    return `raccourci à ${where} : partir ${atArea(rumor.path[0])}, puis ${steps.join(', ')}`;
+  }
+  return `patrouille à ${where}, ${atArea(rumor.hex)}`;
+}
+
+function atArea(hex) {
+  const area = tileArea(hex);
+  return /^[aeiou]/.test(area) ? `à l'${area}` : `au ${area}`;
 }
 
 export function rumorAge(rumor) {

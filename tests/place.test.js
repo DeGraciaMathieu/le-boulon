@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createCampaign, step } from '../src/engine/campaign.js';
 import { PLACE_FEE } from '../src/engine/rules/places.js';
 import content from '../src/content/index.js';
-import { CARD_TYPES, PLACE_LINES, placeCrop, placeEntry, placeScreen, tilePlaces } from '../src/ui/place.js';
+import { CARD_TYPES, NO_OUTCOMES, PLACE_LINES, cardOutcomes, placeCrop, placeEntry, placeScreen, tilePlaces } from '../src/ui/place.js';
 
 const ATP_HEX = content.places.atp.hex;
 const AVANT_POSTE_HEX = content.places['avant-poste'].hex;
@@ -120,4 +120,59 @@ test('journal : une ligne pour chaque événement de lieu d’une visite', () =>
   const placeEvents = events.filter((e) => e.type.startsWith('place-') || e.type === 'loot-found');
   assert.ok(placeEvents.length > 0);
   for (const event of placeEvents) assert.equal(typeof PLACE_LINES[event.type]?.(event), 'string', event.type);
+});
+
+test('résultats : le butin, le test et la quête se posent sur la carte jouée', () => {
+  const events = [
+    { type: 'place-card', place: 'atp', card: 'c1', cardType: 'cache', position: 1, zone: 'main' },
+    { type: 'check', stat: 'survie', roll: 4, bonus: 1, target: 5, success: true },
+    { type: 'loot-found', place: 'atp', card: 'c1', items: [{ item: 'bandage', stored: true }, { item: 'vodka', stored: false }] },
+    { type: 'place-card', place: 'atp', card: 'i1', cardType: 'indice', position: 1, zone: 'inner' },
+    { type: 'clue-found', place: 'atp', card: 'i1' },
+    { type: 'quest-step', quest: 'ami-du-pont', step: 'x' },
+  ];
+  const { cards } = cardOutcomes(NO_OUTCOMES, events);
+  assert.deepEqual(cards['atp|main|1'], { card: 'c1', lines: [
+    { text: 'Test de Survie : 5 sur 5, réussi', tone: 'bon' },
+    { text: `Obtenu : ${content.items.bandage.name}, ${content.items.vodka.name} (pas de place)`, tone: 'bon' },
+  ] });
+  assert.deepEqual(cards['atp|inner|1'].lines.map((line) => line.text),
+    ['Indice trouvé', `Quête avancée : ${content.quests['ami-du-pont'].name}`]);
+});
+
+test('résultats : test raté et piège, anomalie désamorcée au boulon', () => {
+  const { cards } = cardOutcomes(NO_OUTCOMES, [
+    { type: 'place-card', place: 'atp', card: 'c1', cardType: 'cache', position: 2, zone: 'main' },
+    { type: 'check', stat: 'discretion', roll: 1, bonus: 0, target: 5, success: false },
+    { type: 'trap-triggered', place: 'atp', card: 'c1', trap: 'blessure' },
+    { type: 'wounded', amount: 1, cause: 'piege' },
+    { type: 'card-defused', place: 'atp', card: 'a1', position: 3, zone: 'main' },
+  ]);
+  assert.deepEqual(cards['atp|main|2'].lines.map((line) => line.tone), ['mauvais', 'mauvais', 'mauvais']);
+  assert.equal(cards['atp|main|2'].lines[0].text, 'Test de Discrétion : 1 sur 5, raté');
+  assert.deepEqual(cards['atp|main|3'].lines, [{ text: 'Désamorcée au boulon', tone: 'bon' }]);
+});
+
+test('résultats : l’issue du combat d’occupant arrive à une action suivante', () => {
+  const engaged = cardOutcomes(NO_OUTCOMES, [
+    { type: 'place-card', place: 'atp', card: 'o1', cardType: 'occupant', position: 1, zone: 'main' },
+    { type: 'encounter-revealed', hex: null, card: 'bandits', place: 'atp' },
+  ]);
+  assert.equal(engaged.combat, 'atp|main|1');
+  const won = cardOutcomes(engaged, [{ type: 'combat-ended', outcome: 'victory', hex: null, card: 'bandits', trophies: [] }]);
+  assert.deepEqual(won.cards['atp|main|1'].lines.map((line) => line.text), ['Combat engagé', 'Occupant battu']);
+  assert.equal(won.combat, null);
+  // Les événements hors d'une carte (combat d'une autre action, test de Discrétion) n'ajoutent rien.
+  assert.deepEqual(cardOutcomes(won, [{ type: 'check', stat: 'tir', roll: 3, bonus: 0, target: 5, success: false }]).cards, won.cards);
+});
+
+test('écran : chaque carte porte son résultat, seulement si c’est la même carte', () => {
+  const entered = enterAtp();
+  const { state, events } = step(entered, { type: 'explore' });
+  const outcomes = cardOutcomes(NO_OUTCOMES, events);
+  const [card] = placeScreen(state, outcomes).cards;
+  assert.deepEqual(card.outcome, outcomes.cards['atp|main|1'].lines);
+  const stale = { cards: { 'atp|main|1': { card: 'autre', lines: [{ text: 'x', tone: 'bon' }] } }, combat: null };
+  assert.deepEqual(placeScreen(state, stale).cards[0].outcome, []);
+  assert.deepEqual(placeScreen(state).cards[0].outcome, []);
 });

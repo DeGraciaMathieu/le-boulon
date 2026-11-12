@@ -108,7 +108,7 @@
 //   { type: 'loot-found', place, card, items: [{ item, stored }] }
 //   { type: 'trap-triggered', place, card, trap }   { type: 'clue-found', place, card }
 //   { type: 'passage-opened', place, deck }   { type: 'sneak-failed', place }
-//   { type: 'card-defused', place, card }   { type: 'card-peeked', place, card, cardType }
+//   { type: 'card-defused', place, card, position, zone }   { type: 'card-peeked', place, card, cardType }
 //   { type: 'encounter-revealed', hex: null, card, place }   { type: 'fled', from, to, cost, place }
 //   et ceux des règles v1 (check, wounded, anomaly-avoided, anomaly-triggered…).
 
@@ -319,8 +319,8 @@ export function boltCard(draft, _action, ctx) {
   const { deck } = placeOf(id);
   const next = cardOf(nextCard(state, deck));
   if (next.type === 'anomalie') {
-    takeCard(state, deck);
-    ctx.emit({ type: 'card-defused', place: id, card: next.id });
+    const { zone, position } = takeCard(state, deck);
+    ctx.emit({ type: 'card-defused', place: id, card: next.id, position, zone });
   } else {
     ctx.emit({ type: 'card-peeked', place: id, card: next.id, cardType: next.type });
   }

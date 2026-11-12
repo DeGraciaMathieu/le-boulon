@@ -180,7 +180,7 @@ function renderTable() {
   renderPlaceMarks(board, campaign);
   table.dataset.screen = campaign.screen;
   const tile = content.tiles[campaign.world.currentTile];
-  renderPlace(placeSection, campaign, { tile, size: sizes[campaign.world.currentTile], dispatch });
+  renderPlace(placeSection, campaign, { tile, size: sizes[campaign.world.currentTile], dispatch, events: lastEvents });
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   renderBar();
   renderObjective();
