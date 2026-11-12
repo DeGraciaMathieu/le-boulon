@@ -12,6 +12,9 @@
 //   places   lieux des tuiles (§3.4)                                     carte 5
 //   npcs     { [id]: PNJ } (src/content/pnj.js)                         carte 19 (PNJ)
 //   dialogues { [id]: dialogue } (src/content/dialogues/)               carte 19
+//   decks    { [id]: paquet } (src/content/paquets/) : exploration des   carte 11
+//            lieux et rencontres des tuiles (rencontres-<tuile>.js)
+//   loot     { [id]: table de butin } (src/content/butin.js)             carte 11
 //
 // src/engine/data/agroprom.js reste l'Agroprom v1 de l'interface et du banc ; la v2 est
 // src/content/tuiles/agroprom.js.
@@ -32,6 +35,15 @@ import items from './objets.js';
 import perks from './savoir-faire.js';
 import npcs from './pnj.js';
 import dialogues from './dialogues/index.js';
+import exploration from './paquets/exploration.js';
+import rencontresCordon from './paquets/rencontres-cordon.js';
+import rencontresMarais from './paquets/rencontres-marais.js';
+import rencontresDecharge from './paquets/rencontres-decharge.js';
+import rencontresAgroprom from './paquets/rencontres-agroprom.js';
+import rencontresValleeSombre from './paquets/rencontres-vallee-sombre.js';
+import rencontresRostok from './paquets/rencontres-rostok.js';
+import rencontresEntrepots from './paquets/rencontres-entrepots.js';
+import loot from './butin.js';
 import { deepFreeze } from './freeze.js';
 
 export default deepFreeze({
@@ -43,4 +55,15 @@ export default deepFreeze({
   perks,
   npcs,
   dialogues,
+  decks: {
+    ...exploration,
+    'rencontres-cordon': rencontresCordon,
+    'rencontres-marais': rencontresMarais,
+    'rencontres-decharge': rencontresDecharge,
+    'rencontres-agroprom': rencontresAgroprom,
+    'rencontres-vallee-sombre': rencontresValleeSombre,
+    'rencontres-rostok': rencontresRostok,
+    'rencontres-entrepots': rencontresEntrepots,
+  },
+  loot,
 });

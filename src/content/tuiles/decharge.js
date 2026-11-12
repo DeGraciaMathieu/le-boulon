@@ -18,15 +18,7 @@ export default deepFreeze({
   level: 2,
   // Hypothèse v2 : on arrive par le КПП, liaison du Cordon.
   entry: 13,
-  // Hypothèse v2 : niveau 2, Menace 3 à 6, 1 à 2 blessures ; bandits surreprésentés.
-  encounterCards: {
-    pillard: { name: 'Pillard', threat: 3, wounds: 1 },
-    chiens: { name: 'Chiens aveugles', threat: 4, wounds: 1 },
-    bandits: { name: 'Bandits', threat: 5, wounds: 2 },
-    racketteurs: { name: 'Racketteurs', threat: 5, wounds: 2 },
-    sanglier: { name: 'Sanglier muté', threat: 5, wounds: 2 },
-    'pseudo-chien': { name: 'Pseudo-chien', threat: 6, wounds: 2 },
-  },
+  encounters: 'rencontres-decharge',
   hexes: {
     // Arrêt de bus, PNJ (§3.4) : le losange de l'image est juste au-dessus, sur le coin de 2.
     1: { terrain: 'route', lieu: 'Автобусна зупинка', pnj: true },

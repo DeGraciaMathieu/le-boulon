@@ -10,6 +10,7 @@ import {
   checkPlaces,
   checkQuests,
   checkDialogues,
+  checkDecks,
 } from '../src/content/validate.js';
 import { deepFreeze } from '../src/content/freeze.js';
 
@@ -20,7 +21,7 @@ const hexes = () =>
 function fixture() {
   return {
     tiles: {
-      cordon: { name: 'Cordon', entry: 14, level: 1, hexes: hexes() },
+      cordon: { name: 'Cordon', entry: 14, level: 1, encounters: 'rencontres-cordon', hexes: hexes() },
       decharge: { name: 'Décharge', entry: 13, level: 2, hexes: hexes() },
     },
     links: {
@@ -91,13 +92,18 @@ function fixture() {
       solitaires: { name: 'Solitaires', places: ['camp'], joinable: true, start: 2 },
     },
     decks: {
-      camp: { kind: 'exploration', place: 'camp', cards: [{ id: 'rien', type: 'rien' }] },
+      camp: { kind: 'exploration', place: 'camp', cards: [{ id: 'rien', type: 'rien', count: 4 }] },
       atp: {
         kind: 'exploration', place: 'atp',
         cards: [
-          { id: 'butin', type: 'butin', loot: 'n1' },
+          { id: 'butin', type: 'butin', loot: 'n1', count: 2 },
+          { id: 'chiens', type: 'occupant', encounter: 'chiens' },
           { id: 'pda-courrier', type: 'indice', item: 'pda', quest: 'courrier' },
         ],
+      },
+      'rencontres-cordon': {
+        kind: 'rencontres', tile: 'cordon',
+        cards: [{ id: 'chiens', name: 'Chiens aveugles', threat: 3, wounds: 1 }],
       },
     },
     perks: {
@@ -275,6 +281,54 @@ test('dialogues : un lien cassé et un départ inconnu sont signalés', () => {
     checkDialogues(broken((c) => { c.dialogues.marchand.start = 'bonjour'; })),
     /^dialogues\.marchand\.start : nœud inconnu « bonjour »/,
   );
+});
+
+test('paquets : genre, type de carte, nombre d’exemplaires et taille 4-10 d’un paquet d’exploration', () => {
+  const errors = checkDecks(broken((c) => {
+    c.decks.camp.kind = 'tresor';
+    c.decks.atp.cards[0].type = 'coffre';
+    c.decks.atp.cards[1].count = 0;
+    c.decks.atp.cards.push(...Array.from({ length: 8 }, (_, i) => ({ id: `r${i}`, type: 'rien' })));
+  }));
+  hasError(errors, /^decks\.camp\.kind : genre inconnu « tresor »/);
+  hasError(errors, /^decks\.atp\.cards\[0\]\.type : type de carte inconnu « coffre »/);
+  hasError(errors, /^decks\.atp\.cards\[1\]\.count : 0 n'est pas un entier positif/);
+  hasError(errors, /^decks\.atp : 11 cartes, il en faut 4 à 10/);
+});
+
+test('paquets : le paquet d’un lieu est un paquet d’exploration de ce lieu', () => {
+  const errors = checkDecks(broken((c) => {
+    c.places.camp.deck = 'rencontres-cordon';
+    c.decks.atp.place = 'camp';
+  }));
+  hasError(errors, /^places\.camp\.deck : « rencontres-cordon » n'est pas un paquet d'exploration/);
+  hasError(errors, /^decks\.atp\.place : « camp » ≠ lieu « atp »/);
+});
+
+test('paquets : un occupant absent du paquet de rencontres de la tuile est signalé', () => {
+  const errors = checkDecks(broken((c) => { c.decks.atp.cards[1].encounter = 'chimere'; }));
+  hasError(errors, /^decks\.atp\.cards\[1\]\.encounter : rencontre inconnue « chimere » \(paquet rencontres-cordon\)/);
+});
+
+test('paquets : le paquet de rencontres d’une tuile existe et ses cartes ont nom, Menace, blessures', () => {
+  const errors = checkDecks(broken((c) => {
+    c.tiles.decharge.encounters = 'rencontres-decharge';
+    c.decks['rencontres-cordon'].cards[0].threat = 0;
+  }));
+  hasError(errors, /^tiles\.decharge\.encounters : paquet inconnu « rencontres-decharge »/);
+  hasError(errors, /^decks\.rencontres-cordon\.cards\[0\]\.threat : 0 n'est pas un entier positif/);
+});
+
+test('butin : niveau 1-4, poids positifs, niveau de la table = niveau de la tuile du lieu', () => {
+  const errors = checkDecks(broken((c) => {
+    c.loot.n1.entries[1].weight = 0;
+    c.loot.n2 = { level: 5, entries: [] };
+    c.places.atp.loot = 'n2';
+  }));
+  hasError(errors, /^loot\.n1\.entries\[1\]\.weight : 0 n'est pas un entier positif/);
+  hasError(errors, /^loot\.n2\.level : 5 hors 1-4/);
+  hasError(errors, /^loot\.n2\.entries : table vide/);
+  hasError(errors, /^places\.atp\.loot : table de niveau 5 sur une tuile de niveau 1/);
 });
 
 test('validateContent réunit les erreurs de toutes les règles', () => {

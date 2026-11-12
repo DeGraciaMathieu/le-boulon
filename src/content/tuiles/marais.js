@@ -20,15 +20,7 @@ export default deepFreeze({
   level: 2,
   // Hypothèse v2 : on arrive par la liaison du Cordon.
   entry: 11,
-  // Hypothèse v2 : niveau 2, Menace 3 à 6, 1 à 2 blessures.
-  encounterCards: {
-    chair: { name: 'Chair', threat: 3, wounds: 1 },
-    chiens: { name: 'Chiens aveugles', threat: 4, wounds: 1 },
-    pillards: { name: 'Pillards', threat: 4, wounds: 1 },
-    sanglier: { name: 'Sanglier muté', threat: 5, wounds: 2 },
-    renegats: { name: 'Renégats', threat: 5, wounds: 2 },
-    sangsue: { name: 'Suceur de sang', threat: 6, wounds: 2 },
-  },
+  encounters: 'rencontres-marais',
   hexes: {
     1: { terrain: 'marais' },
     2: { terrain: 'marais' },

@@ -14,6 +14,7 @@ import {
   anomalyKinds,
   encounterCount,
   encounterCards,
+  cardsById,
   zoneCards,
 } from '../src/engine/rules/tile.js';
 import agroprom from '../src/engine/data/agroprom.js';
@@ -63,10 +64,10 @@ test('sans surcharge, la tuile prend les valeurs globales', () => {
 });
 
 test("l'Agroprom porte son paquet de rencontres, gelé en profondeur", () => {
-  assert.equal(agroprom.encounterCards, agropromEncounters);
+  assert.equal(agroprom.encounterCards, cardsById(agropromEncounters));
   assert.equal(encounterCards(agroprom), ENCOUNTER_CARDS);
   assert.ok(Object.isFrozen(agropromEncounters));
-  assert.ok(Object.values(agropromEncounters).every(Object.isFrozen));
+  assert.ok(agropromEncounters.cards.every(Object.isFrozen));
 });
 
 test('tileHexes et hasHex suivent les clés de tile.hexes', () => {

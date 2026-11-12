@@ -6,6 +6,7 @@ import content from '../src/content/index.js';
 import { TERRAINS } from '../src/content/validate.js';
 import { HEXES, isEdge } from '../src/engine/hex.js';
 import { createCampaign } from '../src/engine/campaign.js';
+import { encounterCards } from '../src/engine/rules/tile.js';
 
 const TILE_IDS = ['cordon', 'marais', 'decharge', 'agroprom', 'vallee-sombre', 'rostok', 'entrepots'];
 
@@ -84,7 +85,7 @@ test('le calage pose les 19 hexagones dans les limites de l’image', () => {
 
 test('chaque tuile a un paquet de rencontres au format de rules/tile.js', () => {
   for (const id of TILE_IDS) {
-    const cards = Object.entries(tiles[id].encounterCards);
+    const cards = Object.entries(encounterCards(tiles[id]));
     assert.ok(cards.length >= 4, id);
     for (const [cardId, card] of cards) {
       assert.equal(typeof card.name, 'string', `${id}.${cardId}`);

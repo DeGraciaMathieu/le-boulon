@@ -18,15 +18,7 @@ export default deepFreeze({
   level: 3,
   // Hypothèse v2 : on arrive par la liaison de la Décharge.
   entry: 15,
-  // Hypothèse v2 : niveau 3, Menace 4 à 7, 1 à 3 blessures ; bandits surreprésentés.
-  encounterCards: {
-    bandits: { name: 'Bandits', threat: 4, wounds: 1 },
-    chiens: { name: 'Chiens aveugles', threat: 4, wounds: 1 },
-    sanglier: { name: 'Sanglier muté', threat: 5, wounds: 2 },
-    'bandits-armes': { name: 'Bandits armés', threat: 6, wounds: 2 },
-    snork: { name: 'Snork', threat: 6, wounds: 2 },
-    sangsue: { name: 'Suceur de sang', threat: 7, wounds: 3 },
-  },
+  encounters: 'rencontres-vallee-sombre',
   hexes: {
     1: { terrain: 'route' },
     2: { terrain: 'herbe' },

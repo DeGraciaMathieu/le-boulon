@@ -13,6 +13,9 @@
 //   checkPlaces      chaque lieu sur un hexagone 1-19 de sa tuile, un lieu par hexagone
 //   checkQuests      étapes connues, sans orpheline, et chacune mène à une fin
 //   checkDialogues   liens vers des nœuds connus, aucun nœud orphelin
+//   checkDecks       genres et types de cartes connus, 4 à 10 cartes par paquet d'exploration,
+//                    paquet d'un lieu = paquet d'exploration de ce lieu, occupants tirés du
+//                    paquet de rencontres de la tuile, tables de butin au niveau de la tuile
 // Une collection absente ou vide est valide : chaque règle s'active quand sa carte arrive.
 //
 // FORMAT DU CONTENU (src/content/index.js) : un objet gelé, une clé par collection. Les
@@ -21,14 +24,15 @@
 // campagne (src/engine/campaign.js) ; entre parenthèses, le fichier du brief §17.2.
 //
 //   tiles (tuiles/<id>.js)   { [tileId]: { name, label?, image?, calage?, entry, level?,
-//                              encounterCards?, hexes } }
+//                              encounters?, hexes } }
 //       Format v1 de src/engine/data/agroprom.js. hexes : { 1..19 : { terrain, lieu?, abri?,
 //       radiation?, repaire?, faction?, pnj? } }, les 19 numéros de hex.js. terrain : TERRAINS
 //       (coûts dans src/engine/actions/move.js). lieu : étiquette ukrainienne du lieu de
 //       places posé sur l'hexagone. repaire, faction, pnj : symboles de la légende (§3.3).
 //       entry : hexagone de départ v1 (l'arrivée d'un voyage est la liaison empruntée :
 //       src/engine/rules/world.js). level : 1-4 (§5.3). calage : { cx, cy, taille } de
-//       l'image. encounterCards : paquet de rencontres (src/engine/rules/tile.js).
+//       l'image. encounters : id du paquet de rencontres (decks, kind 'rencontres'), lu par
+//       encounterCards de src/engine/rules/tile.js.
 //   links (§3.2)             { [tileId]: { [hex]: { tile, hex } } }
 //       Les sorties de chaque tuile : sortir par l'hexagone de bord `hex` de `tileId` mène à
 //       l'hexagone de bord `hex` de `tile`. Chaque liaison est écrite des deux côtés et le
@@ -47,6 +51,7 @@
 //       (slot, charges, consumable, use, weapon, armor, detector, backpack, grenade, belt) :
 //       en-tête de src/content/objets.js.
 //   loot (butin.js, §5.3)    { [tableId]: { level, entries: [{ item, weight, qty? }] } }
+//       level : 1-4, celui de la tuile des lieux qui la portent. weight : entier positif.
 //   npcs (pnj.js, §7)        { [npcId]: { name, faction, place, dialogue, role?, tile?,
 //                              places? } }
 //       place : lieu fixe, ou null pour un PNJ itinérant (il porte alors tile, et places :
@@ -87,7 +92,12 @@
 //       type : 'butin' | 'cache' | 'anomalie' | 'occupant' | 'pnj' | 'indice' | 'passage' |
 //       'rien'. Les ids de cartes sont uniques dans un paquet. Champs de chaque type (loot,
 //       stat, trap, anomaly, encounter, npc, effects, deck du passage, text) : en-tête de
-//       src/engine/rules/places.js.
+//       src/engine/rules/places.js. Paquet d'un lieu ou paquet intérieur (passage) : kind
+//       'exploration', 4 à 10 cartes en comptant les exemplaires (§5.1). Carte 'occupant' :
+//       encounter = id d'une carte du paquet de rencontres de la tuile du lieu.
+//       Paquet de rencontres (paquets/rencontres-<tuile>.js) : kind 'rencontres', tile, cartes
+//       { id, name, threat, wounds, hp?, damage?, type?, faction?, trophy?, count? } (en-tête
+//       de src/content/paquets/rencontres-agroprom.js).
 //   perks (savoir-faire.js, §11.2) { [perkId]: { name, effect } }
 //
 // RÉFÉRENCES : partout dans une entrée (sauf tiles et links, vérifiés à part), un champ de
@@ -103,6 +113,15 @@
 import { HEXES, isEdge } from '../engine/hex.js';
 
 export const TERRAINS = Object.freeze(['route', 'herbe', 'foret', 'marais', 'batiment']);
+
+export const DECK_KINDS = Object.freeze(['zone', 'nuit', 'meteo', 'rencontres', 'exploration']);
+
+export const CARD_TYPES = Object.freeze([
+  'butin', 'cache', 'anomalie', 'occupant', 'pnj', 'indice', 'passage', 'rien',
+]);
+
+// §5.1 : un paquet d'exploration a de 4 à 10 cartes.
+const EXPLORATION_SIZE = Object.freeze([4, 10]);
 
 export const OBJECTIVES = Object.freeze([
   'visiter', 'explorer', 'parler', 'rapporter', 'eliminer', 'escorter', 'cartographier',
@@ -132,6 +151,7 @@ const PLURAL_FIELDS = Object.freeze({
 
 const HEX_NUMBERS = HEXES.map(({ n }) => n);
 
+const isPositive = (n) => Number.isInteger(n) && n > 0;
 const isHex = (n) => Number.isInteger(n) && HEX_NUMBERS.includes(n);
 const isObject = (value) => value !== null && typeof value === 'object';
 const entriesOf = (content, collection) => Object.entries(content[collection] ?? {});
@@ -155,6 +175,7 @@ export function validateContent(content) {
     checkPlaces,
     checkQuests,
     checkDialogues,
+    checkDecks,
   ].flatMap((check) => check(content));
 }
 
@@ -398,6 +419,90 @@ export function checkDialogues(content) {
     }
   }
   return errors;
+}
+
+export function checkDecks(content) {
+  const errors = [];
+  const decks = content.decks ?? {};
+  const positive = (value, path) => {
+    if (!isPositive(value)) errors.push(`${path} : ${value} n'est pas un entier positif`);
+  };
+
+  for (const [id, deck] of Object.entries(decks)) {
+    const path = `decks.${id}`;
+    if (!DECK_KINDS.includes(deck.kind)) errors.push(`${path}.kind : genre inconnu « ${deck.kind} »`);
+    (deck.cards ?? []).forEach((card, i) => {
+      if (card.count !== undefined) positive(card.count, `${path}.cards[${i}].count`);
+      if (deck.kind === 'exploration' && !CARD_TYPES.includes(card.type)) {
+        errors.push(`${path}.cards[${i}].type : type de carte inconnu « ${card.type} »`);
+      }
+      if (deck.kind === 'rencontres') {
+        if (typeof card.name !== 'string') errors.push(`${path}.cards[${i}].name : nom manquant`);
+        positive(card.threat, `${path}.cards[${i}].threat`);
+        positive(card.wounds, `${path}.cards[${i}].wounds`);
+      }
+    });
+    if (deck.kind === 'exploration') {
+      const size = (deck.cards ?? []).reduce((sum, card) => sum + (card.count ?? 1), 0);
+      const [min, max] = EXPLORATION_SIZE;
+      if (size < min || size > max) errors.push(`${path} : ${size} cartes, il en faut ${min} à ${max}`);
+    }
+  }
+
+  for (const [id, tile] of entriesOf(content, 'tiles')) {
+    if (tile.encounters === undefined || content.decks === undefined) continue;
+    const deck = decks[tile.encounters];
+    if (!deck) errors.push(`tiles.${id}.encounters : paquet inconnu « ${tile.encounters} »`);
+    else if (deck.kind !== 'rencontres') {
+      errors.push(`tiles.${id}.encounters : « ${tile.encounters} » n'est pas un paquet de rencontres`);
+    }
+  }
+
+  for (const [id, place] of entriesOf(content, 'places')) {
+    checkPlaceDeck(content, id, place, errors);
+    const table = content.loot?.[place.loot];
+    const level = content.tiles?.[place.tile]?.level;
+    if (table && level !== undefined && table.level !== level) {
+      errors.push(`places.${id}.loot : table de niveau ${table.level} sur une tuile de niveau ${level}`);
+    }
+  }
+
+  for (const [id, table] of entriesOf(content, 'loot')) {
+    const path = `loot.${id}`;
+    if (!isPositive(table.level) || table.level > 4) errors.push(`${path}.level : ${table.level} hors 1-4`);
+    if (!(table.entries ?? []).length) errors.push(`${path}.entries : table vide`);
+    (table.entries ?? []).forEach((entry, i) => {
+      positive(entry.weight, `${path}.entries[${i}].weight`);
+      if (entry.qty !== undefined) positive(entry.qty, `${path}.entries[${i}].qty`);
+    });
+  }
+  return errors;
+}
+
+// Le paquet du lieu, et les paquets intérieurs de ses passages : occupants de la tuile.
+function checkPlaceDeck(content, id, place, errors) {
+  const deck = content.decks?.[place.deck];
+  // Paquet absent ou inconnu : rien à lire (référence vérifiée par checkReferences).
+  if (!deck) return;
+  if (deck.kind !== 'exploration') {
+    errors.push(`places.${id}.deck : « ${place.deck} » n'est pas un paquet d'exploration`);
+    return;
+  }
+  if (deck.place !== undefined && deck.place !== id) {
+    errors.push(`decks.${place.deck}.place : « ${deck.place} » ≠ lieu « ${id} »`);
+  }
+  const encountersId = content.tiles?.[place.tile]?.encounters;
+  const encounters = content.decks[encountersId];
+  if (!encounters) return;
+  const inner = deck.cards.filter((card) => card.type === 'passage').map((card) => card.deck);
+  for (const deckId of [place.deck, ...inner]) {
+    (content.decks[deckId]?.cards ?? []).forEach((card, i) => {
+      if (card.type !== 'occupant' || card.encounter === undefined) return;
+      if (!encounters.cards.some((known) => known.id === card.encounter)) {
+        errors.push(`decks.${deckId}.cards[${i}].encounter : rencontre inconnue « ${card.encounter} » (paquet ${encountersId})`);
+      }
+    });
+  }
 }
 
 // Ensemble des sommets atteints depuis start en suivant nextOf.

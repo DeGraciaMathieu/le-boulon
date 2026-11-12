@@ -23,15 +23,7 @@ export default deepFreeze({
   level: 1,
   // Départ de la campagne : le Camp des novices.
   entry: 5,
-  // Hypothèse v2 : niveau 1, Menace 2 à 5, 1 à 2 blessures.
-  encounterCards: {
-    pillard: { name: 'Pillard', threat: 2, wounds: 1 },
-    chiens: { name: 'Chiens aveugles', threat: 3, wounds: 1 },
-    chair: { name: 'Chair', threat: 3, wounds: 1 },
-    bandits: { name: 'Bandits', threat: 4, wounds: 1 },
-    sanglier: { name: 'Sanglier muté', threat: 4, wounds: 2 },
-    militaires: { name: 'Patrouille militaire', threat: 5, wounds: 2 },
-  },
+  encounters: 'rencontres-cordon',
   hexes: {
     1: { terrain: 'route' },
     // Le crâne de l'image est sur l'hexagone de l'ATP.

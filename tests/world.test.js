@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createCampaign, step, dayState, CAMPAIGN_ACTIONS } from '../src/engine/campaign.js';
 import { travel, travelTarget, knownTiles, daysAway, TRAVEL_COST } from '../src/engine/rules/world.js';
 import { isEdge } from '../src/engine/hex.js';
-import { encounterCount } from '../src/engine/rules/tile.js';
+import { encounterCount, encounterCards } from '../src/engine/rules/tile.js';
 import content from '../src/content/index.js';
 
 const jsonCopy = (value) => JSON.parse(JSON.stringify(value));
@@ -166,7 +166,7 @@ test('rencontres reposées en revenant sur une tuile quittée depuis 1 jour', ()
     const cordon = state.world.tiles.cordon;
     assert.equal(cordon.encounters.length, encounterCount(content.tiles.cordon));
     assert.ok(cordon.encounters.every((encounter) => encounter.card === null && encounter.hex !== 19));
-    assert.deepEqual(cordon.encounterDeck.sort(), Object.keys(content.tiles.cordon.encounterCards).sort());
+    assert.deepEqual(cordon.encounterDeck.sort(), Object.keys(encounterCards(content.tiles.cordon)).sort());
     assert.deepEqual(cordon.tokens, tokens);
     assert.equal(cordon.tile.entry, content.tiles.cordon.entry);
     assert.deepEqual(events.find((event) => event.type === 'encounters-reset'), {
