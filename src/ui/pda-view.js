@@ -1,11 +1,12 @@
 // Écran PDA (brief v2 §16, §8.5 ; cartes 28 et 32) : onglets Quêtes, Carte du monde, Journal,
-// Rumeurs, Factions, Fiche. Lit les lectures de pda.js ; la carte du monde est dessinée par
+// Rumeurs, Factions, Fiche, Aide (HELP_SECTIONS d'aide.js). Lit les lectures de pda.js ; la carte du monde est dessinée par
 // drawWorld (renderWorld de world-view.js, passé par campagne.js). Les seules actions envoyées
 // sont celles de la fiche, raise-stat et learn-perk (rules/progression.js).
 
 import { h, mountScreen } from './screen.js';
 import { PDA_TABS, pdaQuests, pdaJournal, pdaRumors, pdaFactions, pdaSheet } from './pda.js';
 import { REPUTATION_MIN, REPUTATION_MAX } from '../engine/rules/factions.js';
+import { HELP_SECTIONS } from './aide.js';
 
 const empty = (text) => h('p', { className: 'vide', textContent: text });
 
@@ -16,6 +17,7 @@ const TABS = {
   rumeurs: renderRumors,
   factions: renderFactions,
   fiche: renderSheet,
+  aide: renderHelp,
 };
 
 // dispatch(action) : envoie une action à la campagne (campagne.js) ;
@@ -38,7 +40,7 @@ export function mountPda(root, toggle, { dispatch, drawWorld }) {
     })));
     content.replaceChildren(...TABS[current](campaign, { dispatch, drawWorld }));
   }
-  return { render };
+  return { render, close: screen.close };
 }
 
 function renderQuests(campaign) {
@@ -122,4 +124,14 @@ function renderSheet(campaign, { dispatch }) {
         ` ${perk.name} : ${perk.effect}`))),
     ] : []),
   ];
+}
+
+function renderHelp() {
+  return HELP_SECTIONS.flatMap(({ title, entries }) => [
+    h('h3', { textContent: title }),
+    h('dl', { className: 'aide-liste' }, ...entries.flatMap(({ term, text }) => [
+      h('dt', { textContent: term }),
+      h('dd', { textContent: text }),
+    ])),
+  ]);
 }

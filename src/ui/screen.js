@@ -7,18 +7,24 @@ export function h(tag, attrs = {}, ...children) {
   return node;
 }
 
-// root : élément vide de la page ; toggle : bouton qui ouvre et ferme. Rend { body, isOpen }.
+// root : élément vide de la page ; toggle : bouton qui ouvre et ferme. Rend { body, isOpen, close } ;
+// close() ferme l'écran et dit s'il était ouvert (Échap, campagne.js).
 export function mountScreen(root, toggle, title) {
   const body = h('div', { className: 'ecran-corps' });
-  const close = h('button', { type: 'button', className: 'ecran-fermer', textContent: '×', title: 'Fermer' });
+  const closeButton = h('button', { type: 'button', className: 'ecran-fermer', textContent: '×', title: 'Fermer' });
   root.classList.add('ecran');
-  root.replaceChildren(h('header', { className: 'ecran-titre' }, h('h2', { textContent: title }), close), body);
+  root.replaceChildren(h('header', { className: 'ecran-titre' }, h('h2', { textContent: title }), closeButton), body);
   root.hidden = true;
   const setOpen = (open) => {
     root.hidden = !open;
     toggle.classList.toggle('actif', open);
   };
   toggle.addEventListener('click', () => setOpen(root.hidden));
-  close.addEventListener('click', () => setOpen(false));
-  return { body, isOpen: () => !root.hidden };
+  closeButton.addEventListener('click', () => setOpen(false));
+  const close = () => {
+    const wasOpen = !root.hidden;
+    setOpen(false);
+    return wasOpen;
+  };
+  return { body, isOpen: () => !root.hidden, close };
 }

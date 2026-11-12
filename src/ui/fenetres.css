@@ -106,7 +106,13 @@
 }
 
 .choix-numero {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 4px;
+  background: var(--fond);
   color: var(--ocre);
+  font-weight: bold;
+  text-align: center;
 }
 
 .choix-condition {

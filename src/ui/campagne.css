@@ -392,3 +392,7 @@ body {
 .hub-contrat.perimee {
   opacity: 0.5;
 }
+
+.bandeau-item[title] {
+  cursor: help;
+}

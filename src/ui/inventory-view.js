@@ -15,7 +15,7 @@ export function mountInventory(root, toggle, { dispatch }) {
   function render(campaign) {
     screen.body.replaceChildren(renderEquipment(campaign, dispatch), renderGrid(campaign, dispatch));
   }
-  return { render };
+  return { render, close: screen.close };
 }
 
 function renderGrid(campaign, dispatch) {
