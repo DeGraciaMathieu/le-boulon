@@ -6,12 +6,13 @@
 // SOURIS (tuile) :
 //   survol d'un hexagone   aperçu : terrain, lieu, coût, sortie de liaison et sa destination ;
 //   clic sur un voisin     { type: 'move', to } ;
-//   clic sur le pion       { type: 'travel' } si le pion est sur un hexagone de liaison ;
+//   clic sur le pion       { type: 'enter-place', place } si le pion est sur un lieu explorable,
+//                          sinon { type: 'travel' } (hexagone de liaison) ;
 //   clic droit             { type: 'bolt', target }.
 //
-// ÉCRANS : seule la tuile existe ici. Les combats de rencontre se jouent en mode 'rapide'
-// (Combattre / Fuir de la v1) tant que l'écran de combat v2 n'existe pas ; la nuit n'a que
-// le bouton Se réveiller, en attendant l'écran Réveil et nuit.
+// ÉCRANS : la tuile et le lieu (place-view.js, carte 25). Les combats de rencontre se jouent
+// en mode 'rapide' (Combattre / Fuir de la v1) tant que l'écran de combat v2 n'existe pas ; la
+// nuit n'a que le bouton Se réveiller, en attendant l'écran Réveil et nuit.
 //
 // GRAINE : ?seed=<entier> dans l'adresse, sinon une graine au hasard.
 
@@ -26,6 +27,8 @@ import { hexCenter } from './geometry.js';
 import { describeEvent, ITEM_NAMES } from './journal.js';
 import { linkExits, tileQuestMarkers, topBar } from './world-map.js';
 import { renderWorld } from './world-view.js';
+import { PLACE_LINES, placeEntry, tilePlaces } from './place.js';
+import { renderPlace, renderPlaceMarks } from './place-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
 const USABLE = ['bandage', 'vodka', 'ration'];
@@ -52,9 +55,19 @@ const CAMPAIGN_LINES = {
   'quest-step': (e) => `Quête ${questName(e.quest)} : nouvelle étape`,
   'quest-completed': (e) => `Quête terminée : ${questName(e.quest)}`,
   'quest-failed': (e) => `Quête ratée : ${questName(e.quest)}`,
+  ...PLACE_LINES,
 };
 
-const REFUSALS = { 'not-a-link': 'pas sur un hexagone de liaison', night: "c'est la nuit : se réveiller d'abord" };
+const REFUSALS = {
+  'not-a-link': 'pas sur un hexagone de liaison',
+  night: "c'est la nuit : se réveiller d'abord",
+  'in-place': "dans un lieu : le quitter d'abord",
+  'place-occupied': 'lieu occupé : combattre, se faufiler ou payer',
+  'not-enough-roubles': 'pas assez de roubles',
+  'not-enough-ap': 'pas assez de PA',
+  'no-bolt': 'plus de boulons',
+  fog: 'brouillard : le boulon ne sert à rien',
+};
 
 const params = new URLSearchParams(location.search);
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
@@ -65,6 +78,8 @@ const bar = document.getElementById('bandeau');
 const commandsPanel = document.getElementById('commandes');
 const journal = document.getElementById('journal');
 const preview = document.getElementById('apercu');
+const table = document.getElementById('table');
+const placeSection = document.getElementById('lieu');
 
 let campaign;
 let board;
@@ -95,6 +110,10 @@ function render() {
   if (board?.tileId !== campaign.world.currentTile) mountTile(campaign.world.currentTile);
   renderBoard(board, day);
   renderTileMarks(day);
+  renderPlaceMarks(board, campaign);
+  table.dataset.screen = campaign.screen;
+  const tile = content.tiles[campaign.world.currentTile];
+  renderPlace(placeSection, campaign, { tile, size: sizes[campaign.world.currentTile], dispatch });
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   renderBar();
   renderCommands(day);
@@ -168,20 +187,30 @@ function renderCommands(day) {
       button('Combattre', { type: 'fight' }),
       button('Fuir (2 PA)', { type: 'flee' }),
     );
+  } else if (campaign.screen === 'place') {
+    lines.push(...useButtons(button));
   } else {
+    const entry = placeEntry(campaign);
+    if (entry && !entry.occupied) lines.push(button(`Entrer : ${entry.name}`, { type: 'enter-place', place: entry.id }));
+    for (const option of entry?.options ?? []) {
+      const enter = button(`${entry.name} : ${option.label}`, { type: 'enter-place', place: entry.id, approach: option.approach });
+      enter.disabled = !option.enabled;
+      lines.push(enter);
+    }
     const token = tokenAt(day, day.player.hex);
     if (token?.revealed && token.kind === 'artefact') lines.push(button('Ramasser (1 PA)', { type: 'pickup' }));
-    for (const kind of USABLE) {
-      if (campaign.inventory.some((item) => item.kind === kind)) {
-        lines.push(button(`Utiliser ${ITEM_NAMES[kind].toLowerCase()} (1 PA)`, { type: 'use', item: kind }));
-      }
-    }
+    lines.push(...useButtons(button));
     const target = travelTarget(campaign);
     if (target) lines.push(button(`Passer à ${tileName(target.tile)} (1 PA)`, { type: 'travel' }));
     lines.push(button('Bivouac', { type: 'camp' }));
-    lines.push(h('div', { className: 'aide', textContent: 'Clic : se déplacer · clic sur le pion : voyager · clic droit : boulon' }));
+    lines.push(h('div', { className: 'aide', textContent: 'Clic : se déplacer · clic sur le pion : entrer dans le lieu ou voyager · clic droit : boulon' }));
   }
   commandsPanel.replaceChildren(...lines);
+}
+
+function useButtons(button) {
+  return USABLE.filter((kind) => campaign.inventory.some((item) => item.kind === kind))
+    .map((kind) => button(`Utiliser ${ITEM_NAMES[kind].toLowerCase()} (1 PA)`, { type: 'use', item: kind }));
 }
 
 function describe(event) {
@@ -215,9 +244,11 @@ function describeHex(n) {
   const exit = linkExits(campaign.world.currentTile).find((link) => link.hex === n);
   if (exit) lines.push(`Liaison vers ${exit.name} (1 PA)`);
   for (const marker of tileQuestMarkers(campaign).filter((m) => m.hex === n)) lines.push(`Quête : ${marker.name}`);
+  const place = tilePlaces(campaign).find((entry) => entry.hex === n);
+  if (place) lines.push(placeLine(place));
 
   if (n === campaign.world.hex) {
-    lines.push(exit ? 'Clic : voyager' : 'Vous êtes ici');
+    lines.push(pawnHint(place, exit));
   } else if (reachableHexes(day).includes(n)) {
     const cost = entryCost(hex);
     lines.push(`Coût : ${cost} PA · reste ${day.ap.left - cost} PA`);
@@ -225,6 +256,16 @@ function describeHex(n) {
     lines.push('Hors de portée');
   }
   return lines;
+}
+
+function pawnHint(place, exit) {
+  if (place) return place.occupied ? 'Approche : voir les commandes' : 'Clic : entrer';
+  return exit ? 'Clic : voyager' : 'Vous êtes ici';
+}
+
+function placeLine(place) {
+  const state = place.emptied ? 'vidé' : place.explored ? `${place.explored} carte(s) jouée(s)` : 'inexploré';
+  return `Lieu : ${place.name} · ${place.occupied ? `tenu par ${place.faction} · ` : ''}${state}`;
 }
 
 function showPreview(event) {
@@ -245,9 +286,15 @@ plateau.addEventListener('mouseleave', () => { preview.hidden = true; });
 plateau.addEventListener('click', (event) => {
   const n = hexOf(event);
   if (!n) return;
-  dispatch(n === campaign.world.hex ? { type: 'travel' } : { type: 'move', to: n });
+  dispatch(n === campaign.world.hex ? pawnAction() : { type: 'move', to: n });
   showPreview(event);
 });
+
+// Sur un lieu explorable, le pion y entre ; sinon il voyage (liaison).
+function pawnAction() {
+  const entry = placeEntry(campaign);
+  return entry ? { type: 'enter-place', place: entry.id } : { type: 'travel' };
+}
 
 plateau.addEventListener('contextmenu', (event) => {
   event.preventDefault();

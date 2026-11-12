@@ -1,0 +1,160 @@
+/* Écran Lieu (place-view.js) et lieux cliquables de la tuile. Palette de la v1 (board.css). */
+
+#lieu {
+  grid-area: plateau;
+  display: none;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "titre titre" "image table" "boutons boutons";
+  gap: 10px;
+  min-height: 0;
+  padding: 10px;
+  border: 1px solid var(--olive-sombre);
+  background: var(--panneau);
+}
+
+#table[data-screen="place"] #plateau {
+  display: none;
+}
+
+#table[data-screen="place"] #lieu {
+  display: grid;
+}
+
+.lieu-titre {
+  grid-area: titre;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.lieu-titre h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--ocre);
+  text-transform: uppercase;
+}
+
+.lieu-image {
+  grid-area: image;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--olive-sombre);
+  filter: sepia(0.25);
+}
+
+.lieu-table {
+  grid-area: table;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+.lieu-pile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.carte {
+  padding: 8px 10px;
+  border: 1px solid var(--olive);
+  border-left-width: 4px;
+  background: var(--pda);
+  font-size: 12px;
+}
+
+.lieu-pile .carte:first-child {
+  border-color: var(--ocre);
+  font-size: 14px;
+}
+
+.lieu-pile .carte:not(:first-child) {
+  opacity: 0.7;
+}
+
+.carte-type {
+  font-weight: bold;
+  color: var(--sauge);
+  text-transform: uppercase;
+}
+
+.carte-detail {
+  color: var(--texte);
+}
+
+.carte-texte {
+  margin-top: 4px;
+  color: var(--papier);
+  font-style: italic;
+}
+
+.carte.interieur {
+  background: #0b0d08;
+}
+
+.carte.butin, .carte.cache { border-left-color: var(--ocre); }
+.carte.anomalie { border-left-color: var(--electro); }
+.carte.occupant { border-left-color: var(--danger); }
+.carte.pnj, .carte.indice { border-left-color: var(--phosphore); }
+.carte.passage { border-left-color: var(--rouille); }
+
+.carte.dos {
+  width: 90px;
+  height: 120px;
+  box-sizing: border-box;
+  border-color: var(--sauge-sombre);
+  background: repeating-linear-gradient(45deg, var(--olive-sombre) 0 6px, var(--pda) 6px 12px);
+  text-align: center;
+}
+
+.carte.dos .carte-texte {
+  color: var(--texte);
+  font-style: normal;
+}
+
+.carte.dos.epuise {
+  background: var(--pda);
+  opacity: 0.5;
+}
+
+.lieu-boutons {
+  grid-area: boutons;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lieu-boutons button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Tuile : lieux explorables. */
+.hex.lieu {
+  stroke: var(--ocre);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+.lieu-nom {
+  fill: var(--ocre);
+  stroke: var(--pda);
+  stroke-width: 3;
+  paint-order: stroke;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.lieu-nom.occupe {
+  fill: var(--danger);
+}
+
+.lieu-nom.vide {
+  fill: var(--sauge-sombre);
+}
