@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Le Boulon · Campagne</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="src/ui/board.css">
+  <link rel="stylesheet" href="src/ui/campagne.css">
+</head>
+<body>
+  <header id="bandeau" aria-live="polite"></header>
+  <main id="table" class="campagne">
+    <svg id="plateau" xmlns="http://www.w3.org/2000/svg"></svg>
+    <aside id="panneau">
+      <section>
+        <h2>Carte du monde</h2>
+        <svg id="monde" xmlns="http://www.w3.org/2000/svg"></svg>
+      </section>
+      <section id="commandes" class="commandes"></section>
+      <button type="button" id="nouvelle">Nouvelle campagne</button>
+    </aside>
+    <ol id="journal" aria-live="polite"></ol>
+  </main>
+  <div id="apercu" hidden></div>
+  <script type="module" src="src/ui/campagne.js"></script>
+</body>
+</html>

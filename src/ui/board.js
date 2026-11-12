@@ -10,7 +10,7 @@
 
 import { HEXES, neighbors, isEdge } from '../engine/hex.js';
 import { entryCost } from '../engine/actions/move.js';
-import { ENCOUNTER_CARDS } from '../engine/rules/encounters.js';
+import { encounterCards } from '../engine/rules/tile.js';
 import { isBlocked } from '../engine/rules/suspects.js';
 import { hexCenter, hexPoints } from './geometry.js';
 
@@ -18,18 +18,19 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const TILE_WIDTH = 735;
 const TILE_HEIGHT = 679;
 
-function el(name, attrs = {}, parent) {
+export function el(name, attrs = {}, parent) {
   const node = document.createElementNS(SVG_NS, name);
   for (const [attr, value] of Object.entries(attrs)) node.setAttribute(attr, value);
   if (parent) parent.append(node);
   return node;
 }
 
-// Prépare le <svg> une fois pour toutes et rend ses couches.
-export function mountBoard(svg, { image, calage }) {
-  svg.setAttribute('viewBox', `0 0 ${TILE_WIDTH} ${TILE_HEIGHT}`);
+// Prépare le <svg> une fois pour toutes et rend ses couches. width et height : taille de
+// l'image en pixels (les tuiles v2 ne font pas toutes la même, brief v2 §3.1).
+export function mountBoard(svg, { image, calage, width = TILE_WIDTH, height = TILE_HEIGHT }) {
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.replaceChildren();
-  el('image', { href: image, width: TILE_WIDTH, height: TILE_HEIGHT }, svg);
+  el('image', { href: image, width, height }, svg);
 
   const grid = el('g', { class: 'grille' }, svg);
   for (const { n } of HEXES) el('polygon', { class: 'hex', 'data-hex': n, points: hexPoints(n, calage) }, grid);
@@ -93,7 +94,7 @@ function renderTokens(board, state) {
     const revealed = encounter.card !== null;
     const group = el('g', { class: `jeton rencontre${revealed ? ' revelee' : ''}` }, board.tokens);
     el('circle', { cx: x, cy: y + board.calage.taille * 0.48, r: size * 0.5 }, group);
-    label(group, x, y + board.calage.taille * 0.48, revealed ? ENCOUNTER_CARDS[encounter.card].name.split(' ')[0] : '!');
+    label(group, x, y + board.calage.taille * 0.48, revealed ? encounterCards(state.tile)[encounter.card].name.split(' ')[0] : '!');
   }
 }
 
