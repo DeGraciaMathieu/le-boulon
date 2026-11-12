@@ -21,7 +21,8 @@
 //       stats: { tir, survie, discretion, endurance },
 //     },
 //     inventory,                   [{ kind, size, charges? }], grille de 12 cases (sheet.js)
-//     tokens, encounters, zone, mission   réservés aux cartes suivantes
+//     encounters, encounterDeck, combat   rencontres (src/engine/rules/encounters.js)
+//     tokens, zone, mission        réservés aux cartes suivantes
 //   }
 //
 // ÉVÉNEMENTS (un objet { type, ... } par ligne de journal) :
@@ -32,7 +33,8 @@
 //   { type: 'day-ended', reason: 'no-ap' }
 //   { type: 'refused', action, reason }
 //     reason : 'game-over' | 'unknown-action' | 'not-adjacent' | 'not-enough-ap' | 'not-on-edge'
-//              | 'not-usable' | 'no-item'
+//              | 'not-usable' | 'no-item' | 'in-combat' | 'not-in-combat'
+//   et les événements des rencontres (encounters.js)
 //
 // BRANCHER UNE RÈGLE :
 //   - Nouvelle action (boulon, fouille, fuite…) : écrire un handler
@@ -43,25 +45,26 @@
 //   - Réaction à l'entrée sur un hexagone (jetons, rencontres) : ajouter une
 //     fonction (draft, ctx) à ON_ENTER dans src/engine/actions/move.js.
 //   - ctx.rng : RNG à graine dont l'état est reporté dans draft.rng à la fin
-//     du step ; ctx.spend(cost) dépense des PA ; ctx.check(stat) fait un test et rend sa réussite.
+//     du step ; ctx.spend(cost) dépense des PA ; ctx.check(stat, extra?) fait un test (bonus extra en plus de la stat) et rend sa réussite.
 //   - Fiche (blessures, radiations, inventaire) : ctx.wound, ctx.irradiate, ctx.addItem,
 //     ctx.removeItem, ctx.useCharge, documentés en tête de src/engine/rules/sheet.js.
 
 import { createRng } from './rng.js';
 import { move } from './actions/move.js';
 import { exit } from './actions/exit.js';
+import { setupEncounters, combatRefusal, fight, flee } from './rules/encounters.js';
 import { use, wound, irradiate, addItem, removeItem, useCharge, startingInventory } from './rules/sheet.js';
 
 export const BASE_AP = 10;
 
 const START_STATS = Object.freeze({ tir: 1, survie: 1, discretion: 1, endurance: 0 });
 
-const ACTIONS = { move, exit, use };
+const ACTIONS = { move, exit, use, fight, flee };
 
 export function createGame({ seed, tile }) {
   const stats = { ...START_STATS };
   const max = BASE_AP + stats.endurance;
-  return {
+  return setupEncounters({
     seed,
     rng: seed >>> 0,
     tile: structuredClone(tile),
@@ -74,7 +77,7 @@ export function createGame({ seed, tile }) {
     inventory: startingInventory(),
     zone: null,
     mission: null,
-  };
+  });
 }
 
 export function step(state, action) {
@@ -83,6 +86,8 @@ export function step(state, action) {
   if (state.status !== 'playing') return refuse('game-over');
   const handler = ACTIONS[action.type];
   if (!handler) return refuse('unknown-action');
+  const inCombat = combatRefusal(state, action);
+  if (inCombat) return refuse(inCombat);
 
   const draft = structuredClone(state);
   const events = [];
@@ -94,7 +99,7 @@ export function step(state, action) {
       draft.ap.left -= cost;
       draft.ap.spent += cost;
     },
-    check: (stat) => skillCheck(draft, stat, ctx),
+    check: (stat, extra = 0) => skillCheck(draft, stat, extra, ctx),
     wound: (amount, cause) => wound(draft, amount, cause, ctx.emit),
     irradiate: (amount, cause) => irradiate(draft, amount, cause, ctx.emit),
     addItem: (item) => addItem(draft, item),
@@ -114,9 +119,9 @@ export function step(state, action) {
 // Test de compétence (hypothèse v1) : 1d6 + stat ≥ 5.
 const CHECK_TARGET = 5;
 
-function skillCheck(draft, stat, ctx) {
+function skillCheck(draft, stat, extra, ctx) {
   const roll = ctx.rng.d6();
-  const bonus = draft.player.stats[stat];
+  const bonus = draft.player.stats[stat] + extra;
   const success = roll + bonus >= CHECK_TARGET;
   ctx.emit({ type: 'check', stat, roll, bonus, target: CHECK_TARGET, success });
   return success;

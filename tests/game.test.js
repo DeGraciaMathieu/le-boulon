@@ -15,7 +15,8 @@ function fakeTile() {
   return { name: 'Test', entry: 8, hexes };
 }
 
-const newGame = (seed = 1) => createGame({ seed, tile: fakeTile() });
+// Sans rencontres : ces tests portent sur le déplacement seul.
+const newGame = (seed = 1) => ({ ...createGame({ seed, tile: fakeTile() }), encounters: [] });
 const move = (to) => ({ type: 'move', to });
 
 // Joue une suite d'actions et rend le dernier état et tous les événements.
