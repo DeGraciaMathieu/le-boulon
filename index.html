@@ -3,35 +3,41 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Le Boulon</title>
+  <title>Le Boulon · Campagne</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="src/ui/board.css">
+  <link rel="stylesheet" href="src/ui/campagne.css">
+  <link rel="stylesheet" href="src/ui/lieu.css">
+  <link rel="stylesheet" href="src/ui/fenetres.css">
+  <link rel="stylesheet" href="src/ui/pda.css">
+  <link rel="stylesheet" href="src/ui/cycle.css">
+  <link rel="stylesheet" href="src/ui/effets.css">
 </head>
 <body>
-  <main id="table">
+  <header id="bandeau" aria-live="polite"></header>
+  <main id="table" class="campagne">
     <svg id="plateau" xmlns="http://www.w3.org/2000/svg"></svg>
-    <aside id="panneau"></aside>
+    <section id="hub" hidden></section>
+    <section id="lieu" aria-live="polite"></section>
+    <aside id="panneau">
+      <section>
+        <h2>Carte du monde</h2>
+        <svg id="monde" xmlns="http://www.w3.org/2000/svg"></svg>
+      </section>
+      <section id="commandes" class="commandes"></section>
+      <div class="ecrans-boutons">
+        <button type="button" id="ouvrir-pda">PDA</button>
+        <button type="button" id="ouvrir-inventaire">Inventaire</button>
+      </div>
+      <section id="sauvegarde" class="commandes"></section>
+      <button type="button" id="nouvelle">Écran titre</button>
+    </aside>
     <ol id="journal" aria-live="polite"></ol>
   </main>
   <div id="apercu" hidden></div>
-  <div id="carte-zone" hidden></div>
-  <div id="emission" role="status" hidden>
-    <div class="emission-titre">Émission</div>
-    <div id="emission-pa"></div>
-    <div id="emission-texte"></div>
-  </div>
-  <div id="fin" hidden>
-    <div class="fin-boite">
-      <h1 id="fin-titre"></h1>
-      <p id="fin-cause"></p>
-      <p id="fin-score"></p>
-      <p id="fin-graine"></p>
-      <div class="fin-boutons">
-        <button type="button" id="rejouer">Rejouer (même graine)</button>
-        <button type="button" id="nouvelle">Nouvelle partie</button>
-      </div>
-    </div>
-  </div>
-  <script type="module" src="src/ui/main.js"></script>
+  <section id="pda" hidden></section>
+  <section id="inventaire" hidden></section>
+  <section id="ecran" hidden aria-live="polite"></section>
+  <script type="module" src="src/ui/campagne.js"></script>
 </body>
 </html>

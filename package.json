@@ -8,7 +8,6 @@
   },
   "scripts": {
     "test": "node --test",
-    "bench": "node bench/run.js",
     "bench:campagne": "node bench/campaign.js"
   }
 }

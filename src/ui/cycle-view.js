@@ -1,5 +1,5 @@
 // Écrans Titre, Fin de journée, Nuit, Réveil, Mort et Fin de campagne (brief v2 §15, §16 ;
-// carte 29), en HTML, dans une couche posée sur la table (section #ecran de campagne.html).
+// carte 29), en HTML, dans une couche posée sur la table (section #ecran de index.html).
 // Chaque fonction redessine la section à partir d'une lecture pure (cycle.js, deathView de
 // rules/death.js) et ne fait qu'appeler ses gestionnaires : rien ici ne modifie la campagne,
 // ni le stockage. campagne.js choisit l'écran à montrer.
