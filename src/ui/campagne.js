@@ -26,7 +26,8 @@
 // du step ; l'ambiance d'Émission suit la campagne à chaque rendu.
 //
 // SÉQUENCEUR (sequencer.js, lot L1) : l'état final est rendu d'abord, puis le séquenceur joue les
-// animations des événements du step l'une après l'autre. Pendant une séquence, tout clic ou toute
+// animations des événements du step l'une après l'autre, avec les pas du bandeau en pistes
+// (barBeats de bar.js, dessinés par bar-view.js, lot L2). Pendant une séquence, tout clic ou toute
 // touche l'accélère et n'atteint pas le jeu : pas de seconde action avant la fin de la première.
 //
 // OBJECTIF (objectif.js) : encart en haut du panneau, la quête suivie et sa cible ; un clic
@@ -47,7 +48,7 @@ import { mountBoard, renderBoard, reachableHexes, boltTargets, el } from './boar
 import { hexWarnings } from './hex-hints.js';
 import { hexCenter } from './geometry.js';
 import { journalLine, journalLevel, ITEM_NAMES } from './journal.js';
-import { linkExits, tileQuestMarkers, topBar } from './world-map.js';
+import { linkExits, tileQuestMarkers } from './world-map.js';
 import { renderWorld } from './world-view.js';
 import { renderHub } from './hub-view.js';
 import { hubAt } from '../engine/rules/hubs.js';
@@ -60,7 +61,6 @@ import { mountPda } from './pda-view.js';
 import { talkLabel } from './pda.js';
 import { mountInventory } from './inventory-view.js';
 import { INTRO_LINES, objectiveFocus, giverMarkers } from './objectif.js';
-import { BAR_HINTS } from './aide.js';
 import { deathView } from '../engine/rules/death.js';
 import { canManualSave } from '../engine/rules/save.js';
 import { saves, MANUAL_SLOTS } from './storage.js';
@@ -68,6 +68,8 @@ import { parseSeed, titleSlots, campPreview, nightView, wakeReport, daySummary, 
 import { mountEffects } from './effets-view.js';
 import { readMotion, saveMotion, applyMotion } from './animations.js';
 import { createSequencer } from './sequencer.js';
+import { mountBar } from './bar-view.js';
+import { barSnapshot, barBeats } from './bar.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -97,6 +99,7 @@ const pda = mountPda(document.getElementById('pda'), document.getElementById('ou
 });
 const sequencer = createSequencer();
 const effects = mountEffects({ plateau, place: placeSection, layer: layerSection, sequencer });
+const barView = mountBar(bar, sequencer);
 const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
@@ -151,7 +154,7 @@ function renderTable() {
   const tile = content.tiles[campaign.world.currentTile];
   renderPlace(placeSection, campaign, { tile, size: sizes[campaign.world.currentTile], dispatch, events: lastEvents });
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
-  renderBar();
+  barView.render(campaign);
   renderObjective();
   renderCommands(day);
   renderSaves();
@@ -227,24 +230,6 @@ function showTarget(focus) {
   node.getBoundingClientRect();
   node.classList.add('repere');
   setTimeout(() => node.classList.remove('repere'), 2000);
-}
-
-function renderBar() {
-  const data = topBar(campaign);
-  // Au survol, la définition courte du terme (BAR_HINTS d'aide.js).
-  const item = (hint, label, value, cls = '') => h('div', { className: `bandeau-item ${cls}`, title: BAR_HINTS[hint] },
-    h('span', { className: 'bandeau-valeur', textContent: value }),
-    h('span', { className: 'bandeau-label', textContent: label }));
-  bar.replaceChildren(
-    item('jour', 'Jour', data.day),
-    item('tuile', data.tile, ''),
-    item('pa', `PA / ${data.apMax}`, data.ap, 'bandeau-pa'),
-    item('blessures', 'Blessures', data.wounds, data.wounds >= 4 ? 'alerte' : ''),
-    item('radiations', 'Radiations', data.radiation, data.radiation >= 4 ? 'alerte' : ''),
-    item('faim', 'Faim', data.hunger, data.hunger > 0 ? 'alerte' : ''),
-    item('roubles', 'Roubles', data.roubles),
-  );
-  if (data.emission) bar.append(h('div', { className: 'bandeau-emission', textContent: "ÉMISSION AUJOURD'HUI : restez près d'un abri" }));
 }
 
 // Panneau de commandes en zones : « Ici » (ce que permet l'hexagone du pion), « Soins » repliée,
@@ -491,13 +476,14 @@ function dispatch(action) {
   if (sequencer.busy) return;
   targeting = false;
   const rest = campaign.night?.rest;
+  const before = barSnapshot(campaign);
   const result = step(campaign, action);
   campaign = result.state;
   lastEvents = result.events;
   appendEvents(result.events);
   afterStep(result.events, rest);
   render();
-  sequencer.play(result.events);
+  sequencer.play(barBeats(result.events, before, barSnapshot(campaign)));
 }
 
 // Pendant une séquence, un clic ou une touche l'accélère et s'arrête là (phase de capture).

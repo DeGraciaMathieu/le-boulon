@@ -47,7 +47,7 @@ import { hasPerk } from './progression.js';
 export { usedSlots };
 
 export const TRACK_MAX = 6;
-const TOUGH_TRACK_MAX = 7;
+export const TOUGH_TRACK_MAX = 7;
 const THICK_SKIN = 1;
 const MEDIC_BANDAGE_WOUNDS = -2;
 export const INVENTORY_SLOTS = BASE_INVENTORY_SLOTS;
