@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createGame, step } from '../src/engine/game.js';
 import { distance, neighbors } from '../src/engine/hex.js';
 import { createItem, usedSlots } from '../src/engine/rules/sheet.js';
-import { ZONE_DECK_SIZE, zoneAfterAction } from '../src/engine/rules/zone.js';
+import { ZONE_DECK_SIZE, emissionPositions, zoneAfterAction } from '../src/engine/rules/zone.js';
 
 // Tuile factice : tout en herbe (1 PA par hexagone), entrée 8. Chemin 8 -> 2 -> 1 -> 3.
 function fakeTile() {
@@ -46,12 +46,23 @@ test('paquet : 10 cartes, composition exacte', () => {
   ]);
 });
 
-test('paquet : l\'Émission est toujours dans le dernier tiers, à une place tirée au hasard', () => {
+test('paquet : avec 10 PA, l\'Émission est en 2e ou 3e pioche, les deux selon la graine', () => {
   const positions = new Set();
   for (let seed = 0; seed < 60; seed++) {
-    positions.add(createGame({ seed, tile: fakeTile() }).zone.deck.indexOf('emission'));
+    const game = createGame({ seed, tile: fakeTile() });
+    assert.equal(game.ap.max, 10);
+    positions.add(game.zone.deck.indexOf('emission') + 1);
   }
-  assert.deepEqual([...positions].sort(), [7, 8, 9]);
+  assert.deepEqual([...positions].sort(), [2, 3]);
+});
+
+test('positions de l\'Émission : dernier tiers des pioches possibles, au moins 2 places', () => {
+  assert.deepEqual(emissionPositions(10), { first: 2, last: 3 });
+  assert.deepEqual(emissionPositions(18), { first: 5, last: 6 });
+  assert.deepEqual(emissionPositions(27), { first: 7, last: 9 });
+  assert.deepEqual(emissionPositions(6), { first: 1, last: 2 });
+  assert.deepEqual(emissionPositions(3), { first: 1, last: 1 });
+  assert.deepEqual(emissionPositions(60), { first: 7, last: 10 });
 });
 
 test('pioche : une carte quand le total de PA dépensés franchit un multiple de 3', () => {

@@ -11,8 +11,12 @@
 //
 // PAQUET (10 cartes) : patrouille, chiens, brouillard, cachette, radio, calme ×4, emission.
 //   Le brief en liste 9 (calme ×3) ; une 4e carte calme complète les 10.
-//   Les 9 cartes hors Émission sont mélangées, puis l'Émission est insérée au hasard en
-//   position 8, 9 ou 10 (dernier tiers : les 3 dernières cartes).
+//   Les 9 cartes hors Émission sont mélangées, puis l'Émission est insérée au hasard dans
+//   le dernier tiers des cartes RÉELLEMENT piochables (sinon elle ne sortirait jamais) :
+//     nbPioches = floor(PA de départ (ap.max) / DRAW_EVERY), plafonné à la taille du paquet
+//     positions possibles : de nbPioches - ceil(nbPioches / 3) + 1 à nbPioches (1 = première
+//     carte piochée), élargies à nbPioches - 1 si nbPioches ≥ 2 pour garder au moins 2 positions.
+//   Exemple : 10 PA -> 3 pioches -> Émission en 2e ou 3e pioche.
 //
 // MISE EN PLACE : setupZone(game) -> game   mélange le paquet (avance game.rng)
 //
@@ -71,15 +75,24 @@ const CACHE_ITEMS = ['bandage', 'vodka', 'ration'];
 
 const OTHER_CARDS = ['patrouille', 'chiens', 'brouillard', 'cachette', 'radio', 'calme', 'calme', 'calme', 'calme'];
 export const ZONE_DECK_SIZE = OTHER_CARDS.length + 1;
-const LAST_THIRD = 3;
 
 export function setupZone(game) {
   const rng = createRng(game.rng);
   const deck = rng.shuffle(OTHER_CARDS);
-  deck.splice(rng.int(ZONE_DECK_SIZE - LAST_THIRD, ZONE_DECK_SIZE - 1), 0, 'emission');
+  const { first, last } = emissionPositions(game.ap.max);
+  deck.splice(rng.int(first - 1, last - 1), 0, 'emission');
   game.zone = { deck, fog: false, emission: null, emissionPassed: false };
   game.rng = rng.state();
   return game;
+}
+
+// Positions (1 = première carte piochée) où l'Émission peut tomber : le dernier tiers des pioches
+// que le budget de PA de départ permet.
+export function emissionPositions(apMax) {
+  const draws = Math.max(1, Math.min(ZONE_DECK_SIZE, Math.floor(apMax / DRAW_EVERY)));
+  const lastThird = draws - Math.ceil(draws / 3) + 1;
+  const first = draws >= 2 ? Math.min(lastThird, draws - 1) : 1;
+  return { first, last: draws };
 }
 
 export function zoneRefusal(state, action) {
