@@ -85,7 +85,9 @@
 //       { [deckId]: { kind, tile?, place?, cards: [{ id, type, count?, ...références }] } }
 //       kind : 'zone' | 'nuit' | 'meteo' | 'rencontres' | 'exploration'. Carte d'exploration,
 //       type : 'butin' | 'cache' | 'anomalie' | 'occupant' | 'pnj' | 'indice' | 'passage' |
-//       'rien'. Les ids de cartes sont uniques dans un paquet.
+//       'rien'. Les ids de cartes sont uniques dans un paquet. Champs de chaque type (loot,
+//       stat, trap, anomaly, encounter, npc, effects, deck du passage, text) : en-tête de
+//       src/engine/rules/places.js.
 //   perks (savoir-faire.js, §11.2) { [perkId]: { name, effect } }
 //
 // RÉFÉRENCES : partout dans une entrée (sauf tiles et links, vérifiés à part), un champ de

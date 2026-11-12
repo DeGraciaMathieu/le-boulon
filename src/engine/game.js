@@ -109,20 +109,7 @@ export function step(state, action) {
   const draft = structuredClone(state);
   const events = [];
   const rng = createRng(draft.rng);
-  const ctx = {
-    rng,
-    emit: (event) => events.push(event),
-    spend: (cost) => {
-      draft.ap.left -= cost;
-      draft.ap.spent += cost;
-    },
-    check: (stat, extra = 0) => skillCheck(draft, stat, extra, ctx),
-    wound: (amount, cause) => wound(draft, amount, cause, ctx.emit),
-    irradiate: (amount, cause) => irradiate(draft, amount, cause, ctx.emit),
-    addItem: (item) => addItem(draft, item),
-    removeItem: (kind, cause) => removeItem(draft, kind, cause, ctx.emit),
-    useCharge: (kind) => useCharge(draft, kind),
-  };
+  const ctx = dayContext(draft, rng, (event) => events.push(event));
 
   const refusal = handler(draft, action, ctx);
   if (refusal) return refuse(refusal);
@@ -133,6 +120,26 @@ export function step(state, action) {
   endDayIfExhausted(draft, ctx);
   missionAfterStep(draft, events, ctx);
   return { state: draft, events };
+}
+
+// Contexte d'un handler v1 sur la journée draft (voir BRANCHER UNE RÈGLE). Exporté pour les
+// règles de campagne qui dépensent des PA hors du step v1 (src/engine/rules/places.js).
+export function dayContext(draft, rng, emit) {
+  const ctx = {
+    rng,
+    emit,
+    spend: (cost) => {
+      draft.ap.left -= cost;
+      draft.ap.spent += cost;
+    },
+    check: (stat, extra = 0) => skillCheck(draft, stat, extra, ctx),
+    wound: (amount, cause) => wound(draft, amount, cause, emit),
+    irradiate: (amount, cause) => irradiate(draft, amount, cause, emit),
+    addItem: (item) => addItem(draft, item),
+    removeItem: (kind, cause) => removeItem(draft, kind, cause, emit),
+    useCharge: (kind) => useCharge(draft, kind),
+  };
+  return ctx;
 }
 
 // Test de compétence (hypothèse v1) : 1d6 + stat ≥ 5. La ceinture d'artefacts d'une journée de
@@ -147,7 +154,7 @@ export function skillCheck(draft, stat, extra, ctx) {
   return success;
 }
 
-function endDayIfExhausted(draft, ctx) {
+export function endDayIfExhausted(draft, ctx) {
   if (draft.status !== 'playing' || draft.ap.left > 0) return;
   draft.status = 'night';
   ctx.emit({ type: 'day-ended', reason: 'no-ap' });

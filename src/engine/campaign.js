@@ -41,7 +41,9 @@
 //       weather,                   null, carte Météo du matin                        carte 7
 //       emission: { nextDay, today }  null, false                                    carte 8
 //     },
-//     places: { [id]: placeState }                                                   carte 10
+//     places: { [id]: placeState }  progression des lieux (rules/places.js)          carte 10
+//     place?,                      { id, approach? } pendant la visite d'un lieu seulement
+//                                  (rules/places.js)                                 carte 10
 //     npcs: { [id]: { alive, tile, place, met, helped } }  (rules/npcs.js)          carte 19
 //     quests: { [id]: questState }                                                   carte 15
 //     contracts: { [hubId]: [...] }                                                  carte 22
@@ -103,6 +105,7 @@ import { raiseStat, learnPerk } from './rules/progression.js';
 import { COMBAT_MODES, combatOnReveal, combatRefusal, shoot, takeCover, grenade, heal, escape, parley } from './rules/combat.js';
 import { travel } from './rules/world.js';
 import { talkTo, startingNpcs } from './rules/npcs.js';
+import { enterPlace, explore, boltCard, leavePlace, placesAfterStep, PLACE_OVERRIDES } from './rules/places.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -119,9 +122,10 @@ export const CAMPAIGN_ACTIONS = {
   talk: talkTo, choose, join, equip, unequip, 'raise-stat': raiseStat, 'learn-perk': learnPerk,
   shoot, 'take-cover': takeCover, grenade, heal, escape, parley,
   travel,
+  'enter-place': enterPlace, explore, 'bolt-card': boltCard, 'leave-place': leavePlace,
 };
 
-export const REACTIONS = [combatOnReveal];
+export const REACTIONS = [combatOnReveal, placesAfterStep];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);
@@ -175,7 +179,8 @@ export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles
 export function step(campaign, action) {
   const blocked = combatRefusal(campaign, action);
   if (blocked) return { state: campaign, events: [{ type: 'refused', action, reason: blocked }] };
-  const handler = CAMPAIGN_ACTIONS[action.type];
+  // Dans un lieu, PLACE_OVERRIDES (rules/places.js) remplace des actions v1.
+  const handler = (campaign.place && PLACE_OVERRIDES[action.type]) ?? CAMPAIGN_ACTIONS[action.type];
   const result = handler ? runCampaignAction(campaign, action, handler) : relayToTile(campaign, action);
   if (result.state === campaign) return result;
 
