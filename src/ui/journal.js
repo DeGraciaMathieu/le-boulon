@@ -22,7 +22,7 @@ export const CAUSE_NAMES = {
 
 const STAT_NAMES = { tir: 'Tir', survie: 'Survie', discretion: 'Discrétion', endurance: 'Endurance' };
 
-const ZONE_CARD_NAMES = {
+export const ZONE_CARD_NAMES = {
   patrouille: 'Patrouille', chiens: 'Chiens attirés', brouillard: 'Brouillard', cachette: 'Cachette',
   radio: 'Radio', calme: 'Calme', emission: 'Émission',
 };

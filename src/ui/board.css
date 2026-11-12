@@ -1,9 +1,33 @@
+:root {
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --fond: #1b1f17;
+  --panneau: #20251b;
+  --pda: #10140c;
+  --jeton: #2c2a24;
+  --texte: #cfd8b8;
+  --sauge: #9aa67a;
+  --sauge-sombre: #7d8762;
+  --olive: #6f7a4a;
+  --olive-sombre: #4a5232;
+  --phosphore: #9fe36a;
+  --ocre: #e3cf6a;
+  --rouille: #d9772f;
+  --rouille-sombre: #b5462b;
+  --papier: #f4ead0;
+  --alerte: #ff9a4a;
+  --danger: #ff6a4a;
+  --electro: #7fd6ff;
+  --gravitationnelle: #c49bff;
+  --bruleuse: #ff7a2a;
+  --emission: #ff5a28;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background: #1b1f17;
-  color: #cfd8b8;
-  font-family: ui-monospace, Menlo, Consolas, monospace;
+  background: radial-gradient(ellipse at 30% 20%, #262b1f, var(--fond) 70%) fixed;
+  color: var(--texte);
+  font-family: var(--mono);
 }
 
 #table {
@@ -45,7 +69,7 @@ body {
 
 .hex.atteignable {
   fill: rgba(214, 196, 92, 0.18);
-  stroke: #e3cf6a;
+  stroke: var(--ocre);
   stroke-width: 2.5;
   cursor: pointer;
 }
@@ -55,7 +79,7 @@ body {
 }
 
 .hex.sortie {
-  stroke: #d9772f;
+  stroke: var(--rouille);
   stroke-width: 3;
   stroke-dasharray: 10 6;
   cursor: pointer;
@@ -66,8 +90,8 @@ body {
 }
 
 .pion {
-  fill: #b5462b;
-  stroke: #f4ead0;
+  fill: var(--rouille-sombre);
+  stroke: var(--papier);
   stroke-width: 4;
   pointer-events: none;
 }
@@ -80,7 +104,7 @@ body {
   position: fixed;
   padding: 6px 10px;
   background: rgba(16, 20, 12, 0.92);
-  border: 1px solid #6f7a4a;
+  border: 1px solid var(--olive);
   font-size: 13px;
   line-height: 1.5;
   pointer-events: none;
@@ -88,14 +112,14 @@ body {
 
 .jeton rect,
 .jeton circle {
-  fill: #2c2a24;
-  stroke: #e3cf6a;
+  fill: var(--jeton);
+  stroke: var(--ocre);
   stroke-width: 3;
 }
 
 .jeton text {
-  fill: #f4ead0;
-  font: bold 16px ui-monospace, Menlo, monospace;
+  fill: var(--papier);
+  font: bold 16px var(--mono);
 }
 
 .suspect.cache text {
@@ -104,7 +128,7 @@ body {
 
 .suspect.artefact rect {
   fill: #3d5a2a;
-  stroke: #9fe36a;
+  stroke: var(--phosphore);
 }
 
 .suspect.rien rect {
@@ -114,16 +138,16 @@ body {
 
 .suspect.anomalie rect {
   fill: #5a2219;
-  stroke: #ff6a4a;
+  stroke: var(--danger);
 }
 
 .jeton text.bloque {
-  fill: #ff6a4a;
+  fill: var(--danger);
   font-size: 13px;
 }
 
 .rencontre circle {
-  stroke: #d9772f;
+  stroke: var(--rouille);
 }
 
 .rencontre.revelee circle {
@@ -138,8 +162,8 @@ body {
   grid-area: panneau;
   overflow-y: auto;
   padding: 10px;
-  border: 1px solid #4a5232;
-  background: #20251b;
+  border: 1px solid var(--olive-sombre);
+  background: var(--panneau);
   font-size: 13px;
 }
 
@@ -151,7 +175,7 @@ body {
   margin: 0 0 6px;
   font-size: 13px;
   text-transform: uppercase;
-  color: #9aa67a;
+  color: var(--sauge);
 }
 
 .pa {
@@ -164,7 +188,7 @@ body {
   font-size: 64px;
   font-weight: bold;
   line-height: 1;
-  color: #e3cf6a;
+  color: var(--ocre);
 }
 
 .piste {
@@ -180,15 +204,15 @@ body {
 
 .case {
   height: 14px;
-  border: 1px solid #6f7a4a;
+  border: 1px solid var(--olive);
 }
 
 .case.seuil {
-  border: 2px solid #d9772f;
+  border: 2px solid var(--rouille);
 }
 
 .blessures .case.pleine {
-  background: #b5462b;
+  background: var(--rouille-sombre);
 }
 
 .radiations .case.pleine {
@@ -204,7 +228,7 @@ body {
 .objet {
   min-height: 34px;
   padding: 2px;
-  border: 1px solid #6f7a4a;
+  border: 1px solid var(--olive);
   font-size: 11px;
   overflow-wrap: anywhere;
 }
@@ -219,20 +243,20 @@ body {
 }
 
 .mission.remplie {
-  color: #9fe36a;
+  color: var(--phosphore);
 }
 
 .mission.impossible {
-  color: #ff6a4a;
+  color: var(--danger);
 }
 
 .alerte {
-  color: #ff9a4a;
+  color: var(--alerte);
 }
 
 .alerte.emission {
   font-weight: bold;
-  color: #ff6a4a;
+  color: var(--danger);
 }
 
 .commandes {
@@ -244,18 +268,18 @@ body {
 button {
   padding: 8px;
   font: inherit;
-  color: #1b1f17;
-  background: #cfd8b8;
+  color: var(--fond);
+  background: var(--texte);
   border: 0;
   cursor: pointer;
 }
 
 button:hover {
-  background: #e3cf6a;
+  background: var(--ocre);
 }
 
 .aide {
-  color: #7d8762;
+  color: var(--sauge-sombre);
   font-size: 11px;
 }
 
@@ -265,20 +289,27 @@ button:hover {
   padding: 8px 12px;
   overflow-y: auto;
   list-style: none;
-  border: 1px solid #4a5232;
-  background: #10140c;
-  color: #9fe36a;
+  border: 1px solid var(--olive-sombre);
+  background: var(--pda);
+  color: var(--phosphore);
   font-size: 12px;
   line-height: 1.5;
+  text-shadow: 0 0 4px rgba(159, 227, 106, 0.35);
+  background-image: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.25) 2px 3px);
+}
+
+#journal li[data-type^="emission"],
+#journal li[data-type="anomaly-triggered"] {
+  color: var(--alerte);
 }
 
 #journal li::before {
   content: "> ";
-  color: #4a5232;
+  color: var(--olive-sombre);
 }
 
 #journal li[data-type="refused"] {
-  color: #ff9a4a;
+  color: var(--alerte);
 }
 
 #fin {
@@ -296,8 +327,8 @@ button:hover {
 .fin-boite {
   min-width: 300px;
   padding: 24px;
-  border: 1px solid #6f7a4a;
-  background: #20251b;
+  border: 1px solid var(--olive);
+  background: var(--panneau);
   text-align: center;
 }
 
@@ -305,4 +336,248 @@ button:hover {
   display: flex;
   gap: 8px;
   justify-content: center;
+}
+
+/* ---------- Retours visuels (fx.js) ---------- */
+
+.fx * {
+  pointer-events: none;
+}
+
+.fx-trajet {
+  stroke: var(--papier);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 4 9;
+  opacity: 0;
+  animation: trajet 0.45s ease-out;
+}
+
+@keyframes trajet {
+  0% { opacity: 1; stroke-dashoffset: 120; }
+  70% { opacity: 1; }
+  100% { opacity: 0; stroke-dashoffset: 0; }
+}
+
+.fx-impact {
+  fill: none;
+  stroke: var(--ocre);
+  stroke-width: 4;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: impact 0.6s ease-out 0.3s;
+}
+
+@keyframes impact {
+  0% { opacity: 1; transform: scale(0.2); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+.suspect.retourne {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: retourne 0.4s ease-out backwards;
+}
+
+.suspect.retourne.apres-boulon {
+  animation-delay: 0.4s;
+}
+
+@keyframes retourne {
+  0% { transform: scaleX(0); }
+  60% { transform: scaleX(1.15); }
+  100% { transform: scaleX(1); }
+}
+
+.fx-anomalie {
+  --teinte: var(--danger);
+  fill: var(--teinte);
+  stroke: var(--teinte);
+  stroke-width: 4;
+  opacity: 0;
+  animation: anomalie 0.8s ease-out;
+}
+
+.fx-anomalie.electro { --teinte: var(--electro); }
+.fx-anomalie.gravitationnelle { --teinte: var(--gravitationnelle); }
+.fx-anomalie.bruleuse { --teinte: var(--bruleuse); }
+
+@keyframes anomalie {
+  0% { opacity: 0.9; transform: translate(0, 0); }
+  15% { opacity: 0.3; transform: translate(-7px, 3px); }
+  30% { opacity: 0.8; transform: translate(6px, -4px); }
+  45% { opacity: 0.3; transform: translate(-5px, -2px); }
+  60% { opacity: 0.6; transform: translate(4px, 3px); }
+  100% { opacity: 0; transform: translate(0, 0); }
+}
+
+#carte-zone {
+  position: fixed;
+  top: 18%;
+  left: calc((100vw - 316px) / 2);
+  transform: translateX(-50%);
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+  padding: 16px 22px;
+  border: 2px solid var(--ocre);
+  background: var(--panneau);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  text-align: center;
+  pointer-events: none;
+}
+
+#carte-zone[hidden] {
+  display: none;
+}
+
+#carte-zone small {
+  color: var(--sauge);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+#carte-zone strong {
+  font-size: 26px;
+  color: var(--papier);
+}
+
+#carte-zone.emission {
+  border-color: var(--emission);
+}
+
+#carte-zone.emission strong {
+  color: var(--emission);
+}
+
+#carte-zone.apparait {
+  animation: carte 1s ease-out forwards;
+}
+
+@keyframes carte {
+  0% { opacity: 0; transform: translateX(-50%) rotateY(90deg); }
+  25% { opacity: 1; transform: translateX(-50%) rotateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Émission en cours : teinte rouge-ambre, vignette et pulsation sur tout l'écran. */
+body.en-emission::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(255, 120, 40, 0.08) 35%, rgba(150, 20, 0, 0.6) 100%),
+    rgba(255, 90, 40, 0.1);
+  mix-blend-mode: hard-light;
+  pointer-events: none;
+  animation: pulsation 1.6s ease-in-out infinite;
+}
+
+@keyframes pulsation {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+body.en-emission #panneau,
+body.en-emission #journal {
+  border-color: var(--emission);
+}
+
+.hex.abri {
+  fill: rgba(159, 227, 106, 0.22);
+  stroke: var(--phosphore);
+  stroke-width: 4;
+  animation: abri 1.2s ease-in-out infinite;
+}
+
+@keyframes abri {
+  50% { fill: rgba(159, 227, 106, 0.45); }
+}
+
+#emission {
+  position: fixed;
+  top: 12px;
+  left: calc((100vw - 316px) / 2);
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 20px;
+  border: 2px solid var(--emission);
+  background: rgba(30, 8, 4, 0.9);
+  color: var(--papier);
+  box-shadow: 0 0 24px rgba(255, 90, 40, 0.55);
+  pointer-events: none;
+}
+
+#emission[hidden] {
+  display: none;
+}
+
+.emission-titre {
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--emission);
+}
+
+#emission-pa {
+  font-size: 56px;
+  font-weight: bold;
+  line-height: 1;
+  color: var(--ocre);
+}
+
+#emission.annonce {
+  animation: annonce 0.7s ease-out;
+}
+
+@keyframes annonce {
+  0% { opacity: 0; transform: translateX(-50%) scale(1.8); }
+  60% { opacity: 1; transform: translateX(-50%) scale(0.95); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+#emission-pa.tic {
+  animation: tic 0.5s ease-out;
+}
+
+@keyframes tic {
+  0% { transform: scale(1.6); color: var(--danger); }
+  100% { transform: scale(1); }
+}
+
+#emission.passee {
+  border-color: var(--phosphore);
+  box-shadow: 0 0 24px rgba(159, 227, 106, 0.4);
+}
+
+#emission.passee .emission-titre {
+  color: var(--phosphore);
+}
+
+@media (max-width: 800px) {
+  #carte-zone,
+  #emission {
+    left: 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .fx-trajet,
+  .fx-impact,
+  .fx-anomalie {
+    opacity: 0.6;
+  }
 }

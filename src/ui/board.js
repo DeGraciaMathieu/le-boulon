@@ -5,6 +5,7 @@
 //   fond    l'image de la tuile ;
 //   grille  un polygone transparent par hexagone, data-hex = numéro ;
 //   jetons  les jetons suspects (cachés ou révélés) et les rencontres ;
+//   fx      les traces passagères des retours visuels (fx.js) ;
 //   pion    le joueur.
 
 import { HEXES, neighbors, isEdge } from '../engine/hex.js';
@@ -34,8 +35,9 @@ export function mountBoard(svg, { image, calage }) {
   for (const { n } of HEXES) el('polygon', { class: 'hex', 'data-hex': n, points: hexPoints(n, calage) }, grid);
 
   const tokens = el('g', { class: 'jetons' }, svg);
+  const fx = el('g', { class: 'fx' }, svg);
   const pawn = el('circle', { class: 'pion', r: calage.taille * 0.28 }, svg);
-  return { svg, grid, tokens, pawn, calage };
+  return { svg, grid, tokens, fx, pawn, calage };
 }
 
 // Voisins où le joueur peut entrer avec les PA qui lui restent : ni combat en cours, ni anomalie révélée.
@@ -50,14 +52,17 @@ export function canExit(state) {
   return state.status === 'playing' && !state.combat && isEdge(state.player.hex);
 }
 
+// Pendant une Émission en cours, les abris portent la classe abri.
 export function renderBoard(board, state) {
   const reachable = reachableHexes(state);
+  const shelters = Boolean(state.zone?.emission) && state.status === 'playing';
   for (const polygon of board.grid.children) {
     const n = Number(polygon.dataset.hex);
     const here = n === state.player.hex;
     polygon.classList.toggle('atteignable', reachable.includes(n));
     polygon.classList.toggle('joueur', here);
     polygon.classList.toggle('sortie', here && canExit(state));
+    polygon.classList.toggle('abri', shelters && Boolean(state.tile.hexes[n].abri));
   }
   renderTokens(board, state);
 
@@ -76,7 +81,7 @@ function renderTokens(board, state) {
   for (const token of state.tokens ?? []) {
     const { x, y } = hexCenter(token.hex, board.calage);
     const kind = token.revealed ? token.kind : 'cache';
-    const group = el('g', { class: `jeton suspect ${kind}` }, board.tokens);
+    const group = el('g', { class: `jeton suspect ${kind}`, 'data-hex': token.hex }, board.tokens);
     el('rect', { x: x - size / 2, y: y - board.calage.taille * 0.62, width: size, height: size, rx: 5 }, group);
     label(group, x, y - board.calage.taille * 0.62 + size / 2, SUSPECT_LABELS[token.revealed ? (token.anomaly ?? token.kind) : 'cache']);
     if (token.revealed && token.kind === 'anomalie') {

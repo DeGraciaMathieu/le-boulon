@@ -7,6 +7,8 @@
 //   clic sur le pion       { type: 'exit' } si le pion est sur un hexagone de bord ;
 //   clic droit             { type: 'bolt', target } : boulon lancé sur l'hexagone voisin visé.
 //
+// RETOURS : après chaque rendu, fx.js anime les événements de l'action (boulon, anomalie,
+// carte Zone, Émission).
 // PANNEAU : boutons Combattre, Fuir, Ramasser, Utiliser, Sortir selon l'état (panel.js).
 // FIN : Rejouer relance la même graine, Nouvelle partie en tire une autre (reportée dans l'adresse).
 //
@@ -19,6 +21,7 @@ import { missionAssigned } from '../engine/rules/mission.js';
 import { mountBoard, renderBoard, reachableHexes, canExit } from './board.js';
 import { renderPanel } from './panel.js';
 import { appendEvents, CAUSE_NAMES } from './journal.js';
+import { playEffects, renderEmission, resetEffects } from './fx.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
 
@@ -35,6 +38,7 @@ const endScreen = document.getElementById('fin');
 function render() {
   renderBoard(board, state);
   renderPanel(panel, state, dispatch);
+  renderEmission(state);
   renderEnd();
 }
 
@@ -52,6 +56,7 @@ function start(seed) {
   state = createGame({ seed, tile: agroprom });
   history.replaceState(null, '', `?seed=${seed}`);
   journal.replaceChildren();
+  resetEffects(board);
   appendEvents(journal, [missionAssigned(state)]);
   render();
 }
@@ -61,6 +66,7 @@ function dispatch(action) {
   state = result.state;
   appendEvents(journal, result.events);
   render();
+  playEffects(board, result.events, state);
 }
 
 const hexOf = (event) => Number(event.target.closest('[data-hex]')?.dataset.hex) || null;
