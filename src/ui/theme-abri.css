@@ -1,0 +1,366 @@
+/* Thème « Table de l'abri » (direction 1, lot L0) : on joue à la lampe sur une table en noyer.
+   Chargé en dernier : il redéfinit la palette de board.css pour tous les écrans, puis donne leur
+   matière aux objets de l'écran principal (plateau en carton, panneau kraft, carnet ligné,
+   jetons crème). Toutes les couleurs sont ici, en variables. Polices : replis système (aucune
+   police embarquée). */
+
+:root {
+  /* Matières. */
+  --noyer: #2b1e15;
+  --noyer-clair: #4a3324;
+  --noyer-fonce: #1d140e;
+  --table-fond: #1a120c;
+  --kraft: #c9b289;
+  --kraft-sombre: #a8905f;
+  --papier-clair: #fbf3dc;
+  --papier-ombre: #e4d6b2;
+  --carton-creme: #d8c79c;
+  --carton-bord: #6b5530;
+  --carton-encre: #3a2c12;
+  --carte-bouton: #fff7e2;
+  --encre: #2a241c;
+  --encre-douce: rgb(42 36 28 / 0.62);
+  --trait: rgb(42 36 28 / 0.3);
+  --feutre: #3d4a30;
+  --lampe: rgb(255 206 130 / 0.2);
+  --ligne-carnet: rgb(80 110 160 / 0.2);
+  --ombre-objet: 0 8px 14px rgb(0 0 0 / 0.5);
+  --rouille-encre: #a5432b;
+  --ocre-encre: #8a5a12;
+  --olive-encre: #4f5a2c;
+
+  /* Palette de board.css, transposée sur le bois : valable pour tous les écrans. */
+  --fond: var(--table-fond);
+  --panneau: var(--noyer);
+  --pda: var(--noyer-fonce);
+  --jeton: #3a2a1d;
+  --texte: #efe5c9;
+  --papier: #efe5c9;
+  --sauge: var(--kraft);
+  --sauge-sombre: var(--kraft-sombre);
+  --olive: #5d6542;
+  --olive-sombre: var(--noyer-clair);
+  --phosphore: #b5c46a;
+  --ocre: #d6a03c;
+  --rouille: #c8643c;
+  --rouille-sombre: #a5432b;
+
+  /* Typographie : corps en machine à écrire, titres en linéale étroite. */
+  --mono: "Special Elite", "American Typewriter", "Courier New", monospace;
+  --titre: "Oswald", "DIN Condensed", "Avenir Next Condensed", "Arial Narrow", sans-serif;
+}
+
+/* ---------- Table ---------- */
+
+html {
+  background: var(--table-fond);
+}
+
+body {
+  background:
+    radial-gradient(ellipse 70% 60% at 45% 40%, var(--lampe), transparent 70%),
+    repeating-linear-gradient(92deg, rgb(0 0 0 / 0.08) 0 2px, transparent 2px 9px, rgb(255 255 255 / 0.03) 9px 10px, transparent 10px 23px),
+    linear-gradient(180deg, var(--noyer-clair), var(--noyer) 60%, var(--table-fond));
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3,
+.bandeau-valeur,
+.objectif-titre,
+.objectif-etape,
+#commandes .zone-titre,
+.emission-titre,
+#carte-zone strong {
+  font-family: var(--titre);
+}
+
+/* Boutons : petites cartes crème posées sur la table. */
+button {
+  color: var(--encre);
+  background: var(--carte-bouton);
+  border: 1px solid var(--trait);
+  border-radius: 3px;
+  box-shadow: 0 2px 0 var(--trait);
+}
+
+button:hover {
+  background: var(--ocre);
+}
+
+button:active {
+  box-shadow: none;
+  transform: translateY(2px);
+}
+
+/* ---------- Bandeau : réglette en bois foncé ---------- */
+
+#bandeau {
+  margin: 8px 8px 0;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: linear-gradient(#3a2a1d, #2c2016);
+  box-shadow: 0 6px 14px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.08);
+  color: var(--papier);
+}
+
+.bandeau-label {
+  letter-spacing: 0.08em;
+}
+
+/* ---------- Plateau : carton épais posé sur un creux de la table ---------- */
+
+#plateau {
+  border-radius: 6px;
+  background: var(--noyer-fonce);
+  box-shadow: inset 0 0 40px rgb(0 0 0 / 0.7);
+}
+
+#plateau > image {
+  filter: drop-shadow(0 2px 0 #6b5a3f) drop-shadow(0 14px 16px rgb(0 0 0 / 0.7));
+}
+
+.hex {
+  stroke: rgb(255 255 255 / 0.2);
+}
+
+.cout rect {
+  fill: #2a1f15;
+}
+
+/* Jetons en carton crème, posés avec leur ombre. */
+.jeton {
+  filter: drop-shadow(2px 4px 2px rgb(0 0 0 / 0.6));
+}
+
+.jeton rect,
+.jeton circle {
+  fill: var(--carton-creme);
+  stroke: var(--carton-bord);
+  stroke-width: 2;
+}
+
+.suspect.cache text {
+  fill: var(--carton-encre);
+}
+
+.rencontre circle {
+  fill: var(--rouille-sombre);
+  stroke: #f0d8b0;
+}
+
+.rencontre text {
+  fill: #f7ead0;
+}
+
+.rencontre.revelee circle {
+  fill: #6a2b14;
+}
+
+.pion {
+  fill: #b23a26;
+  stroke: var(--papier);
+  filter: drop-shadow(2px 5px 3px rgb(0 0 0 / 0.6));
+}
+
+.marqueur-quete path,
+.marqueur-donneur circle {
+  stroke: var(--carton-encre);
+}
+
+.marqueur-donneur text {
+  fill: var(--carton-encre);
+}
+
+#apercu {
+  border: 1px solid var(--trait);
+  border-radius: 3px;
+  background: var(--papier);
+  color: var(--encre);
+  box-shadow: var(--ombre-objet);
+}
+
+/* ---------- Panneau de commandes : carton kraft ---------- */
+
+#table.campagne #panneau {
+  --texte: var(--encre);
+  --sauge: var(--encre-douce);
+  --sauge-sombre: var(--encre-douce);
+  --olive-sombre: var(--trait);
+  --phosphore: var(--olive-encre);
+  --alerte: var(--rouille-encre);
+  --danger: var(--rouille-encre);
+  border: 0;
+  border-radius: 4px;
+  background: linear-gradient(160deg, var(--kraft), var(--kraft-sombre));
+  box-shadow: 0 10px 18px rgb(0 0 0 / 0.55), inset 0 0 0 1px rgb(0 0 0 / 0.15);
+  color: var(--encre);
+}
+
+#panneau h2 {
+  letter-spacing: 0.14em;
+}
+
+#commandes .zone + .zone {
+  border-top-color: var(--trait);
+}
+
+#commandes button.donneur,
+#commandes button.suivie {
+  background: var(--ocre);
+}
+
+#commandes button.suivie {
+  outline-color: var(--carton-encre);
+}
+
+#commandes #finir {
+  background: var(--papier-ombre);
+}
+
+button.boulon.actif {
+  background: var(--electro);
+}
+
+/* Encart Objectif : fiche de mission en papier, liseré ocre. */
+.objectif-encart {
+  padding: 10px 12px;
+  border: 0;
+  border-left: 6px solid var(--ocre);
+  background: linear-gradient(var(--papier), var(--papier-ombre));
+  box-shadow: 0 4px 8px rgb(0 0 0 / 0.35);
+  color: var(--encre);
+}
+
+.objectif-encart:hover {
+  background: var(--papier-clair);
+}
+
+.objectif-titre {
+  color: var(--rouille-encre);
+  letter-spacing: 0.14em;
+}
+
+.objectif-etape {
+  color: var(--encre);
+  font-size: 15px;
+}
+
+.objectif-cible {
+  color: var(--encre-douce);
+}
+
+/* Carte du monde : vignettes posées sur une plaque sombre. */
+#monde {
+  border-radius: 4px;
+  background: var(--noyer-fonce);
+  box-shadow: inset 0 0 12px rgb(0 0 0 / 0.6);
+}
+
+#monde .tuile-monde text {
+  fill: var(--papier);
+}
+
+#monde .tuile-monde.inconnue text {
+  fill: var(--kraft-sombre);
+}
+
+#monde .tuile-monde.courante .cadre {
+  stroke: var(--ocre);
+}
+
+#monde .pion-monde {
+  fill: var(--ocre);
+}
+
+/* ---------- Journal : carnet en papier ligné ---------- */
+
+#journal {
+  border: 0;
+  border-radius: 2px;
+  background-color: var(--papier);
+  background-image: repeating-linear-gradient(transparent 0 17px, var(--ligne-carnet) 17px 18px);
+  background-attachment: local;
+  box-shadow: var(--ombre-objet);
+  color: var(--encre);
+  line-height: 18px;
+  text-shadow: none;
+}
+
+#journal li::before {
+  color: var(--kraft-sombre);
+}
+
+#journal li[data-level="detail"] {
+  color: var(--encre-douce);
+}
+
+#journal li[data-type^="quest"] {
+  color: var(--ocre-encre);
+}
+
+#journal li[data-type^="emission"],
+#journal li[data-type="anomaly-triggered"],
+#journal li[data-type="refused"] {
+  color: var(--rouille-encre);
+}
+
+#journal-filtre button {
+  border-color: var(--trait);
+  background: var(--papier-ombre);
+  color: var(--encre-douce);
+  box-shadow: none;
+}
+
+#journal-filtre button[aria-pressed="true"] {
+  border-color: var(--olive-encre);
+  background: var(--olive);
+  color: var(--papier);
+}
+
+/* ---------- Autres écrans : même bois, mêmes cartes ---------- */
+
+#hub,
+#lieu,
+.cadre-fenetre,
+.ecran-carte {
+  border-color: var(--noyer-clair);
+  border-radius: 4px;
+  box-shadow: var(--ombre-objet);
+}
+
+.ecran-carte h1 {
+  color: var(--ocre);
+}
+
+#ecran[data-ecran="titre"] {
+  background: rgb(26 18 12 / 0.9);
+}
+
+.ecran-reglage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ecran-reglage button[aria-pressed="true"] {
+  background: var(--ocre);
+}
+
+/* ---------- Animations réduites (réglage de l'écran titre, animations.js) ---------- */
+
+html.animations-reduites *,
+html.animations-reduites *::before,
+html.animations-reduites *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+html.animations-reduites .fx-trajet,
+html.animations-reduites .fx-impact,
+html.animations-reduites .fx-anomalie {
+  opacity: 0.6;
+}

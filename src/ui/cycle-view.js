@@ -40,7 +40,7 @@ function card(section, kind, ...children) {
   section.replaceChildren(h('div', { className: `ecran-carte ecran-${kind}` }, ...children));
 }
 
-export function renderTitle(section, { slots, error }, on) {
+export function renderTitle(section, { slots, error, motion }, on) {
   const seed = h('input', { type: 'text', inputMode: 'numeric', placeholder: 'au hasard', id: 'graine', size: 12 });
   const file = h('input', { type: 'file', accept: 'application/json,.json', id: 'importer' });
   file.addEventListener('change', () => file.files[0] && on.import(file.files[0]));
@@ -59,6 +59,10 @@ export function renderTitle(section, { slots, error }, on) {
       h('span', { className: slot.error ? 'alerte' : 'ecran-detail', textContent: slot.detail })))),
     h('h2', { textContent: 'Importer' }),
     h('label', { className: 'ecran-import' }, 'Fichier de sauvegarde (JSON) ', file),
+    h('h2', { textContent: 'Réglages' }),
+    h('div', { className: 'ecran-reglage', role: 'group', ariaLabel: 'Animations' }, 'Animations ',
+      ...[['normales', 'Normales'], ['reduites', 'Réduites']].map(([mode, label]) =>
+        button(label, () => on.motion(mode), { ariaPressed: String(mode === motion), id: `animations-${mode}` }))),
     error && h('p', { className: 'alerte', role: 'alert', textContent: error }));
 }
 

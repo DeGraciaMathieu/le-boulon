@@ -1,4 +1,5 @@
-// Sauvegardes côté navigateur (brief v2 §15). Seul fichier qui touche localStorage ; chaque
+// Sauvegardes côté navigateur (brief v2 §15). Seul fichier qui touche localStorage
+// (hors réglage des animations, animations.js) ; chaque
 // accès est sous try/catch (navigation privée, quota, stockage bloqué) et aucune exception ne
 // sort : les fonctions rendent { ok, error? } ou { campaign?, error? }.
 //
