@@ -42,10 +42,11 @@ test('contenu : les 6 factions du §9, gelées et rangées dans l\'index', () =>
   for (const [id, faction] of Object.entries(FACTIONS)) {
     assert.ok(Object.isFrozen(faction));
     assert.equal(faction.id, id);
-    for (const key of ['nom', 'base', 'rejoignable', 'attitude']) assert.ok(key in faction, `${id}.${key}`);
+    for (const key of ['name', 'places', 'joinable', 'start']) assert.ok(key in faction, `${id}.${key}`);
   }
-  const joinable = Object.values(FACTIONS).filter((f) => f.rejoignable).map((f) => f.id).sort();
+  const joinable = Object.values(FACTIONS).filter((f) => f.joinable).map((f) => f.id).sort();
   assert.deepEqual(joinable, ['devoir', 'liberte', 'solitaires']);
+  assert.equal(FACTIONS.solitaires.default, true);
   assert.equal(FACTIONS.devoir.rival, 'liberte');
   assert.equal(FACTIONS.liberte.rival, 'devoir');
 });
@@ -94,7 +95,7 @@ test('changeReputation : bornée à -3..3, un événement par changement', () =>
 test('effet de dialogue « reputation » passe par changeReputation', () => {
   const draft = campaignWith({ reputation: { devoir: 1 } });
   const { events, ctx } = collector();
-  EFFECTS.reputation(draft, { type: 'reputation', faction: 'devoir', montant: 1 }, ctx);
+  EFFECTS.reputation(draft, { type: 'reputation', faction: 'devoir', amount: 1 }, ctx);
   assert.equal(draft.reputation.devoir, 2);
   assert.equal(events[0].type, 'reputation-changed');
 });
@@ -134,10 +135,10 @@ test('action join : refus sans rien toucher', () => {
 test('effet de dialogue « rejoindre-faction » : même règle, refus qui annule le choix', () => {
   DIALOGUES['barman-test'] = Object.freeze({
     id: 'adhesion',
-    debut: 'offre',
-    noeuds: [{ id: 'offre', texte: 'Tu es avec nous ?', choix: [
-      { texte: 'Je rejoins Liberté.', effets: [{ type: 'rejoindre-faction', faction: 'liberte' }] },
-    ] }],
+    start: 'offre',
+    nodes: { offre: { text: 'Tu es avec nous ?', choices: [
+      { text: 'Je rejoins Liberté.', next: null, effects: [{ type: 'rejoindre-faction', faction: 'liberte' }] },
+    ] } },
   });
   let campaign = step(createCampaign({ seed: 5 }), { type: 'talk', npc: 'barman-test' }).state;
   const { state, events } = step(campaign, { type: 'choose', index: 0 });

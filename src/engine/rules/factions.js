@@ -1,10 +1,12 @@
 // Factions et réputation (brief v2 §9, §5.4, §6.2 ; carte 16). Contenu : src/content/factions.js.
 //
 // RÉPUTATION : campaign.reputation[faction] de -3 à +3, posée au départ par startingReputation()
-// (createCampaign). Une faction absente de la piste vaut 0 ; une faction inconnue lève une
-// erreur (faute de contenu).
+// (createCampaign) depuis le champ start de chaque faction. Une faction absente de la piste
+// vaut 0 ; une faction inconnue lève une erreur (faute de contenu).
 //   Paliers (STANDINGS) : -3 et -2 hostile, -1 à +1 neutre, +2 amical, +3 allié.
-//   Hypothèse v2 : l'attitude de départ du §9 donne la valeur hostile -2, neutre 0, amical +2.
+//
+// ADHÉSION : une faction joinable et non default (Devoir, Liberté) se rejoint ; la faction
+// default (Solitaires) est celle du départ, on ne la « rejoint » pas.
 //
 // LECTURE (pure) :
 //   reputationOf(campaign, faction) -> -3..3       tierOf(valeur) -> palier
@@ -36,7 +38,7 @@
 //     par le dialogue ou la quête qui propose l'adhésion (carte 15), pas ici.
 //
 // ACTION DE CAMPAGNE (CAMPAIGN_ACTIONS de campaign.js) : { type: 'join', faction } -> joinFaction.
-// EFFETS DE DIALOGUE (EFFECTS de dialogue.js) : { type: 'reputation', faction, montant }
+// EFFETS DE DIALOGUE (EFFECTS de dialogue.js) : { type: 'reputation', faction, amount }
 //   -> changeReputation ; { type: 'rejoindre-faction', faction } -> joinFaction.
 //
 // ÉVÉNEMENTS :
@@ -49,9 +51,6 @@ export const REPUTATION_MIN = -3;
 export const REPUTATION_MAX = 3;
 
 export const STANDINGS = Object.freeze(['hostile', 'neutre', 'amical', 'allie']);
-
-// Hypothèse v2 : valeur de départ de chaque attitude du §9.
-const STARTING_VALUES = Object.freeze({ hostile: -2, neutre: 0, amical: 2 });
 
 const RIVAL_REPUTATION = -2;
 
@@ -72,7 +71,7 @@ function factionData(faction) {
 
 export function startingReputation() {
   const reputation = {};
-  for (const { id, attitude } of Object.values(content.factions)) reputation[id] = STARTING_VALUES[attitude];
+  for (const [id, { start }] of Object.entries(content.factions)) reputation[id] = start;
   return reputation;
 }
 
@@ -98,8 +97,13 @@ export function isMember(campaign, faction) {
 
 export function memberPerks(campaign, faction) {
   const member = isMember(campaign, faction);
-  const joined = member && factionData(faction).rejoignable === true;
+  const joined = member && canBeJoined(factionData(faction));
   return { freeBed: member, allyPrices: joined, factionContracts: joined };
+}
+
+// Devoir et Liberté : membres par adhésion, contrairement aux Solitaires du départ.
+function canBeJoined(data) {
+  return data.joinable === true && !data.default;
 }
 
 function onGoodTerms(campaign, faction) {
@@ -134,9 +138,9 @@ function setReputation(draft, faction, value, amount, ctx) {
 export function joinFaction(draft, faction, ctx) {
   const data = content.factions[faction];
   if (!data) return 'unknown-faction';
-  if (data.rejoignable !== true) return isMember(draft, faction) ? 'already-member' : 'not-joinable';
+  if (!canBeJoined(data)) return isMember(draft, faction) ? 'already-member' : 'not-joinable';
   if (isMember(draft, faction)) return 'already-member';
-  if (factionData(draft.player.faction).rejoignable === true) return 'already-joined';
+  if (canBeJoined(factionData(draft.player.faction))) return 'already-joined';
   if (standing(draft, faction) === 'hostile') return 'hostile';
 
   const previous = draft.player.faction;

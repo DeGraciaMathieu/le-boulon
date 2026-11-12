@@ -11,67 +11,62 @@ function deepFreeze(value) {
 
 export default deepFreeze({
   id: 'sidorovitch-test',
-  debut: 'accueil',
-  noeuds: [
-    {
-      id: 'accueil',
-      texte: 'Approche, stalker. Tu as quelque chose pour moi ?',
-      choix: [
-        { texte: 'Je cherche du travail.', vers: 'travail' },
+  start: 'accueil',
+  nodes: {
+    accueil: {
+      text: 'Approche, stalker. Tu as quelque chose pour moi ?',
+      choices: [
+        { text: 'Je cherche du travail.', next: 'travail' },
         {
-          texte: 'Voici un artefact.',
-          vers: 'merci',
-          condition: { type: 'objet', objet: 'artefact' },
-          effets: [
-            { type: 'prendre-objet', objet: 'artefact' },
-            { type: 'roubles', montant: 500 },
-            { type: 'reputation', faction: 'solitaires', montant: 1 },
+          text: 'Voici un artefact.',
+          next: 'merci',
+          conditions: [{ type: 'objet', item: 'artefact' }],
+          effects: [
+            { type: 'prendre', item: 'artefact' },
+            { type: 'roubles', amount: 500 },
+            { type: 'reputation', faction: 'solitaires', amount: 1 },
           ],
         },
         {
-          texte: 'Parlons entre amis.',
-          vers: 'confidence',
-          condition: {
-            type: 'tous',
-            conditions: [
-              { type: 'reputation', faction: 'solitaires', min: 2 },
-              { type: 'rang', min: 'experimente' },
-            ],
-          },
+          text: 'Parlons entre amis.',
+          next: 'confidence',
+          conditions: [
+            { type: 'reputation', faction: 'solitaires', min: 2 },
+            { type: 'rang', min: 'experimente' },
+          ],
         },
-        { texte: 'Au revoir.' },
+        { text: 'Au revoir.', next: null },
       ],
     },
-    {
-      id: 'travail',
-      texte: 'Prends ce bandage et file vers l\'ATP.',
-      choix: [
+    travail: {
+      text: 'Prends ce bandage et file vers l\'ATP.',
+      choices: [
         {
-          texte: 'Merci.',
-          effets: [{ type: 'donner-objet', objet: 'bandage' }],
+          text: 'Merci.',
+          next: null,
+          effects: [{ type: 'donner', item: 'bandage' }],
         },
         {
-          texte: 'Payer 100 roubles pour un tuyau.',
-          vers: 'accueil',
-          condition: { type: 'roubles', min: 100 },
-          effets: [{ type: 'roubles', montant: -100 }],
+          text: 'Payer 100 roubles pour un tuyau.',
+          next: 'accueil',
+          conditions: [{ type: 'roubles', min: 100 }],
+          effects: [{ type: 'roubles', amount: -100 }],
         },
       ],
     },
-    {
-      id: 'merci',
-      texte: 'Bon travail. Reviens quand tu veux.',
-      choix: [{ texte: 'Au revoir.' }],
+    merci: {
+      text: 'Bon travail. Reviens quand tu veux.',
+      choices: [{ text: 'Au revoir.', next: null }],
     },
-    {
-      id: 'confidence',
-      texte: 'On raconte qu\'un Guide connaît le chemin du centre.',
-      choix: [
+    confidence: {
+      text: 'On raconte qu\'un Guide connaît le chemin du centre.',
+      choices: [
         {
-          texte: 'Où le trouver ?',
-          effets: [{ type: 'demarrer-quete', quete: 'le-guide' }],
+          text: 'Où le trouver ?',
+          next: null,
+          effects: [{ type: 'quete', quest: 'le-guide' }],
         },
       ],
     },
-  ],
+  },
 });
