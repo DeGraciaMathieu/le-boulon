@@ -3,8 +3,7 @@
 // ce module ne touche jamais la campagne. Les animations vivent dans effets.css.
 //
 // SÉQUENCEUR (sequencer.js, lot L1) : chaque type d'événement qui donne un effet est enregistré
-// dans le séquenceur ; un pas dure le temps de l'animation CSS (BEAT_MS, 0 pour le compteur qui
-// bat à chaque PA). Accélérer finit l'animation CSS en cours ; les annonces et le tampon de rang,
+// dans le séquenceur ; un pas dure le temps de l'animation CSS (BEAT_MS). Accélérer finit l'animation CSS en cours ; les annonces et le tampon de rang,
 // qui portent une information, restent affichés jusqu'à leur fin. Mode réduit : fondu du plateau,
 // de la carte ou du réveil ; annonces et rang s'affichent (effets.css coupe leur mouvement).
 //
@@ -12,11 +11,10 @@
 //   card        la carte du dessus de la pile du lieu se retourne
 //   wake        l'écran du réveil sort du noir
 //   announce    bande d'annonce de l'Émission en travers de l'écran
-//   countdown   le compteur d'Émission bat à chaque PA dépensé
 //   rank        tampon du nouveau rang
 //
 // AMBIANCE (ambience, à chaque rendu) : tant que l'Émission est en cours, <body> porte la classe
-// en-emission (teinte de board.css) et un compteur des PA restants reste affiché.
+// en-emission (teinte de board.css) ; la piste du compte à rebours est dans plateau-view.js.
 //
 // Tout ce qui est posé ici a pointer-events: none : aucun effet ne bloque l'entrée du joueur.
 // Les traces disparaissent après TRACE_MS, les annonces après ANNOUNCE_MS.
@@ -26,7 +24,7 @@ import { fade } from './sequencer.js';
 
 const TRACE_MS = 1000;
 const ANNOUNCE_MS = 2600;
-const BEAT_MS = { transition: 700, card: 500, wake: 900, announce: 700, countdown: 0, rank: 400 };
+const BEAT_MS = { transition: 700, card: 500, wake: 900, announce: 700, rank: 400 };
 
 function h(tag, className, text) {
   return Object.assign(document.createElement(tag), { className, textContent: text });
@@ -49,9 +47,6 @@ function settle(node) {
 // sequencer : le séquenceur de campagne.js, où les effets s'enregistrent.
 export function mountEffects({ plateau, place, layer, sequencer }) {
   const overlay = h('div', 'effets');
-  const counter = h('div', 'fx-compteur');
-  counter.hidden = true;
-  overlay.append(counter);
   document.body.append(overlay);
   let announce = null;
 
@@ -98,7 +93,6 @@ export function mountEffects({ plateau, place, layer, sequencer }) {
       finish: () => settle(layer),
     },
     announce: { play: showAnnounce, reduced: showAnnounce },
-    countdown: { play: () => replay(counter, 'tic') },
     rank: { play: showRank, reduced: showRank },
   };
 
@@ -116,14 +110,11 @@ export function mountEffects({ plateau, place, layer, sequencer }) {
 
   return {
     ambience(campaign) {
-      const emission = emissionAmbience(campaign);
-      document.body.classList.toggle('en-emission', Boolean(emission));
-      counter.hidden = !emission;
-      if (emission) counter.textContent = `Émission · ${emission.left} PA`;
+      document.body.classList.toggle('en-emission', Boolean(emissionAmbience(campaign)));
     },
     // Nouvelle partie : efface les annonces restées de la précédente.
     reset() {
-      overlay.replaceChildren(counter);
+      overlay.replaceChildren();
       announce = null;
     },
   };

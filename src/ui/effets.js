@@ -12,10 +12,9 @@
 //     { kind: 'announce', tone, title, text }     annonce globale de l'Émission
 //       tone 'signes' (carte Météo du matin), 'emission' (elle frappe, ou elle a pris le
 //       joueur), 'abri' (passée à l'abri)
-//     { kind: 'countdown', left }                 emission-countdown
 //     { kind: 'rank', rank, name }                rank-up
-//   emissionAmbience(campaign) -> null | { left }  Émission en cours sur la tuile : teinte et
-//                                                  compte à rebours tant qu'elle dure
+//   emissionAmbience(campaign) -> null | { left }  Émission en cours sur la tuile : teinte, et
+//                                                  piste du compte à rebours (plateau-view.js)
 
 import content from '../content/index.js';
 import { RANK_NAMES } from './pda.js';
@@ -30,7 +29,6 @@ const EFFECTS = {
     ? { kind: 'announce', tone: 'signes', title: "Signes d'Émission", text: "Elle frappera aujourd'hui : repérer un abri" }
     : null),
   'emission-started': (e) => ({ kind: 'announce', tone: 'emission', title: 'Émission', text: `${e.apLeftToShelter} PA pour rejoindre un abri` }),
-  'emission-countdown': (e) => ({ kind: 'countdown', left: e.left }),
   'emission-survived': () => ({ kind: 'announce', tone: 'abri', title: 'Émission passée', text: "À l'abri" }),
   'emission-caught': () => ({ kind: 'announce', tone: 'emission', title: "Pris par l'Émission", text: 'Évanoui à découvert' }),
   'rank-up': (e) => ({ kind: 'rank', rank: e.rank, name: RANK_NAMES[e.rank] ?? e.rank }),

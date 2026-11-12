@@ -6,7 +6,7 @@
 //   grille  un polygone transparent par hexagone, data-hex = numéro ;
 //   jetons  les jetons suspects (cachés ou révélés) et les rencontres ;
 //   couts   le coût en PA écrit sur chaque hexagone atteignable ;
-//   fx      les traces passagères des retours visuels (fx.js) ;
+//   fx      les traces passagères du plateau vivant (plateau-view.js) ;
 //   pion    le joueur.
 
 import { HEXES, neighbors, isEdge } from '../engine/hex.js';
@@ -85,6 +85,7 @@ export function renderBoard(board, state, { targeting = false } = {}) {
   board.pawn.setAttribute('cx', x);
   board.pawn.setAttribute('cy', y);
   board.svg.dataset.status = state.status;
+  board.svg.dataset.emission = String(shelters);
 }
 
 // Jetons suspects en haut de l'hexagone, rencontres en bas : les deux peuvent partager une case.
@@ -106,7 +107,7 @@ function renderTokens(board, state) {
   for (const encounter of state.encounters ?? []) {
     const { x, y } = hexCenter(encounter.hex, board.calage);
     const revealed = encounter.card !== null;
-    const group = el('g', { class: `jeton rencontre${revealed ? ' revelee' : ''}` }, board.tokens);
+    const group = el('g', { class: `jeton rencontre${revealed ? ' revelee' : ''}`, 'data-hex': encounter.hex }, board.tokens);
     el('circle', { cx: x, cy: y + board.calage.taille * 0.48, r: size * 0.5 }, group);
     label(group, x, y + board.calage.taille * 0.48, revealed ? encounterCard(state.tile, encounter.card).name.split(' ')[0] : '!');
   }

@@ -375,78 +375,161 @@ button.boulon.actif {
   justify-content: center;
 }
 
-/* ---------- Retours visuels (fx.js) ---------- */
+/* ---------- Plateau vivant (plateau-view.js, lot L6) ---------- */
 
 .fx * {
   pointer-events: none;
 }
 
-.fx-trajet {
-  stroke: var(--papier);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-dasharray: 4 9;
-  opacity: 0;
-  animation: trajet 0.45s ease-out;
-}
-
-@keyframes trajet {
-  0% { opacity: 1; stroke-dashoffset: 120; }
-  70% { opacity: 1; }
-  100% { opacity: 0; stroke-dashoffset: 0; }
-}
-
-.fx-impact {
-  fill: none;
-  stroke: var(--ocre);
-  stroke-width: 4;
-  opacity: 0;
+/* Pion et jetons pivotent et rebondissent autour de leur propre centre. */
+.pion,
+.jeton {
   transform-box: fill-box;
   transform-origin: center;
-  animation: impact 0.6s ease-out 0.3s;
 }
 
-@keyframes impact {
-  0% { opacity: 1; transform: scale(0.2); }
-  100% { opacity: 0; transform: scale(1.1); }
+/* A5 : dos du jeton qui bascule pendant le retournement. */
+.jeton.dos {
+  filter: drop-shadow(3px 8px 3px rgb(0 0 0 / 0.5));
 }
 
-.suspect.retourne {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: retourne 0.4s ease-out backwards;
-}
-
-.suspect.retourne.apres-boulon {
-  animation-delay: 0.4s;
-}
-
-@keyframes retourne {
-  0% { transform: scaleX(0); }
-  60% { transform: scaleX(1.15); }
-  100% { transform: scaleX(1); }
-}
-
+/* A10 : onde d'anomalie, teinte du type ; pointillés si évitée. */
 .fx-anomalie {
   --teinte: var(--danger);
   fill: var(--teinte);
+  fill-opacity: 0.22;
   stroke: var(--teinte);
-  stroke-width: 4;
+  stroke-width: 6;
   opacity: 0;
-  animation: anomalie 0.8s ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: onde 0.8s ease-out;
+}
+
+.fx-anomalie.echo {
+  fill: none;
+  animation-delay: 0.2s;
+  animation-duration: 0.6s;
 }
 
 .fx-anomalie.electro { --teinte: var(--electro); }
 .fx-anomalie.gravitationnelle { --teinte: var(--gravitationnelle); }
 .fx-anomalie.bruleuse { --teinte: var(--bruleuse); }
 
-@keyframes anomalie {
-  0% { opacity: 0.9; transform: translate(0, 0); }
-  15% { opacity: 0.3; transform: translate(-7px, 3px); }
-  30% { opacity: 0.8; transform: translate(6px, -4px); }
-  45% { opacity: 0.3; transform: translate(-5px, -2px); }
-  60% { opacity: 0.6; transform: translate(4px, 3px); }
-  100% { opacity: 0; transform: translate(0, 0); }
+.fx-anomalie.evitee {
+  fill: none;
+  stroke-width: 4;
+  stroke-dasharray: 10 8;
+}
+
+@keyframes onde {
+  0% { opacity: 0.95; transform: scale(0.15); }
+  60% { opacity: 0.6; }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+.fx-evitee {
+  fill: var(--papier);
+  stroke: var(--carton-encre, #3a2c12);
+  stroke-width: 4;
+  paint-order: stroke;
+  font: bold 18px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* A15 : Émission en cours, la tuile prend la teinte du ciel ; les abris appellent. */
+#plateau[data-emission="true"] > image {
+  filter: sepia(0.5) hue-rotate(-25deg) saturate(1.6) brightness(0.8) drop-shadow(0 14px 16px rgb(0 0 0 / 0.7));
+}
+
+.hex.abri.appel {
+  animation: appel 0.4s ease-in-out 3;
+}
+
+@keyframes appel {
+  50% { fill: rgba(159, 227, 106, 0.7); stroke-width: 9; }
+}
+
+/* A15 : piste du compte à rebours, en haut du plateau ; une case par PA restant. */
+.piste-emission {
+  position: fixed;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border: 2px solid var(--emission);
+  border-radius: 4px;
+  background: rgb(30 8 4 / 0.9);
+  color: var(--papier);
+  box-shadow: 0 0 24px rgb(255 90 40 / 0.45);
+  font-family: var(--mono);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.piste-emission[hidden] {
+  display: none;
+}
+
+.piste-emission .piste-titre {
+  color: var(--emission);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.cases-emission {
+  display: flex;
+  gap: 5px;
+}
+
+.case-emission {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--emission);
+  border-radius: 2px;
+}
+
+.case-emission.allumee {
+  background: var(--ocre);
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.3);
+}
+
+.case-emission.eteinte {
+  animation: eteinte 0.5s ease-out;
+}
+
+@keyframes eteinte {
+  0% { background: var(--danger); transform: scale(1.4); }
+  100% { background: transparent; transform: none; }
+}
+
+.piste-emission.annonce {
+  animation: piste-annonce 1.2s ease-out;
+}
+
+@keyframes piste-annonce {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(1.4); }
+  30% { opacity: 1; transform: translateX(-50%) scale(1); }
+  45%, 75% { box-shadow: 0 0 40px rgb(255 90 40 / 0.9); }
+  100% { transform: translateX(-50%); }
+}
+
+/* A16 : la lampe baisse sur la table à la fin de la journée (sous les écrans de la couche). */
+.lampe {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  background: radial-gradient(ellipse 70% 60% at 45% 40%, rgb(10 6 2 / 0.35), rgb(5 3 1 / 0.8) 75%);
+  opacity: 0;
+  transition: opacity 0.8s ease-out;
+  pointer-events: none;
+}
+
+.lampe.basse {
+  opacity: 1;
+  transition: none;
 }
 
 #carte-zone {
@@ -612,8 +695,6 @@ body.en-emission #journal {
     transition: none !important;
   }
 
-  .fx-trajet,
-  .fx-impact,
   .fx-anomalie {
     opacity: 0.6;
   }
