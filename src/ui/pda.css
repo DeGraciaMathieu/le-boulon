@@ -211,3 +211,17 @@
   cursor: pointer;
   border-color: var(--electro);
 }
+
+.pda-monde {
+  display: block;
+  width: 100%;
+  max-height: calc(100vh - 260px);
+}
+
+.pda-rumeurs li {
+  margin-bottom: 8px;
+}
+
+.pda-rumeurs li.perimee {
+  opacity: 0.6;
+}

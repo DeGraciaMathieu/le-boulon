@@ -1,5 +1,6 @@
-// Lectures du PDA (brief v2 §16, §8.5, §9, §11 ; carte 28) : onglets Quêtes, Journal,
-// Factions, Fiche. Pures : elles lisent la campagne et le contenu, sans rien modifier, et ne
+// Lectures du PDA (brief v2 §16, §8.5, §9, §10.3, §11 ; cartes 28 et 32) : onglets Quêtes,
+// Carte du monde, Journal, Rumeurs, Factions, Fiche. La Carte du monde est dessinée par
+// world-view.js à partir de worldMap (world-map.js). Pures : elles lisent la campagne et le contenu, sans rien modifier, et ne
 // touchent pas au DOM (testées par tests/pda.test.js). Le rendu est dans pda-view.js.
 //
 //   PDA_TABS                      [{ id, label }] onglets, dans l'ordre affiché
@@ -8,6 +9,8 @@
 //                             done: [{ quest, name }], failed: [{ quest, name, reason }] }
 //   pdaJournal(campaign) -> [{ day, text }]  journal du PDA (campaign.journal), le plus récent
 //                           en premier ; une nouvelle étape dit son objectif
+//   pdaRumors(campaign)  -> [{ type, name, tileName, text, age, stale }] rumeurs connues, les
+//                           fraîches d'abord, la plus récente en premier
 //   pdaFactions(campaign) -> [{ id, name, reputation, standing, member }]
 //   pdaSheet(campaign)   -> { rank, xp, nextRank, stats, statPoints, perks, perkPicks,
 //                             available, wounds, radiation, faction }
@@ -19,11 +22,14 @@
 import content from '../content/index.js';
 import { questLog } from '../engine/rules/quests.js';
 import { reputationOf, standing, isMember } from '../engine/rules/factions.js';
+import { knownRumors, RUMOR_NAMES, rumorText, rumorAge } from './hub.js';
 import { RANKS, STATS, STAT_MAX, statPointsLeft, perkPicksLeft } from '../engine/rules/progression.js';
 
 export const PDA_TABS = Object.freeze([
   { id: 'quetes', label: 'Quêtes' },
+  { id: 'carte', label: 'Carte du monde' },
   { id: 'journal', label: 'Journal' },
+  { id: 'rumeurs', label: 'Rumeurs' },
   { id: 'factions', label: 'Factions' },
   { id: 'fiche', label: 'Fiche' },
 ]);
@@ -102,6 +108,21 @@ function journalText({ kind, quest, step }, campaign) {
   const text = `${JOURNAL_KINDS[kind] ?? kind} : ${definition?.name ?? quest}`;
   const objective = definition?.steps[step]?.objective;
   return kind === 'quest-step' && objective ? `${text} · ${objectiveText(objective, campaign)}` : text;
+}
+
+export function pdaRumors(campaign) {
+  return knownRumors(campaign)
+    .map((rumor) => ({
+      type: rumor.type,
+      name: RUMOR_NAMES[rumor.type] ?? rumor.type,
+      tileName: rumor.tileName,
+      text: rumorText(rumor),
+      age: rumorAge(rumor),
+      stale: rumor.stale,
+      day: rumor.day,
+    }))
+    .sort((a, b) => a.stale - b.stale || b.day - a.day)
+    .map(({ day, ...rumor }) => rumor);
 }
 
 export function pdaFactions(campaign) {

@@ -21,15 +21,11 @@
 //   HUB_REFUSALS { [raison]: texte }
 
 import content from '../content/index.js';
-import { hubScreen, traderScreen, chestScreen, contractsScreen, barmanScreen, RANK_NAMES } from './hub.js';
+import { hubScreen, traderScreen, chestScreen, contractsScreen, barmanScreen, RANK_NAMES, RUMOR_NAMES, rumorText, rumorAge } from './hub.js';
 
 const itemName = (kind) => content.items[kind]?.name ?? kind;
 const hubName = (id) => content.places[id]?.name ?? id;
 const traderName = (id) => content.npcs[content.traders[id]?.npc]?.name ?? id;
-
-const tileName = (id) => content.tiles[id]?.name ?? id;
-
-const RUMOR_NAMES = { planque: 'Planque', artefact: 'Artefact rare', raccourci: 'Raccourci', patrouille: 'Patrouille' };
 
 const STANDING_NAMES = { hostile: 'hostile', neutre: 'neutre', amical: 'amical', allie: 'allié' };
 
@@ -178,21 +174,6 @@ function barmanBody(campaign, dispatch) {
       h('section', { className: 'hub-zone' }, h('h3', { textContent: 'Rumeurs connues' }), known)),
     h('div', { className: 'aide', textContent: 'Une rumeur devient fausse après la prochaine Émission.' }),
   ];
-}
-
-// Contenu d'une rumeur connue (§10.3), lu d'une lecture barmanScreen ou d'un événement du moteur.
-function rumorText(rumor) {
-  const where = tileName(rumor.tile);
-  if (rumor.type === 'planque') return `planque à ${where}, hexagone ${rumor.hex}${rumor.opened ? ' (fouillée)' : ''}`;
-  if (rumor.type === 'artefact') return `${itemName(rumor.item)} à ${where}, hexagone ${rumor.hex}`;
-  if (rumor.type === 'raccourci') return `raccourci à ${where} : ${rumor.path.join(' → ')}`;
-  return `patrouille à ${where}, hexagone ${rumor.hex}`;
-}
-
-function rumorAge(rumor) {
-  if (rumor.stale) return 'Périmée : une Émission est passée';
-  if (rumor.expires === null) return `Fraîche (jour ${rumor.day})`;
-  return `Fraîche jusqu’à l’Émission du jour ${rumor.expires}`;
 }
 
 function chestBody(campaign, dispatch) {

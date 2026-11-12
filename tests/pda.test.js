@@ -4,7 +4,7 @@ import { createCampaign, step } from '../src/engine/campaign.js';
 import { startQuest } from '../src/engine/rules/quests.js';
 import { createRng } from '../src/engine/rng.js';
 import content from '../src/content/index.js';
-import { PDA_TABS, PDA_LINES, objectiveText, pdaQuests, pdaJournal, pdaFactions, pdaSheet } from '../src/ui/pda.js';
+import { PDA_TABS, PDA_LINES, objectiveText, pdaQuests, pdaJournal, pdaRumors, pdaFactions, pdaSheet } from '../src/ui/pda.js';
 
 const fakeCtx = () => ({ rng: createRng(1), emit: () => {} });
 
@@ -22,8 +22,31 @@ function experienced() {
   return campaign;
 }
 
-test('onglets : Quêtes, Journal, Factions, Fiche', () => {
-  assert.deepEqual(PDA_TABS.map((tab) => tab.id), ['quetes', 'journal', 'factions', 'fiche']);
+test('onglets : Quêtes, Carte du monde, Journal, Rumeurs, Factions, Fiche (§16)', () => {
+  assert.deepEqual(PDA_TABS.map((tab) => tab.id), ['quetes', 'carte', 'journal', 'rumeurs', 'factions', 'fiche']);
+});
+
+test('rumeurs : au départ, aucune ; une rumeur en vente non achetée ne s’affiche pas', () => {
+  const campaign = createCampaign({ seed: 1 });
+  assert.deepEqual(pdaRumors(campaign), []);
+  campaign.rumors.push({ type: 'patrouille', tile: 'cordon', hex: 4, day: 1, known: false });
+  assert.deepEqual(pdaRumors(campaign), []);
+});
+
+test('rumeurs : contenu lisible, fraîches d’abord, la plus récente en premier', () => {
+  const campaign = createCampaign({ seed: 1 });
+  campaign.rumors.push(
+    { type: 'patrouille', tile: 'cordon', hex: 4, day: 1, known: true, stale: true },
+    { type: 'artefact', tile: 'cordon', hex: 7, item: 'meduse', day: 2, known: true, expires: 5 },
+    { type: 'raccourci', tile: 'cordon', path: [3, 9], day: 3, known: true },
+  );
+  const rumors = pdaRumors(campaign);
+  assert.deepEqual(rumors.map((rumor) => rumor.type), ['raccourci', 'artefact', 'patrouille']);
+  assert.equal(rumors[1].name, 'Artefact rare');
+  assert.equal(rumors[1].text, `${content.items.meduse.name} à ${content.tiles.cordon.name}, hexagone 7`);
+  assert.equal(rumors[1].age, 'Fraîche jusqu’à l’Émission du jour 5');
+  assert.equal(rumors[2].stale, true);
+  assert.equal(rumors[2].age, 'Périmée : une Émission est passée');
 });
 
 test('objectif : texte lisible avec les noms du contenu', () => {
