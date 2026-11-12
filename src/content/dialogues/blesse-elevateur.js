@@ -28,7 +28,7 @@ export default deepFreeze({
       text: 'Ça tiendra. Merci, stalker. Je te dois quelque chose.',
       effects: [{ type: 'reputation', faction: 'solitaires', amount: 1 }],
       choices: [
-        { text: 'Ce PDA, tu le connais ?', next: 'mot-de-passe', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a1-elevateur' }] },
+        { text: 'Ce PDA, tu le connais ?', next: 'mot-de-passe', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a1-elevateur', status: 'active' }] },
         { text: 'Repose-toi.', next: null },
       ],
     },

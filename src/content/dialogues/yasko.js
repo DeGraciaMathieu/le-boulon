@@ -10,8 +10,8 @@ export default deepFreeze({
       choices: [
         { text: 'Qu’est-ce que Liberté ?', next: 'presentation', conditions: [{ type: 'premiere-visite' }] },
         { text: 'Liberté a du travail ?', next: 'travail' },
-        { text: 'Fedir m’envoie. Pour le Guide.', next: 'guide', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-liberte' }] },
-        { text: 'Les ordres du Devoir.', next: 'serment', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-liberte-serment' }] },
+        { text: 'Fedir m’envoie. Pour le Guide.', next: 'guide', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-liberte', status: 'active' }] },
+        { text: 'Les ordres du Devoir.', next: 'serment', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-liberte-serment', status: 'active' }] },
         {
           text: 'Je veux parler.',
           next: 'hostile',

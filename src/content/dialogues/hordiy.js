@@ -10,8 +10,8 @@ export default deepFreeze({
       choices: [
         { text: 'Qu’est-ce que le Devoir ?', next: 'presentation', conditions: [{ type: 'premiere-visite' }] },
         { text: 'Le Devoir a du travail ?', next: 'travail' },
-        { text: 'Fedir m’envoie. Pour le Guide.', next: 'guide', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-devoir' }] },
-        { text: 'Le contrôleur est mort.', next: 'serment', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-devoir-serment' }] },
+        { text: 'Fedir m’envoie. Pour le Guide.', next: 'guide', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-devoir', status: 'active' }] },
+        { text: 'Le contrôleur est mort.', next: 'serment', conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-devoir-serment', status: 'active' }] },
         {
           text: 'Je veux parler.',
           next: 'hostile',

@@ -104,6 +104,7 @@ export function playCampaign(seed, profileId, { days = DAYS } = {}) {
   record.rank = campaign.player.rank;
   record.xp = campaign.player.xp;
   record.questStep = campaign.quests[MAIN_QUEST]?.step ?? null;
+  record.questFailure = campaign.quests[MAIN_QUEST]?.reason ?? null;
   return record;
 }
 
@@ -180,6 +181,8 @@ function summarize(records, days) {
     ranks: countBy(records, (r) => r.rank),
     acts,
     questSteps: countBy(records, (r) => r.questStep ?? 'non commencée'),
+    questFailed: round(records.filter((r) => r.questFailure !== null).length / n),
+    questFailures: countBy(records.filter((r) => r.questFailure !== null), (r) => r.questFailure),
     shoulderWeapon: { rate: round(shoulder.length / n), dayMean: meanOrNull(shoulder), dayMin: min(shoulder), dayMax: max(shoulder) },
     hubFill: meanOrNull(records.flatMap((r) => r.hubFill)),
     placesEmptied: meanOrNull(records.map((r) => r.placesEmptied)),
@@ -223,6 +226,7 @@ export function formatCampaignReport(report) {
       'Quête principale :',
       ...Object.entries(p.acts).map(([a, act]) => `  acte ${a} fini         ${percent(act.rate).padStart(7)}   ${range(act)}`),
       `  étape en fin          ${entries(p.questSteps)}`,
+      `  ratée                ${percent(p.questFailed).padStart(7)}   ${entries(p.questFailures)}`,
       `Arme d'épaule achetée   ${percent(p.shoulderWeapon.rate)}   ${range(p.shoulderWeapon)}`,
       `Inventaire au retour    ${percent(p.hubFill)} de la grille`,
       `Lieux vidés             ${p.placesEmptied} par campagne`,

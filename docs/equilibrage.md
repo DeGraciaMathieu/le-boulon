@@ -87,6 +87,23 @@ Test : « respawn : hub sur une tuile jamais visitée » dans `tests/death.test.
 - L'acte 3 n'est fini que dans 10 à 16 % des campagnes en 30 jours ; le §17.3 ne fixe pas de
   cible au-delà de l'acte 1.
 
+## LBL-52 : PNJ de la quête principale protégés
+
+Un PNJ nécessaire à une étape encore à venir du Guide ne meurt plus (`protectedNpcs` de
+`src/engine/rules/npcs.js`) ; seuls le blessé de l'Élévateur et Vovk sont isolés, donc
+concernés. Le banc compte désormais la part de campagnes où le Guide est raté (ligne
+« ratée », avec la cause).
+
+| Guide raté (graine 1, 50 campagnes) | Avant | Après |
+| --- | --- | --- |
+| Prudente | 10 % (5 PNJ morts) | **0 %** |
+| Gourmande | 0 % | 0 % |
+
+Effet de bord : les 5 campagnes prudentes autrefois bloquées finissent l'acte 1, tard ; la
+moyenne passe de J6,1 (90 %) à J7,7 (100 %), juste au-dessus de la cible de 4 à 7 jours. La
+gourmande achète son arme d'épaule à J7,8 au lieu de J8,6 : le blessé vivant décale les
+tirages, ce qui reste dans la variation d'une graine à l'autre notée plus haut.
+
 ## Rapport final du banc (graine 1)
 
 ```

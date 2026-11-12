@@ -34,7 +34,7 @@ export default deepFreeze({
         {
           text: 'Le PDA est ouvert. Le mot de passe : « Kolos ».',
           next: 'pda-ouvert',
-          conditions: [{ type: 'quete', quest: 'le-guide', step: 'a1-retour' }, { type: 'objet', item: 'pda' }],
+          conditions: [{ type: 'quete', quest: 'le-guide', step: 'a1-retour', status: 'active' }, { type: 'objet', item: 'pda' }],
           effects: [{ type: 'prendre', item: 'pda' }],
         },
         { text: 'D’accord.', next: 'accueil' },

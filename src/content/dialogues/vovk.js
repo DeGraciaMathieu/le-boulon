@@ -12,7 +12,7 @@ export default deepFreeze({
         {
           text: 'Je cherche une clé. Celle du Complexe.',
           next: 'cle',
-          conditions: [{ type: 'quete', quest: 'le-guide', step: 'a3-usine' }],
+          conditions: [{ type: 'quete', quest: 'le-guide', step: 'a3-usine', status: 'active' }],
         },
         { text: 'Rien. Je passe.', next: null },
       ],

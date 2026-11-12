@@ -25,11 +25,18 @@
 //   moveNpcs(draft, ctx)                        carte 7, au changement de jour
 //     Chaque itinérant vivant change de lieu avec la chance MOVE_CHANCE -> npc-moved.
 //   endangerNpcs(draft, ctx, { cause, tile? })  carte 8 (cause 'emission'), rencontres
-//     ('rencontre', tile : la tuile de la rencontre). Chaque isolé vivant non aidé (de la
-//     tuile si elle est donnée) meurt avec la chance DEATH_CHANCE[cause] -> npc-died.
+//     ('rencontre', tile : la tuile de la rencontre). Chaque isolé vivant non aidé et non
+//     protégé (de la tuile si elle est donnée) meurt avec la chance DEATH_CHANCE[cause]
+//     -> npc-died.
+//
+// PNJ PROTÉGÉS (LBL-52, décision de Mathieu) : un PNJ nécessaire à une étape encore à venir de
+//   la quête principale ne meurt pas. Étapes à venir : l'étape courante et celles qu'on atteint
+//   par next ; toutes, plus le donneur, tant que la quête n'est pas prise ; aucune une fois
+//   finie ou ratée. PNJ d'une étape : celui de son objectif, et ceux dont un choix de dialogue
+//   porte la condition quete de cette étape (Vovk, a3-usine).
 //
 // LECTURE (pure) : npcsAt(campaign, place) -> ids des PNJ vivants du lieu ;
-//   isIsolated(npcId) -> bool.
+//   isIsolated(npcId) -> bool ; protectedNpcs(campaign) -> Set des PNJ protégés.
 //
 // ÉVÉNEMENTS : { type: 'npc-met', npc }  { type: 'npc-helped', npc }
 //   { type: 'npc-moved', npc, from, to }  { type: 'npc-died', npc, cause }
@@ -41,6 +48,8 @@ import { talk, CONDITIONS, EFFECTS } from './dialogue.js';
 export const MOVE_CHANCE = 1 / 3;
 // Hypothèse v2 : le brief dit « peuvent mourir » sans chiffre.
 export const DEATH_CHANCE = Object.freeze({ emission: 1 / 4, rencontre: 1 / 6 });
+
+const MAIN_QUEST = 'le-guide';
 
 const npcsOf = () => content.npcs ?? {};
 
@@ -61,6 +70,17 @@ export function npcsAt(campaign, place) {
   return Object.entries(campaign.npcs)
     .filter(([, state]) => state.alive && state.place === place)
     .map(([id]) => id);
+}
+
+export function protectedNpcs(campaign) {
+  const quest = content.quests?.[MAIN_QUEST];
+  const state = campaign.quests?.[MAIN_QUEST];
+  if (!quest || (state && state.status !== 'active')) return new Set();
+  const ids = new Set(state ? [] : [quest.giver]);
+  for (const stepId of stepsAhead(quest, state?.step ?? quest.start)) {
+    for (const id of stepNpcs(quest).get(stepId) ?? []) ids.add(id);
+  }
+  return ids;
 }
 
 export function talkTo(draft, action, ctx) {
@@ -95,14 +115,41 @@ export function moveNpcs(draft, ctx) {
 export function endangerNpcs(draft, ctx, { cause, tile }) {
   const chance = DEATH_CHANCE[cause];
   if (chance === undefined) throw new Error(`cause inconnue : ${cause}`);
+  const spared = protectedNpcs(draft);
   for (const id of Object.keys(npcsOf())) {
     const state = draft.npcs[id];
-    if (!state.alive || state.helped || !isIsolated(id)) continue;
+    if (!state.alive || state.helped || spared.has(id) || !isIsolated(id)) continue;
     if (tile !== undefined && state.tile !== tile) continue;
     if (ctx.rng.next() >= chance) continue;
     state.alive = false;
     ctx.emit({ type: 'npc-died', npc: id, cause });
   }
+}
+
+function stepsAhead(quest, from) {
+  const ahead = new Set([from]);
+  for (const stepId of ahead) for (const next of quest.steps[stepId].next ?? []) ahead.add(next);
+  return ahead;
+}
+
+// step -> PNJ de l'étape, calculé une fois (le contenu est figé).
+let questNpcs;
+function stepNpcs(quest) {
+  if (questNpcs) return questNpcs;
+  questNpcs = new Map(Object.keys(quest.steps).map((stepId) => [stepId, new Set()]));
+  for (const [stepId, { objective }] of Object.entries(quest.steps)) {
+    if (objective.npc) questNpcs.get(stepId).add(objective.npc);
+  }
+  for (const [id, npc] of Object.entries(npcsOf())) {
+    for (const node of Object.values(content.dialogues[npc.dialogue].nodes)) {
+      for (const condition of (node.choices ?? []).flatMap((choice) => choice.conditions ?? [])) {
+        if (condition.type === 'quete' && condition.quest === MAIN_QUEST && condition.step) {
+          questNpcs.get(condition.step).add(id);
+        }
+      }
+    }
+  }
+  return questNpcs;
 }
 
 function isHere(campaign, state) {

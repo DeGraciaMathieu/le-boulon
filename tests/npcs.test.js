@@ -6,7 +6,7 @@ import { createCampaign, step } from '../src/engine/campaign.js';
 import { dialogueView } from '../src/engine/rules/dialogue.js';
 import { createItem } from '../src/engine/rules/sheet.js';
 import {
-  startingNpcs, npcsAt, isIsolated, moveNpcs, endangerNpcs, MOVE_CHANCE, DEATH_CHANCE,
+  startingNpcs, npcsAt, isIsolated, moveNpcs, endangerNpcs, protectedNpcs, MOVE_CHANCE, DEATH_CHANCE,
 } from '../src/engine/rules/npcs.js';
 
 const { npcs, places, dialogues } = content;
@@ -191,7 +191,7 @@ test('endangerNpcs : seuls les isolés non aidés meurent, la tuile filtre', () 
   const emission = fakeCtx(0);
   endangerNpcs(campaign, emission, { cause: 'emission' });
   const dead = emission.events.map((e) => e.npc).sort();
-  assert.deepEqual(dead, ['blesse-elevateur', 'chasseur', 'kravets', 'pelerin', 'vovk']);
+  assert.deepEqual(dead, ['chasseur', 'kravets', 'pelerin']);
   for (const id of npcsAt(campaign, 'bar')) assert.equal(campaign.npcs[id].alive, true);
 
   const safe = createCampaign({ seed: 1 });
@@ -199,4 +199,47 @@ test('endangerNpcs : seuls les isolés non aidés meurent, la tuile filtre', () 
   endangerNpcs(safe, lucky, { cause: 'emission' });
   assert.deepEqual(lucky.events, []);
   assert.throws(() => endangerNpcs(safe, lucky, { cause: 'pluie' }));
+});
+
+// --- PNJ de la quête principale (LBL-52) ----------------------------------------------------
+
+// Quête « Le Guide » posée à l'étape step, active.
+function guideAt(campaign, step) {
+  campaign.quests['le-guide'] = { status: 'active', step, started: 1, deadline: null, waiting: false, history: [step] };
+  return campaign;
+}
+
+test('le blessé de l\'Élévateur ne meurt pas à la 1re Émission : son rôle dans le Guide reste à jouer', () => {
+  const campaign = createCampaign({ seed: 1 });
+  endangerNpcs(campaign, fakeCtx(0), { cause: 'emission' });
+  assert.equal(campaign.npcs['blesse-elevateur'].alive, true);
+
+  const started = guideAt(createCampaign({ seed: 1 }), 'a1-elevateur');
+  endangerNpcs(started, fakeCtx(0), { cause: 'rencontre', tile: 'cordon' });
+  assert.equal(started.npcs['blesse-elevateur'].alive, true);
+});
+
+test('une fois son acte joué, le PNJ du Guide meurt normalement', () => {
+  const campaign = guideAt(createCampaign({ seed: 1 }), 'a1-retour');
+  const ctx = fakeCtx(0);
+  endangerNpcs(campaign, ctx, { cause: 'emission' });
+  assert.equal(campaign.npcs['blesse-elevateur'].alive, false);
+  assert.ok(ctx.events.some((e) => e.type === 'npc-died' && e.npc === 'blesse-elevateur'));
+  assert.equal(campaign.npcs.vovk.alive, true, 'Vovk attend encore l\'acte 3');
+
+  const after = guideAt(createCampaign({ seed: 1 }), 'a3-labo');
+  endangerNpcs(after, fakeCtx(0), { cause: 'emission' });
+  assert.equal(after.npcs.vovk.alive, false);
+});
+
+test('protectedNpcs : PNJ des étapes à venir du Guide, tirés des objectifs et des dialogues', () => {
+  const fresh = createCampaign({ seed: 1 });
+  for (const id of ['marchand-bunker', 'blesse-elevateur', 'vovk', 'fedir', 'hordiy', 'yasko']) {
+    assert.ok(protectedNpcs(fresh).has(id), id);
+  }
+  const devoir = protectedNpcs(guideAt(createCampaign({ seed: 1 }), 'a4-devoir'));
+  assert.deepEqual([...devoir].sort(), ['hordiy']);
+  const done = createCampaign({ seed: 1 });
+  done.quests['le-guide'] = { status: 'done', step: 'a5-trace' };
+  assert.equal(protectedNpcs(done).size, 0);
 });

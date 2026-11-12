@@ -15,7 +15,7 @@ export default deepFreeze({
         {
           text: 'Des bandes du laboratoire, et des documents.',
           next: 'donnees',
-          conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-bar' }, { type: 'objet', item: 'donnees' }, { type: 'objet', item: 'documents' }],
+          conditions: [{ type: 'quete', quest: 'le-guide', step: 'a4-bar', status: 'active' }, { type: 'objet', item: 'donnees' }, { type: 'objet', item: 'documents' }],
           effects: [{ type: 'prendre', item: 'donnees' }, { type: 'prendre', item: 'documents' }],
         },
         { text: 'Au revoir.', next: null },
