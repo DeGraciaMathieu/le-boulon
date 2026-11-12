@@ -6,6 +6,7 @@
 //
 //   tiles    { [id]: tuile au format de src/engine/data/agroprom.js }   carte 5 (Données des tuiles)
 //   factions { [id]: faction } (src/content/factions.js)                carte 16 (Factions)
+//   items    { [id]: objet } (src/content/objets.js)                    carte 9 (Objets)
 //
 // En attendant la carte 5, la seule tuile est l'Agroprom de la v1, importée telle quelle :
 // src/engine/data/agroprom.js reste en place pour l'interface et le banc v1.
@@ -15,9 +16,11 @@
 
 import agroprom from '../engine/data/agroprom.js';
 import factions from './factions.js';
+import items from './objets.js';
 import { deepFreeze } from './freeze.js';
 
 export default deepFreeze({
   tiles: { agroprom },
   factions,
+  items,
 });

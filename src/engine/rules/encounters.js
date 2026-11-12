@@ -25,6 +25,9 @@
 //                      est retirée. Défaite : blessures de la carte et 1 munition, le combat
 //                      continue (on peut relancer).
 //                      Arme : pistolet avec munitions +1, sinon -1. Couverture : forêt +1, bâtiment +2.
+//                      Avec un champ equipment (journée de campagne) : arme équipée chargée au
+//                      plus fort bonus (activeWeapon d'equipment.js), sinon -1 ; la défaite
+//                      dépense une munition dédiée de cette arme ; Tir compte les bonus de ceinture.
 //   { type: 'flee' }   2 PA, retour sur player.previousHex, le jeton reste. 'not-enough-ap'.
 //   combatRefusal(state, action) -> 'in-combat' | undefined, appelé par step pour refuser
 //   toute autre action pendant un combat.
@@ -43,6 +46,7 @@ import { createRng } from '../rng.js';
 import { distance } from '../hex.js';
 import { countCharges } from './sheet.js';
 import { TILE_DEFAULTS, DEFAULT_ENCOUNTER_CARDS, encounterCards, encounterCount, hasHex, tileHexes } from './tile.js';
+import { activeWeapon, statBonus } from './equipment.js';
 
 export const ENCOUNTER_COUNT = TILE_DEFAULTS.encounters;
 const FLEE_COST = 2;
@@ -108,7 +112,8 @@ export function combatRefusal(state, action) {
   if (state.combat && action.type !== 'fight' && action.type !== 'flee') return 'in-combat';
 }
 
-export function weaponBonus(inventory) {
+export function weaponBonus(inventory, equipment) {
+  if (equipment) return activeWeapon(equipment, inventory)?.bonus ?? WEAPON_BONUS.empty;
   const armed = inventory.some((item) => item.kind === 'pistolet');
   const loaded = armed && countCharges(inventory, 'munitions') > 0;
   return loaded ? WEAPON_BONUS.loaded : WEAPON_BONUS.empty;
@@ -120,8 +125,8 @@ export function fight(draft, _action, ctx) {
   const { threat, wounds } = encounterCards(draft.tile)[card];
 
   const roll = ctx.rng.d6();
-  const tir = draft.player.stats.tir;
-  const weapon = weaponBonus(draft.inventory);
+  const tir = draft.player.stats.tir + statBonus(draft.equipment, 'tir');
+  const weapon = weaponBonus(draft.inventory, draft.equipment);
   const cover = COVER[draft.tile.hexes[draft.player.hex].terrain] ?? 0;
   const total = roll + tir + weapon + cover;
   const won = total >= threat;
@@ -134,7 +139,8 @@ export function fight(draft, _action, ctx) {
     return;
   }
   ctx.wound(wounds, 'combat');
-  ctx.useCharge('munitions');
+  const ammo = draft.equipment ? activeWeapon(draft.equipment, draft.inventory)?.ammo : 'munitions';
+  if (ammo) ctx.useCharge(ammo);
 }
 
 export function flee(draft, _action, ctx) {

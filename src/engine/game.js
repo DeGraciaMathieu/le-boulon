@@ -65,6 +65,7 @@ import { placeSuspects, bolt, pickup } from './rules/suspects.js';
 import { setupEncounters, combatRefusal, fight, flee } from './rules/encounters.js';
 import { setupZone, zoneRefusal, zoneAfterAction } from './rules/zone.js';
 import { setupMission, missionAfterStep } from './rules/mission.js';
+import { statBonus } from './rules/equipment.js';
 import { use, wound, irradiate, addItem, removeItem, useCharge, startingInventory } from './rules/sheet.js';
 
 export const BASE_AP = 10;
@@ -135,12 +136,13 @@ export function step(state, action) {
   return { state: draft, events };
 }
 
-// Test de compétence (hypothèse v1) : 1d6 + stat ≥ 5.
+// Test de compétence (hypothèse v1) : 1d6 + stat ≥ 5. La ceinture d'artefacts d'une journée de
+// campagne ajoute ses bonus de stat (src/engine/rules/equipment.js).
 const CHECK_TARGET = 5;
 
 function skillCheck(draft, stat, extra, ctx) {
   const roll = ctx.rng.d6();
-  const bonus = draft.player.stats[stat] + extra;
+  const bonus = draft.player.stats[stat] + statBonus(draft.equipment, stat) + extra;
   const success = roll + bonus >= CHECK_TARGET;
   ctx.emit({ type: 'check', stat, roll, bonus, target: CHECK_TARGET, success });
   return success;

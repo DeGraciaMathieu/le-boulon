@@ -4,10 +4,12 @@
 //   ctx.wound(n, cause)            +n blessures (piste 0-6). En atteignant 4 : -1 PA sur le
 //                                  budget restant (jamais sous 0, une seule fois par partie,
 //                                  ap.spent ne bouge pas). À 6 : status 'dead'.
-//   ctx.irradiate(n, cause)        +n radiations (piste 0-6). À 6 : 1 blessure (cause
+//   ctx.irradiate(n, cause)        +n radiations (piste 0-6), moins la protection de l'armure
+//                                  et de la ceinture (equipment.js). À 6 : 1 blessure (cause
 //                                  'radiation'), puis la piste retombe à 3.
-//   ctx.addItem(item) -> bool      range un objet (createItem) ; false si la grille de 12
-//                                  cases n'a pas la place, l'inventaire est alors inchangé.
+//   ctx.addItem(item) -> bool      range un objet (createItem) ; false si la grille (12 cases,
+//                                  15 avec sac ou Mule : inventorySlots d'equipment.js) n'a
+//                                  pas la place, l'inventaire est alors inchangé.
 //   ctx.removeItem(kind, cause) -> item | null
 //                                  retire ou détruit le premier objet de ce type.
 //   ctx.useCharge(kind) -> bool    dépense 1 munition ou 1 boulon ; false s'il n'en reste
@@ -15,37 +17,38 @@
 //
 // LECTURE (pures, utilisables par l'UI) :
 //   createItem(kind, extra)        objet { kind, size, charges? } du catalogue ITEMS
-//   usedSlots(inventory)           cases occupées
+//                                  (src/content/objets.js)
+//   usedSlots(inventory)           cases occupées (défini dans equipment.js)
+//   inventoryCapacity(state)       taille de la grille (12, ou 15 avec sac ou Mule)
 //   countCharges(inventory, kind)  munitions ou boulons restants ; pour un autre type, le
 //                                  nombre d'objets
 //   consumables(inventory)         types des consommables présents (un par objet), pour
 //                                  choisir lequel détruire
 //
-// ACTION JOUEUR { type: 'use', item: 'bandage' | 'vodka' | 'ration' } : 1 PA, consomme l'objet.
-//   bandage -1 blessure, vodka -2 radiations, ration sans effet en v1 (simple consommation,
-//   la faim n'existe pas encore).
-//   Refus : 'not-usable' | 'no-item' | 'not-enough-ap'.
+// ACTION JOUEUR { type: 'use', item } : tout objet du catalogue avec un champ use. 1 PA (ou
+//   use.cost), consomme l'objet. Soins : blessures ; antiradiations : radiations ;
+//   nourriture : sans effet tant que la faim n'existe pas (carte 7) ; boisson énergétique :
+//   +2 PA restants, une fois par jour (ap.boosted, remis à zéro avec le budget de PA).
+//   Refus : 'not-usable' | 'no-item' | 'not-enough-ap' | 'once-per-day'.
 //
 // ÉVÉNEMENTS :
-//   { type: 'wounded', amount, cause }        { type: 'irradiated', amount, cause }
+//   { type: 'wounded', amount, cause }        { type: 'irradiated', amount, cause, blocked? }
+//   blocked : radiations retenues par la protection (absent si aucune)
 //   { type: 'ap-penalty', amount: 1, cause: 'wounds' }
 //   { type: 'died', cause }                   { type: 'item-removed', kind, cause }
-//   { type: 'used', item, wounds?, radiation? }
+//   { type: 'used', item, wounds?, radiation?, ap? }
+
+import catalog from '../../content/objets.js';
+import { BASE_INVENTORY_SLOTS, inventorySlots, radiationProtection, usedSlots } from './equipment.js';
+
+export { usedSlots };
 
 export const TRACK_MAX = 6;
-export const INVENTORY_SLOTS = 12;
+export const INVENTORY_SLOTS = BASE_INVENTORY_SLOTS;
 const WOUND_PENALTY_AT = 4;
 const RADIATION_RESET = 3;
 
-export const ITEMS = Object.freeze({
-  pistolet: { size: 2 },
-  munitions: { size: 1, charges: 6 },
-  boulons: { size: 1, charges: 10 },
-  bandage: { size: 1, consumable: true },
-  vodka: { size: 1, consumable: true },
-  ration: { size: 1, consumable: true },
-  artefact: { size: 1 },
-});
+export const ITEMS = catalog;
 
 const STARTING_KINDS = ['pistolet', 'munitions', 'boulons', 'bandage', 'bandage', 'vodka', 'ration'];
 
@@ -58,10 +61,6 @@ export function createItem(kind, extra = {}) {
 
 export function startingInventory() {
   return STARTING_KINDS.map((kind) => createItem(kind));
-}
-
-export function usedSlots(inventory) {
-  return inventory.reduce((total, item) => total + item.size, 0);
 }
 
 export function countCharges(inventory, kind) {
@@ -93,8 +92,10 @@ export function wound(draft, amount, cause, emit) {
 
 export function irradiate(draft, amount, cause, emit) {
   const { player } = draft;
-  player.radiation = Math.min(TRACK_MAX, player.radiation + amount);
-  emit({ type: 'irradiated', amount, cause });
+  const taken = Math.max(0, amount - radiationProtection(draft.equipment));
+  const blocked = amount - taken;
+  player.radiation = Math.min(TRACK_MAX, player.radiation + taken);
+  emit({ type: 'irradiated', amount: taken, cause, ...(blocked > 0 && { blocked }) });
   if (player.radiation < TRACK_MAX) return;
 
   player.radiation = RADIATION_RESET;
@@ -102,7 +103,7 @@ export function irradiate(draft, amount, cause, emit) {
 }
 
 export function addItem(draft, item) {
-  if (usedSlots(draft.inventory) + item.size > INVENTORY_SLOTS) return false;
+  if (usedSlots(draft.inventory) + item.size > inventoryCapacity(draft)) return false;
   draft.inventory.push(item);
   return true;
 }
@@ -124,28 +125,41 @@ export function useCharge(draft, kind) {
   return true;
 }
 
+export function inventoryCapacity(draft) {
+  return inventorySlots({ equipment: draft.equipment, perks: draft.player.perks });
+}
+
 const USE_COST = 1;
 
-const USE_EFFECTS = {
-  bandage: (player) => {
-    player.wounds = Math.max(0, player.wounds - 1);
-    return { wounds: -1 };
-  },
-  vodka: (player) => {
-    player.radiation = Math.max(0, player.radiation - 2);
-    return { radiation: -2 };
-  },
-  ration: () => ({}),
-};
-
 export function use(draft, { item }, ctx) {
-  const effect = USE_EFFECTS[item];
+  const effect = ITEMS[item]?.use;
   if (!effect) return 'not-usable';
   const index = draft.inventory.findIndex((owned) => owned.kind === item);
   if (index === -1) return 'no-item';
-  if (draft.ap.left < USE_COST) return 'not-enough-ap';
+  const cost = effect.cost ?? USE_COST;
+  if (draft.ap.left < cost) return 'not-enough-ap';
+  if (effect.oncePerDay && draft.ap.boosted) return 'once-per-day';
 
-  ctx.spend(USE_COST);
+  ctx.spend(cost);
   draft.inventory.splice(index, 1);
-  ctx.emit({ type: 'used', item, ...effect(draft.player) });
+  ctx.emit({ type: 'used', item, ...applyUse(draft, effect) });
+}
+
+function applyUse(draft, { wounds, radiation, ap }) {
+  const { player } = draft;
+  const changes = {};
+  if (wounds) {
+    player.wounds = Math.max(0, player.wounds + wounds);
+    changes.wounds = wounds;
+  }
+  if (radiation) {
+    player.radiation = Math.max(0, player.radiation + radiation);
+    changes.radiation = radiation;
+  }
+  if (ap) {
+    draft.ap.left += ap;
+    draft.ap.boosted = true;
+    changes.ap = ap;
+  }
+  return changes;
 }

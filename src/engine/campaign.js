@@ -30,7 +30,7 @@
 //       faction,                   'solitaires' (§9, rejointe par défaut)            carte 16
 //     },
 //     inventory,                   grille v1 [{ kind, size, charges? }]              carte 9
-//     equipment,                   {} emplacements d'équipement                      carte 9
+//     equipment,                   emplacements d'équipement (rules/equipment.js)    carte 9
 //     world: {
 //       tiles: { [id]: tileState } état v1 de la tuile, SANS les champs de campagne
 //                                  (voir « Une seule source de vérité »)             cartes 2, 6
@@ -58,6 +58,7 @@
 // par la campagne et retirés de tileState :
 //   rng -> campaign.rng ; inventory -> campaign.inventory ; seed -> campaign.seed ;
 //   player.hex -> world.hex ; player.wounds, radiation, stats -> campaign.player.
+// equipment -> campaign.equipment : dayState le prête aux règles v1, qui le lisent sans le changer.
 // Restent dans tileState : tile (données), status, turn, ap, player.{ previousHex,
 // woundPenalty }, tokens, detector, encounters, encounterDeck, combat, zone, mission, outcome.
 // La carte 7 (Temps) sortira ap et status de la tuile vers la journée ; la carte 2 remplacera
@@ -90,6 +91,7 @@ import { createRng } from './rng.js';
 import content from '../content/index.js';
 import { talk, choose } from './rules/dialogue.js';
 import { join, startingReputation } from './rules/factions.js';
+import { emptyEquipment, outfit, equip, unequip } from './rules/equipment.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -103,7 +105,7 @@ const START_FACTION = 'solitaires';
 // Hypothèse v2 : le brief ne fixe pas les roubles de départ.
 const START_ROUBLES = 0;
 
-export const CAMPAIGN_ACTIONS = { talk, choose, join };
+export const CAMPAIGN_ACTIONS = { talk, choose, join, equip, unequip };
 
 export const REACTIONS = [];
 
@@ -129,7 +131,7 @@ export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles
       faction: START_FACTION,
     },
     inventory: day.inventory,
-    equipment: {},
+    equipment: emptyEquipment(),
     world: {
       tiles: {},
       currentTile: tile,
@@ -149,6 +151,7 @@ export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles
     screen: 'tile',
   };
   storeDay(campaign, day);
+  outfit(campaign);
   return campaign;
 }
 
@@ -173,6 +176,7 @@ export function dayState(campaign) {
     seed: campaign.seed,
     rng: campaign.rng,
     inventory: campaign.inventory,
+    equipment: campaign.equipment,
     player: {
       ...tile.player,
       hex: world.hex,
@@ -184,7 +188,8 @@ export function dayState(campaign) {
 }
 
 export function storeDay(draft, day) {
-  const { seed, rng, inventory, player, ...tile } = day;
+  // equipment, prêté par dayState et jamais modifié par les règles v1, est laissé de côté.
+  const { seed, rng, inventory, equipment, player, ...tile } = day;
   const { hex, wounds, radiation, stats, ...tilePlayer } = player;
   draft.rng = rng;
   draft.inventory = inventory;

@@ -30,6 +30,9 @@
 //                         coût de PA ; un jeton non révélé à l'arrivée se déclenche à son tour
 //        bruleuse         2 blessures, un consommable au hasard détruit
 //   2. Détecteur (s'il marche) : révèle les artefacts à 2 hexagones ou moins.
+//      Avec un champ equipment (journée de campagne) : portée du détecteur porté (Écho 1,
+//      Ours 2, Vélès 3, aucun détecteur : rien) ; le Vélès révèle aussi les anomalies et leur
+//      type (hypothèse v2 : une anomalie ainsi révélée bloque l'hexagone comme au boulon).
 //
 // ACTIONS JOUEUR :
 //   { type: 'bolt', target }  1 PA + 1 boulon, hexagone adjacent ; révèle le jeton (ou rien).
@@ -58,7 +61,8 @@
 
 import { neighbors, distance } from '../hex.js';
 import { hasHex, tileHexes, suspectComposition, anomalyKinds } from './tile.js';
-import { consumables, createItem, countCharges, usedSlots, INVENTORY_SLOTS } from './sheet.js';
+import { consumables, createItem, countCharges, usedSlots, inventoryCapacity } from './sheet.js';
+import { detectorOf } from './equipment.js';
 
 export const ARTEFACT_VALUE = 1000;
 export const DETECTOR_RANGE = 2;
@@ -169,9 +173,13 @@ function throwPlayer(draft, ctx) {
 
 function scanWithDetector(draft, ctx) {
   if (draft.detector.broken) return;
+  const { range, anomalyType } = draft.equipment
+    ? (detectorOf(draft.equipment) ?? { range: -1, anomalyType: false })
+    : { range: DETECTOR_RANGE, anomalyType: false };
+  const detected = anomalyType ? ['artefact', 'anomalie'] : ['artefact'];
   for (const token of draft.tokens) {
-    const inRange = distance(draft.player.hex, token.hex) <= DETECTOR_RANGE;
-    if (token.kind === 'artefact' && !token.revealed && inRange) reveal(token, 'detector', ctx);
+    const inRange = distance(draft.player.hex, token.hex) <= range;
+    if (detected.includes(token.kind) && !token.revealed && inRange) reveal(token, 'detector', ctx);
   }
 }
 
@@ -192,7 +200,7 @@ export function pickup(draft, _action, ctx) {
   const token = tokenAt(draft, hex);
   if (!token || token.kind !== 'artefact' || !token.revealed) return 'no-artefact';
   const item = createItem('artefact', { value: ARTEFACT_VALUE });
-  if (usedSlots(draft.inventory) + item.size > INVENTORY_SLOTS) return 'inventory-full';
+  if (usedSlots(draft.inventory) + item.size > inventoryCapacity(draft)) return 'inventory-full';
   if (draft.ap.left < PICKUP_COST) return 'not-enough-ap';
 
   ctx.spend(PICKUP_COST);
