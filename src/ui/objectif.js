@@ -12,7 +12,7 @@
 
 import content from '../content/index.js';
 import { questLog } from '../engine/rules/quests.js';
-import { objectiveText, targetText } from './pda.js';
+import { objectiveText, targetText, talkLabel } from './pda.js';
 
 const MAIN_QUEST = 'le-guide';
 
@@ -32,7 +32,7 @@ export function objectiveFocus(campaign) {
   const giver = giverOf(campaign);
   if (giver) {
     const { tile, hex } = content.places[giver.place];
-    return focus(campaign, 'Pour commencer', `Parler à ${giver.name}`, { tile, place: giver.place, hex });
+    return focus(campaign, 'Pour commencer', talkLabel(giver.name), { tile, place: giver.place, hex });
   }
   return focus(campaign, 'Aucune quête en cours', 'Les tableaux de contrats des hubs proposent du travail', null);
 }

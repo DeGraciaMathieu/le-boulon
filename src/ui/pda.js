@@ -68,13 +68,18 @@ const questOf = (id, campaign) => campaign.quests[id]?.quest ?? content.quests[i
 const OBJECTIVES = {
   visiter: (o) => `Se rendre à ${placeName(o.place)}`,
   explorer: (o, campaign) => `Fouiller ${placeName(o.place)}${cardHint(o, campaign)}`,
-  parler: (o) => `Parler à ${npcName(o.npc)}`.replace(/ à Les /, ' aux ').replace(/ à Le /, ' au '),
+  parler: (o) => talkLabel(npcName(o.npc)),
   rapporter: (o) => `Rapporter ${nameOf('items', o.item)} à ${npcName(o.npc)}`,
   eliminer: (o) => `Éliminer ${o.encounter}${o.tile ? ` (${tileName(o.tile)})` : ''}`,
   escorter: (o) => `Escorter ${npcName(o.npc)} jusqu'à ${placeName(o.place)}`,
   cartographier: (o) => `Cartographier ${tileName(o.tile)}`,
   survivre: (o, campaign) => (o.emission ? "Survivre à l'Émission" : `Survivre jusqu'au jour ${o.day} (aujourd'hui ${campaign.day})`),
 };
+
+// « Parler à Le Marchand » contracté en « Parler au Marchand ».
+export function talkLabel(name) {
+  return `Parler à ${name}`.replace(/ à Les /, ' aux ').replace(/ à Le /, ' au ');
+}
 
 export const PDA_LINES = Object.freeze({
   'stat-raised': (e) => `${STAT_NAMES[e.stat]} monte à ${e.value}`,

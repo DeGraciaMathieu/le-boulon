@@ -18,7 +18,7 @@ test('objectif au départ : parler au donneur de la quête principale, au Camp d
   const focus = objectiveFocus(createCampaign({ seed: 1 }));
   assert.deepEqual(focus, {
     title: 'Pour commencer',
-    step: 'Parler à Le Marchand du bunker',
+    step: 'Parler au Marchand du bunker',
     target: 'Camp des novices (Cordon)',
     tile: 'cordon',
     hex: camp.hex,

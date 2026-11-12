@@ -53,6 +53,7 @@ import { mountDialogue } from './dialogue-window.js';
 import { npcsHere } from './dialogue-screen.js';
 import { mountCombat } from './combat-window.js';
 import { mountPda } from './pda-view.js';
+import { talkLabel } from './pda.js';
 import { mountInventory } from './inventory-view.js';
 import { INTRO_LINES, objectiveFocus, giverMarkers } from './objectif.js';
 import { BAR_HINTS } from './aide.js';
@@ -303,7 +304,7 @@ function hereButtons(day, button) {
   const givers = giverMarkers(campaign).map((giver) => giver.npc);
   for (const npc of npcsHere(campaign)) {
     const giver = givers.includes(npc.id);
-    const talk = button(`${giver ? '! ' : ''}Parler à ${npc.name}`, { type: 'talk', npc: npc.id });
+    const talk = button(`${giver ? '! ' : ''}${talkLabel(npc.name)}`, { type: 'talk', npc: npc.id });
     if (giver) talk.classList.add('donneur');
     add(talk, giver);
   }
