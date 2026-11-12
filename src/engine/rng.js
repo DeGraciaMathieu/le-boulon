@@ -1,4 +1,5 @@
 // RNG à graine (mulberry32) : même graine, même suite. Le moteur ne touche jamais Math.random.
+// state() rend l'état interne : createRng(rng.state()) reprend la suite là où elle s'est arrêtée.
 
 export function createRng(seed) {
   let state = seed >>> 0;
@@ -28,5 +29,5 @@ export function createRng(seed) {
     return copy;
   };
 
-  return { next, int, d6: () => int(1, 6), d20: () => int(1, 20), shuffle, pick };
+  return { next, state: () => state, int, d6: () => int(1, 6), d20: () => int(1, 20), shuffle, pick };
 }

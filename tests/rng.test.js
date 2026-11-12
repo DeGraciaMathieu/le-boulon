@@ -41,3 +41,10 @@ test('pick prend un élément du tableau', () => {
 test('pick sur un tableau vide lève une erreur', () => {
   assert.throws(() => createRng(1).pick([]));
 });
+
+test('state() permet de reprendre la suite', () => {
+  const rng = createRng(9);
+  rng.next();
+  const resumed = createRng(rng.state());
+  assert.deepEqual(draw(resumed, 5), draw(rng, 5));
+});
