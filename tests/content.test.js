@@ -21,7 +21,9 @@ function frenchFields(value, path, forbidden) {
   const found = [];
   for (const [key, child] of Object.entries(value)) {
     const childPath = Array.isArray(value) ? `${path}[${key}]` : `${path}.${key}`;
-    if (!Array.isArray(value) && forbidden.includes(key)) found.push(childPath);
+    // condition est le champ anglais de la condition { type: 'non', condition } (dialogue.js).
+    const negation = key === 'condition' && value.type === 'non';
+    if (!Array.isArray(value) && forbidden.includes(key) && !negation) found.push(childPath);
     found.push(...frenchFields(child, childPath, forbidden));
   }
   return found;

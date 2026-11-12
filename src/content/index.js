@@ -13,6 +13,7 @@
 //   npcs     { [id]: PNJ } (src/content/pnj.js)                         carte 19 (PNJ)
 //   dialogues { [id]: dialogue } (src/content/dialogues/)               carte 19
 //   decks    { [id]: paquet } (src/content/paquets/) : Nuit, Météo       carte 7 (Temps)
+//   quests   { [id]: quête } (src/content/quetes/)                      carte 15 (Quêtes)
 //
 // src/engine/data/agroprom.js reste l'Agroprom v1 de l'interface et du banc ; la v2 est
 // src/content/tuiles/agroprom.js.
@@ -35,6 +36,7 @@ import npcs from './pnj.js';
 import dialogues from './dialogues/index.js';
 import nuit from './paquets/nuit.js';
 import meteo from './paquets/meteo.js';
+import quests from './quetes/index.js';
 import { deepFreeze } from './freeze.js';
 
 export default deepFreeze({
@@ -47,4 +49,5 @@ export default deepFreeze({
   npcs,
   dialogues,
   decks: { ...nuit, ...meteo },
+  quests,
 });

@@ -72,7 +72,7 @@ test('rang : ordre du brief §11.1', () => {
 });
 
 test('étape de quête : quête démarrée, étape précise', () => {
-  const campaign = campaignWith({ quests: { courrier: { etape: 'pda' } } });
+  const campaign = campaignWith({ quests: { courrier: { step: 'pda' } } });
   assert.equal(evaluate({ type: 'quete', quest: 'courrier' }, campaign), true);
   assert.equal(evaluate({ type: 'quete', quest: 'courrier', step: 'pda' }, campaign), true);
   assert.equal(evaluate({ type: 'quete', quest: 'courrier', step: 'ateliers' }, campaign), false);
@@ -261,21 +261,24 @@ test('un effet sans hook enregistré refuse le choix ; une carte peut le branche
   const start = campaignWith({ reputation: { solitaires: 2 }, rank: 'experimente' });
   const open = play(start, [{ type: 'talk', npc: NPC }, { type: 'choose', index: 2 }]).campaign;
   assert.equal(open.dialogue.node, 'confidence');
-  const refused = step(open, { type: 'choose', index: 0 });
-  assert.equal(refused.state, open);
-  assert.equal(refused.events[0].reason, 'unknown-effect');
-
-  EFFECTS.quete = (draft, effect, ctx) => {
-    draft.quests[effect.quest] = { etape: 'debut' };
-    ctx.emit({ type: 'quest-started', quest: effect.quest });
-  };
+  // L'effet quete est branché par rules/quests.js (carte 15) : on le retire le temps du test.
+  const branched = EFFECTS.quete;
+  delete EFFECTS.quete;
   try {
+    const refused = step(open, { type: 'choose', index: 0 });
+    assert.equal(refused.state, open);
+    assert.equal(refused.events[0].reason, 'unknown-effect');
+
+    EFFECTS.quete = (draft, effect, ctx) => {
+      draft.quests[effect.quest] = { step: 'debut' };
+      ctx.emit({ type: 'quest-started', quest: effect.quest });
+    };
     const { state, events } = step(open, { type: 'choose', index: 0 });
-    assert.deepEqual(state.quests['le-guide'], { etape: 'debut' });
+    assert.deepEqual(state.quests['le-guide'], { step: 'debut' });
     assert.equal(state.screen, 'tile');
     assert.deepEqual(events.map((e) => e.type), ['quest-started', 'dialogue-ended']);
   } finally {
-    delete EFFECTS.quete;
+    EFFECTS.quete = branched;
   }
 });
 
