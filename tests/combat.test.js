@@ -6,6 +6,7 @@ import { enemiesOf, startCombat, combatOdds, parleyTerms, COMBAT_MODES } from '.
 import items from '../src/content/objets.js';
 import factions from '../src/content/factions.js';
 import AGROPROM_ENCOUNTERS from '../src/content/paquets/rencontres-agroprom.js';
+import content from '../src/content/index.js';
 
 const CARDS = {
   solo: { name: 'Pillard', threat: 3, wounds: 1, hp: 1, damage: 1, type: 'humain', faction: 'bandits' },
@@ -78,6 +79,36 @@ test('enemiesOf : une carte v1 donne un ennemi humain par défaut, count forme u
     assert.deepEqual(dog, {
       name: 'Chiens', threat: 4, hp: 1, maxHp: 1, damage: 1, type: 'mutant', faction: null, trophy: 'queue-chien',
     });
+  }
+});
+
+test('paquets de rencontres et patrouilles : chaque carte porte ses champs de combat v2', () => {
+  const decks = Object.entries(content.decks).filter(([, deck]) => deck.kind === 'rencontres');
+  const cards = [
+    ...decks.flatMap(([deckId, deck]) => deck.cards.map((card) => [`${deckId}.${card.id}`, card])),
+    ...Object.entries(content.patrols).map(([id, card]) => [`patrols.${id}`, card]),
+  ];
+  for (const [id, card] of cards) {
+    assert.ok(Number.isInteger(card.hp) && card.hp >= 1 && card.hp <= 4, `${id} : PV 1-4`);
+    assert.ok(Number.isInteger(card.damage) && card.damage >= 1, `${id} : dégâts`);
+    assert.ok(['humain', 'mutant'].includes(card.type), `${id} : type`);
+    if (card.type === 'mutant') assert.equal(card.faction ?? null, null, `${id} : un mutant n'a pas de faction`);
+    if (card.faction) assert.ok(factions[card.faction], `${id} : faction ${card.faction}`);
+    if (card.trophy) {
+      assert.equal(card.type, 'mutant', `${id} : seuls les mutants donnent des trophées`);
+      assert.equal(items[card.trophy]?.category, 'trophee', `${id} : trophée ${card.trophy}`);
+    }
+    if (card.count !== undefined) assert.ok(Number.isInteger(card.count) && card.count >= 1, `${id} : nombre`);
+  }
+});
+
+test('paquets de rencontres : une même créature garde son type d’un paquet à l’autre', () => {
+  const types = new Map();
+  for (const deck of Object.values(content.decks).filter((d) => d.kind === 'rencontres')) {
+    for (const card of deck.cards) {
+      if (types.has(card.id)) assert.equal(card.type, types.get(card.id), `${deck.tile}.${card.id}`);
+      types.set(card.id, card.type);
+    }
   }
 });
 
