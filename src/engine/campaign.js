@@ -1,7 +1,8 @@
 // État de campagne v2 (brief v2 §17.1) autour du moteur v1, sans le réécrire.
 //
 // API :
-//   createCampaign({ seed, mode = 'normal', tile, tiles })  -> campaign     mode : 'normal' | 'hardcore'
+//   createCampaign({ seed, mode = 'normal', tile, tiles, combatMode = 'rounds' })  -> campaign
+//     mode : 'normal' | 'hardcore' ; combatMode : 'rounds' (combat v2) | 'rapide' (v1)
 //     tile : id de la tuile de départ (START_TILE par défaut), cherché dans tiles
 //     (content.tiles par défaut) ; toute tuile au format de src/engine/data/agroprom.js convient.
 //   step(campaign, action)                     -> { state, events }
@@ -49,6 +50,8 @@
 //     journal,                     [] journal du PDA                                 cartes 15, 28
 //     dialogue?,                   { npc, dialogue, node, previousScreen } pendant un
 //                                  dialogue seulement (rules/dialogue.js)            carte 14
+//     combatMode,                  'rounds' | 'rapide' (rules/combat.js)             carte 18
+//     combat,                      null, combat v2 en cours (rules/combat.js)        carte 18
 //     screen,                      'tile' | 'place' | 'hub' | 'dialogue' | 'combat' | 'night'
 //                                  toujours 'tile' ici ; chaque carte d'écran le change
 //   }
@@ -70,7 +73,8 @@
 // BRANCHER UNE RÈGLE :
 //   - Action v1 (move, exit, use, bolt, pickup, fight, flee) : rien à faire, step la relaie au
 //     step v1 sur la tuile courante. Une règle par tuile s'écrit dans src/engine/rules/ comme
-//     en v1 (en-tête de game.js).
+//     en v1 (en-tête de game.js). Pendant un combat v2 (campaign.combat), step refuse
+//     'in-combat' à toute action autre que celles du round (combatRefusal de rules/combat.js).
 //   - Action de campagne (sleep, camp, travel, talk, buy…) : écrire un handler
 //     (draft, action, ctx) -> string | undefined dans src/engine/rules/<module>.js et
 //     l'ajouter à CAMPAIGN_ACTIONS ci-dessous. Une action de campagne masque une action v1 du
@@ -95,6 +99,7 @@ import { talk, choose } from './rules/dialogue.js';
 import { join, startingReputation } from './rules/factions.js';
 import { emptyEquipment, outfit, equip, unequip } from './rules/equipment.js';
 import { raiseStat, learnPerk } from './rules/progression.js';
+import { COMBAT_MODES, combatOnReveal, combatRefusal, shoot, takeCover, grenade, heal, escape, parley } from './rules/combat.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -109,12 +114,14 @@ const START_ROUBLES = 0;
 
 export const CAMPAIGN_ACTIONS = {
   talk, choose, join, equip, unequip, 'raise-stat': raiseStat, 'learn-perk': learnPerk,
+  shoot, 'take-cover': takeCover, grenade, heal, escape, parley,
 };
 
-export const REACTIONS = [];
+export const REACTIONS = [combatOnReveal];
 
-export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles }) {
+export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);
+  if (!COMBAT_MODES.includes(combatMode)) throw new Error(`combatMode inconnu : ${combatMode}`);
   if (!tiles[tile]) throw new Error(`tuile inconnue : ${tile}`);
   const day = createGame({ seed, tile: tiles[tile] });
   const campaign = {
@@ -152,6 +159,8 @@ export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles
     rumors: [],
     stashes: [],
     journal: [],
+    combatMode,
+    combat: null,
     screen: 'tile',
   };
   storeDay(campaign, day);
@@ -160,6 +169,8 @@ export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles
 }
 
 export function step(campaign, action) {
+  const blocked = combatRefusal(campaign, action);
+  if (blocked) return { state: campaign, events: [{ type: 'refused', action, reason: blocked }] };
   const handler = CAMPAIGN_ACTIONS[action.type];
   const result = handler ? runCampaignAction(campaign, action, handler) : relayToTile(campaign, action);
   if (result.state === campaign) return result;

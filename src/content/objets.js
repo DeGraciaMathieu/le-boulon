@@ -6,7 +6,7 @@
 //     name,            nom affiché
 //     category,        'arme-poing' | 'arme-epaule' | 'munitions' | 'armure' | 'detecteur'
 //                      | 'sac' | 'soin' | 'antirad' | 'nourriture' | 'divers' | 'artefact' | 'quete'
-//                      ('trophee' du §13 : carte 18 ; 'sac' ajouté par la carte 9)
+//                      | 'trophee' (§13, carte 18 ; 'sac' ajouté par la carte 9)
 //     price,           prix indicatif en roubles (prix de revente pour un artefact) ;
 //                      null : ne se vend pas (objets de quête)
 //     size,            cases occupées dans la grille d'inventaire
@@ -271,6 +271,10 @@ export default deepFreeze({
     slot: 'belt',
     belt: { stats: { tir: 1, survie: 1 }, ap: 1, cost: 3 },
   },
+
+  // Trophées (§13) : laissés par les mutants abattus, revendables. Prix et taille : hypothèse v2.
+  'queue-chien': { name: 'Queue de chien aveugle', category: 'trophee', price: 150, size: 1 },
+  sabot: { name: 'Sabot de sanglier', category: 'trophee', price: 300, size: 1 },
 
   // Objets de quête : pas de vente. Taille : hypothèse v2.
   pda: { name: 'PDA', category: 'quete', price: null, size: 1 },
