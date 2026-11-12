@@ -12,6 +12,8 @@ import {
 import { createRng } from '../src/engine/rng.js';
 import { neighbors } from '../src/engine/hex.js';
 import content from '../src/content/index.js';
+import { EFFECTS, DIALOGUES, talk, choose } from '../src/engine/rules/dialogue.js';
+import { PLACES, DECKS } from '../src/engine/rules/places.js';
 
 const jsonCopy = (value) => JSON.parse(JSON.stringify(value));
 const ofType = (events, type) => events.filter((event) => event.type === type);
@@ -299,4 +301,64 @@ test('état sérialisable et rejouable : même graine, mêmes rumeurs', () => {
   assert.deepEqual(first.rumors, second.rumors);
   assert.deepEqual(jsonCopy(first.stashes), first.stashes);
   assert.deepEqual(jsonCopy(first.rumors), first.rumors);
+});
+
+// --- Effet « reveler » { stash } : dialogue et carte d'exploration Indice ---------------------
+
+test('effet reveler { stash } : une planque connue, de niveau +1, ici ou à côté', () => {
+  const nearby = ['cordon', ...Object.values(content.links.cordon).map((link) => link.tile)];
+  for (let seed = 1; seed < 20; seed++) {
+    const events = [];
+    const draft = onCordon(5);
+    assert.equal(EFFECTS.reveler(draft, { type: 'reveler', stash: true }, ctxOf(seed, events)), undefined);
+    const [stash] = draft.stashes;
+    assert.ok(nearby.includes(stash.tile));
+    assert.deepEqual({ known: stash.known, opened: stash.opened, source: stash.source }, { known: true, opened: false, source: 'indice' });
+    assert.equal(stash.level, Math.min(MAX_LEVEL, tileLevel(draft, stash.tile) + 1));
+    assert.notEqual(`${stash.tile}:${stash.hex}`, 'cordon:5');
+    assert.deepEqual(ofType(events, 'stash-revealed'), [{ type: 'stash-revealed', stash: stash.id }]);
+  }
+});
+
+test('effet reveler { place } : toujours le lieu (rules/places.js)', () => {
+  const draft = onCordon(5);
+  const place = Object.keys(content.places)[0];
+  assert.equal(EFFECTS.reveler(draft, { type: 'reveler', place }, ctxOf(1)), undefined);
+  assert.equal(draft.places[place].known, true);
+  assert.equal(draft.stashes.length, 0);
+});
+
+test('choix de dialogue avec reveler { stash } : la planque est connue à la fin du choix', () => {
+  DIALOGUES['indic-test'] = {
+    start: 'a',
+    nodes: { a: { text: 'Je sais où il a tout caché.', choices: [{ text: 'Dis-moi.', effects: [{ type: 'reveler', stash: true }] }] } },
+  };
+  const events = [];
+  const ctx = ctxOf(1, events);
+  const draft = onCordon(5);
+  talk(draft, { type: 'talk', npc: 'indic-test' }, ctx);
+  assert.equal(choose(draft, { type: 'choose', index: 0 }, ctx), undefined);
+  assert.equal(draft.stashes.length, 1);
+  assert.equal(one(events, 'stash-revealed').stash, draft.stashes[0].id);
+});
+
+test('carte Indice du contenu : l’icône de l’église révèle une planque', () => {
+  const icone = content.decks.eglise.cards.find((card) => card.id === 'icone');
+  assert.deepEqual(icone.effects, [{ type: 'reveler', stash: true }]);
+
+  PLACES['eglise-test'] = { name: 'Église test', label: 'Тест', tile: 'cordon', hex: 5, tags: [], deck: 'eglise-test', loot: 'n1-cache' };
+  DECKS['eglise-test'] = { kind: 'exploration', place: 'eglise-test', cards: [icone] };
+  let campaign = onCordon(5);
+  campaign.world.tiles.cordon.zone.deck = [];
+  const events = [];
+  for (const action of [{ type: 'enter-place', place: 'eglise-test' }, { type: 'explore' }]) {
+    const result = step(campaign, action);
+    assert.notEqual(result.events[0]?.type, 'refused', JSON.stringify(result.events[0]));
+    campaign = result.state;
+    events.push(...result.events);
+  }
+  assert.equal(one(events, 'clue-found').card, 'icone');
+  const revealed = one(events, 'stash-revealed');
+  const stash = campaign.stashes.find((candidate) => candidate.id === revealed.stash);
+  assert.deepEqual({ known: stash.known, source: stash.source }, { known: true, source: 'indice' });
 });

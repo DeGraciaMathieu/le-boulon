@@ -280,6 +280,15 @@ test('dialogues : un nœud orphelin est signalé', () => {
   hasError(errors, /^dialogues\.marchand\.nodes\.oubli : nœud orphelin/);
 });
 
+test('dialogues : un statut de quête inconnu dans une condition est signalé', () => {
+  hasError(
+    checkDialogues(broken((c) => {
+      c.dialogues.marchand.nodes.accueil.choices[0].conditions = [{ type: 'quete', quest: 'courrier', status: 'finie' }];
+    })),
+    /^dialogues\.marchand\.nodes\.accueil\.choices\[0\]\.conditions\[0\]\.status : statut inconnu « finie »/,
+  );
+});
+
 test('dialogues : un lien cassé et un départ inconnu sont signalés', () => {
   hasError(
     checkDialogues(broken((c) => { c.dialogues.marchand.nodes.accueil.choices[0].next = 'boutique'; })),

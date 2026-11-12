@@ -22,7 +22,7 @@ export default deepFreeze({
         {
           text: 'J’ai trouvé ses notes.',
           next: 'notes-guide',
-          conditions: [{ type: 'quete', quest: 'souvenir-du-guide', step: 'retour' }],
+          conditions: [{ type: 'quete', quest: 'souvenir-du-guide', step: 'retour', status: 'active' }],
         },
         {
           text: 'Que cherche Ciel Pur ?',

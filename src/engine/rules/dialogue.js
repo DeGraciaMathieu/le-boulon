@@ -15,7 +15,11 @@
 //   { type: 'reputation', faction, min?, max? }   piste de la faction, absente = 0
 //   { type: 'objet', item }                       un objet de ce type dans l'inventaire
 //   { type: 'rang', min?, max? }                  ids de RANKS, ordre du §11.1
-//   { type: 'quete', quest, step? }               quête démarrée, à l'étape donnée si précisée
+//   { type: 'quete', quest, step?, status? }      quête démarrée, à l'étape et au statut
+//                                                 ('active' | 'done' | 'failed') donnés si
+//                                                 précisés. Une quête finie ou ratée garde sa
+//                                                 dernière étape : une réplique d'étape porte
+//                                                 status: 'active'.
 //   { type: 'stat', stat, min?, max? }            player.stats[stat]
 //   { type: 'roubles', min?, max? }
 //   { type: 'tous', conditions } | { type: 'un', conditions } | { type: 'non', condition }
@@ -32,7 +36,7 @@
 //     { type: 'rejoindre-faction', faction }   refus de joinFaction        -> faction-joined
 //     (ces deux effets : src/engine/rules/factions.js, carte 16)
 //   Branchés par leur carte : 'quete' { quest } (démarrer), 'avancer' { quest, step }
-//   (rules/quests.js, carte 15), 'reveler' { place } (carte 10) ; à brancher : { stash } (carte 23) ;
+//   (rules/quests.js, carte 15), 'reveler' { place } (carte 10) et { stash } (rules/stashes.js, carte 23) ;
 //   la carte 16 peut remplacer 'reputation'. Un effet sans hook refuse le choix ('unknown-effect').
 //
 // ACTIONS DE CAMPAGNE (enregistrées dans CAMPAIGN_ACTIONS de campaign.js) :
@@ -84,6 +88,7 @@ export const CONDITIONS = {
   quete: (condition, campaign) => {
     const quest = campaign.quests[condition.quest];
     if (!quest) return false;
+    if (condition.status !== undefined && quest.status !== condition.status) return false;
     return condition.step === undefined || quest.step === condition.step;
   },
   stat: (condition, campaign) => within(campaign.player.stats[condition.stat], condition),

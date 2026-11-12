@@ -93,7 +93,7 @@
 //   PLACES, DECKS, LOOT : lieux, paquets et tables en plus du contenu (tests), lus avant lui.
 //
 // EFFET DE DIALOGUE (EFFECTS de dialogue.js) : { type: 'reveler', place } -> places[id].known.
-//   { type: 'reveler', stash } reste à la carte 23 ('unknown-effect' en attendant).
+//   { type: 'reveler', stash: true } : rules/stashes.js (carte 23) enveloppe ce hook.
 //
 // ÉVÉNEMENTS :
 //   { type: 'place-entered', place, approach? }   { type: 'place-left', place }

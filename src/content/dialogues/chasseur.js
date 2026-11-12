@@ -19,7 +19,7 @@ export default deepFreeze({
         {
           text: 'Ton snork est mort.',
           next: 'snork',
-          conditions: [{ type: 'quete', quest: 'snork-vallee', step: 'rapport' }],
+          conditions: [{ type: 'quete', quest: 'snork-vallee', step: 'rapport', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

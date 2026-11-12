@@ -19,12 +19,12 @@ export default deepFreeze({
         {
           text: 'Les mercenaires ont payé.',
           next: 'patrouille',
-          conditions: [{ type: 'quete', quest: 'patrouille-perdue', step: 'rapport' }],
+          conditions: [{ type: 'quete', quest: 'patrouille-perdue', step: 'rapport', status: 'active' }],
         },
         {
           text: 'Une caisse de Liberté, ça t’intéresse ?',
           next: 'caisse',
-          conditions: [{ type: 'quete', quest: 'caisse-matvii', step: 'devoir' }],
+          conditions: [{ type: 'quete', quest: 'caisse-matvii', step: 'devoir', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

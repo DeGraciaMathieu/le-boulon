@@ -19,7 +19,7 @@ export default deepFreeze({
         {
           text: 'Les chiens sont morts.',
           next: 'chiens-morts',
-          conditions: [{ type: 'quete', quest: 'chiens-cordon', step: 'rapport' }],
+          conditions: [{ type: 'quete', quest: 'chiens-cordon', step: 'rapport', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

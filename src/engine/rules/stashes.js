@@ -1,7 +1,7 @@
 // Planques et rumeurs (brief v2 §10.3, §10.1 ; carte 23).
 //
 // ÉTAT :
-//   campaign.stashes = [{ id, tile, hex, level, source: 'pda' | 'rumeur', known, opened, day }]
+//   campaign.stashes = [{ id, tile, hex, level, source: 'pda' | 'rumeur' | 'indice', known, opened, day }]
 //     id 'planque-<n>' ; level : niveau de la table de butin (tuile + 1, plafonné à 4).
 //     known : le joueur sait où elle est (PDA lu, rumeur achetée) ; opened : déjà fouillée.
 //   campaign.rumors = [{ type, tile, hex?, day, known?, expires?, stale?, ... }]
@@ -17,6 +17,11 @@
 // PDA (§10.3) : dropPda(draft, enemies, ctx), appelée par la fin de combat v2 (victoire,
 //   rules/combat.js). Un jet par humain abattu, PDA_ROLL.min ou plus sur 1d6 ; au premier
 //   succès, le PDA révèle une planque connue sur la tuile courante ou une tuile voisine.
+//
+// EFFET « reveler » { type: 'reveler', stash: true } (EFFECTS de rules/dialogue.js, §10.3) :
+//   choix de dialogue ou carte d'exploration Indice (rules/places.js). Comme un PDA, pose une
+//   planque connue (source 'indice') sur la tuile courante ou une tuile voisine. Sans stash,
+//   l'effet reste celui de rules/places.js ({ place }).
 //
 // ACTION DE CAMPAGNE { type: 'open-stash' } (CAMPAIGN_ACTIONS de campaign.js) :
 //   Sur l'hexagone d'une planque connue et pas encore fouillée, OPEN_COST PA : STASH_DRAWS
@@ -50,7 +55,7 @@
 // HYPOTHÈSES V2 :
 //   - PDA : un jet par humain abattu, 5 ou plus sur 1d6 ; un PDA au plus par combat ; pas de PDA
 //     en mode de combat 'rapide' (la carte vise la fin de combat v2).
-//   - Planque d'un PDA : tuile courante ou voisine par une liaison ; hexagone libre (ni entrée,
+//   - Planque d'un PDA ou d'un indice : tuile courante ou voisine par une liaison ; hexagone libre (ni entrée,
 //     ni lieu, ni autre planque, ni joueur).
 //   - Niveau d'une tuile : tile.level, sinon le plus haut niveau des tables de ses lieux, sinon 1.
 //     Butin de niveau +1 plafonné à 4 (tables 1 à 4), thème 'cache', 2 tirages, 1 PA.
@@ -58,7 +63,8 @@
 //   - Les deux barmans vendent le même fil de rumeurs ; 3 rumeurs à vendre au plus.
 //   - Une rumeur de planque cache une planque sur une tuile du contenu au hasard ; la planque
 //     disparaît avec la rumeur à l'Émission suivante si elle n'a pas été fouillée. Une planque
-//     de PDA ne vieillit pas.
+//     de PDA ou d'indice ne vieillit pas.
+//   - Indice sans hexagone libre (tuile pleine) : pas de planque, le choix n'est pas refusé.
 //   - Raccourci : plus court chemin entre deux hexagones d'accès (liaisons et entrée) d'une tuile
 //     visitée autre que la tuile courante, sans jeton d'anomalie.
 //   - Patrouille : un jeton de rencontre d'une tuile visitée autre que la tuile courante.
@@ -72,6 +78,7 @@ import { createItem } from './sheet.js';
 import { tileHexes } from './tile.js';
 import { zoneAfterAction } from './zone.js';
 import { rollLoot } from './places.js';
+import { EFFECTS } from './dialogue.js';
 
 export const PDA_ROLL = Object.freeze({ min: 5 });
 export const STASH_LEVEL_BONUS = 1;
@@ -84,6 +91,10 @@ export const RUMOR_OFFER = 3;
 const STASH_THEME = 'cache';
 const OPERATIONS = { browse, buy };
 const INVENTED = Object.freeze({ planque: inventStash, raccourci: inventShortcut, patrouille: inventPatrol });
+
+// places.js a déjà posé EFFECTS.reveler pour { place } : il est importé avant ce module.
+const revealPlace = EFFECTS.reveler;
+EFFECTS.reveler = (draft, effect, ctx) => (effect.stash ? revealStash(draft, ctx) : revealPlace(draft, effect, ctx));
 
 export const rumorPrice = (rumor) => RUMOR_PRICES[rumor.type];
 
@@ -104,10 +115,18 @@ export function dropPda(draft, enemies, ctx) {
   const humans = enemies.filter((enemy) => enemy.type === 'humain' && enemy.hp <= 0);
   const found = humans.some(() => ctx.rng.d6() >= PDA_ROLL.min);
   if (!found) return;
-  const here = draft.world.currentTile;
-  const tiles = [here, ...Object.values(content.links[here] ?? {}).map((link) => link.tile)];
-  const stash = placeStash(draft, ctx.rng.pick(tiles), ctx, { source: 'pda', known: true });
+  const stash = placeStash(draft, ctx.rng.pick(nearbyTiles(draft)), ctx, { source: 'pda', known: true });
   if (stash) ctx.emit({ type: 'pda-found', stash: stash.id, tile: stash.tile, hex: stash.hex });
+}
+
+function revealStash(draft, ctx) {
+  const stash = placeStash(draft, ctx.rng.pick(nearbyTiles(draft)), ctx, { source: 'indice', known: true });
+  if (stash) ctx.emit({ type: 'stash-revealed', stash: stash.id });
+}
+
+function nearbyTiles(draft) {
+  const here = draft.world.currentTile;
+  return [here, ...Object.values(content.links[here] ?? {}).map((link) => link.tile)];
 }
 
 // Handlers en déclarations de fonctions : campaign.js et ce module s'importent l'un l'autre.

@@ -18,12 +18,12 @@ export default deepFreeze({
         {
           text: 'À propos de ta dette.',
           next: 'dette',
-          conditions: [{ type: 'quete', quest: 'dette-bohdan', step: 'debut' }],
+          conditions: [{ type: 'quete', quest: 'dette-bohdan', step: 'debut', status: 'active' }],
         },
         {
           text: 'Ton créancier est payé.',
           next: 'merci',
-          conditions: [{ type: 'quete', quest: 'dette-bohdan', step: 'retour' }],
+          conditions: [{ type: 'quete', quest: 'dette-bohdan', step: 'retour', status: 'active' }],
         },
         {
           text: 'Je peux entrer ?',
