@@ -10,7 +10,8 @@
 //   {
 //     seed,                        graine de départ
 //     rng,                         état interne du RNG (uint32), avance à chaque tirage
-//     tile,                        { name, entry, hexes } (format de src/engine/data/agroprom.js)
+//     tile,                        { name, entry, hexes, encounterCards?, composition? } (format de
+//                                  src/engine/data/agroprom.js ; paramètres : src/engine/rules/tile.js)
 //     status,                      'playing' | 'exited' | 'night' (0 PA sans être sorti) | 'dead'
 //                                  | 'emission' (prise sans abri)
 //     turn,                        nombre d'actions acceptées
