@@ -23,7 +23,7 @@ function experienced() {
 }
 
 test('onglets : Quêtes, Carte du monde, Journal, Rumeurs, Factions, Fiche (§16)', () => {
-  assert.deepEqual(PDA_TABS.map((tab) => tab.id), ['quetes', 'carte', 'journal', 'rumeurs', 'factions', 'fiche']);
+  assert.deepEqual(PDA_TABS.map((tab) => tab.id), ['quetes', 'carte', 'journal', 'rumeurs', 'factions', 'fiche', 'aide']);
 });
 
 test('rumeurs : au départ, aucune ; une rumeur en vente non achetée ne s’affiche pas', () => {

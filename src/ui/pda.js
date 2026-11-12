@@ -1,5 +1,5 @@
 // Lectures du PDA (brief v2 §16, §8.5, §9, §10.3, §11 ; cartes 28 et 32) : onglets Quêtes,
-// Carte du monde, Journal, Rumeurs, Factions, Fiche. La Carte du monde est dessinée par
+// Carte du monde, Journal, Rumeurs, Factions, Fiche, Aide (notice : aide.js). La Carte du monde est dessinée par
 // world-view.js à partir de worldMap (world-map.js). Pures : elles lisent la campagne et le contenu, sans rien modifier, et ne
 // touchent pas au DOM (testées par tests/pda.test.js). Le rendu est dans pda-view.js.
 //
@@ -32,6 +32,7 @@ export const PDA_TABS = Object.freeze([
   { id: 'rumeurs', label: 'Rumeurs' },
   { id: 'factions', label: 'Factions' },
   { id: 'fiche', label: 'Fiche' },
+  { id: 'aide', label: 'Aide' },
 ]);
 
 export const RANK_NAMES = Object.freeze({

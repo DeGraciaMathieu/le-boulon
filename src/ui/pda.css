@@ -225,3 +225,19 @@
 .pda-rumeurs li.perimee {
   opacity: 0.6;
 }
+
+.aide-liste {
+  display: grid;
+  grid-template-columns: 11em 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.aide-liste dt {
+  color: var(--ocre);
+  font-weight: bold;
+}
+
+.aide-liste dd {
+  margin: 0;
+}

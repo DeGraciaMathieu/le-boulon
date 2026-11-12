@@ -51,6 +51,7 @@ import { combatLine } from './combat-screen.js';
 import { mountPda } from './pda-view.js';
 import { mountInventory } from './inventory-view.js';
 import { PDA_LINES } from './pda.js';
+import { BAR_HINTS } from './aide.js';
 import { INVENTORY_LINES } from './inventory.js';
 import { deathView } from '../engine/rules/death.js';
 import { canManualSave } from '../engine/rules/save.js';
@@ -226,17 +227,18 @@ function renderTileMarks(day) {
 
 function renderBar() {
   const data = topBar(campaign);
-  const item = (label, value, cls = '') => h('div', { className: `bandeau-item ${cls}` },
+  // Au survol, la définition courte du terme (BAR_HINTS d'aide.js).
+  const item = (hint, label, value, cls = '') => h('div', { className: `bandeau-item ${cls}`, title: BAR_HINTS[hint] },
     h('span', { className: 'bandeau-valeur', textContent: value }),
     h('span', { className: 'bandeau-label', textContent: label }));
   bar.replaceChildren(
-    item('Jour', data.day),
-    item(data.tile, ''),
-    item(`PA / ${data.apMax}`, data.ap, 'bandeau-pa'),
-    item('Blessures', data.wounds, data.wounds >= 4 ? 'alerte' : ''),
-    item('Radiations', data.radiation, data.radiation >= 4 ? 'alerte' : ''),
-    item('Faim', data.hunger, data.hunger > 0 ? 'alerte' : ''),
-    item('Roubles', data.roubles),
+    item('jour', 'Jour', data.day),
+    item('tuile', data.tile, ''),
+    item('pa', `PA / ${data.apMax}`, data.ap, 'bandeau-pa'),
+    item('blessures', 'Blessures', data.wounds, data.wounds >= 4 ? 'alerte' : ''),
+    item('radiations', 'Radiations', data.radiation, data.radiation >= 4 ? 'alerte' : ''),
+    item('faim', 'Faim', data.hunger, data.hunger > 0 ? 'alerte' : ''),
+    item('roubles', 'Roubles', data.roubles),
   );
   if (data.emission) bar.append(h('div', { className: 'bandeau-emission', textContent: "ÉMISSION AUJOURD'HUI : restez près d'un abri" }));
 }
@@ -491,8 +493,13 @@ plateau.addEventListener('click', (event) => {
   showPreview(event);
 });
 
+// Échap ferme une chose à la fois : le ciblage du boulon, sinon le PDA et l'Inventaire, sinon le
+// dialogue par « Au revoir ».
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && targeting) setTargeting(false);
+  if (event.key !== 'Escape') return;
+  if (targeting) return setTargeting(false);
+  const closed = [pda, inventory].filter((screen) => screen.close()).length > 0;
+  if (!closed) dialogueWindow.leave();
 });
 
 // Sur un lieu explorable, le pion y entre ; sinon il voyage (liaison).

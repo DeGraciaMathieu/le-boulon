@@ -2,10 +2,12 @@
 // numérotés, choix grisés avec leur condition. Lit dialogueWindow (dialogue-screen.js) et
 // envoie { type: 'choose', index } par onChoose ; touches 1 à 9 pour choisir.
 //
-//   mountDialogue({ onChoose }) -> { render(campaign) }   la fenêtre s'ajoute à document.body
+//   mountDialogue({ onChoose }) -> { render(campaign), leave() }   la fenêtre s'ajoute à document.body
+//     leave() : choisit « Au revoir » s'il est proposé (Échap, campagne.js) ; dit s'il l'a fait
 
 import { el } from './board.js';
 import { dialogueWindow } from './dialogue-screen.js';
+import { farewellChoice } from './aide.js';
 
 // Hypothèse v2 : le brief ne dessine pas les pictogrammes ; une initiale sur un hexagone de
 // la couleur de la faction (classe faction-<id> de fenetres.css).
@@ -49,6 +51,11 @@ export function mountDialogue({ onChoose }) {
   });
 
   return {
+    leave() {
+      const choice = farewellChoice(view);
+      if (choice) onChoose({ type: 'choose', index: choice.index });
+      return Boolean(choice);
+    },
     render(campaign) {
       view = dialogueWindow(campaign);
       root.hidden = !view;
