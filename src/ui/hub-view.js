@@ -2,10 +2,13 @@
 // lectures pures de hub.js et n'agit que par dispatch(action) : rien ici ne modifie la campagne.
 //
 // ONGLETS : ceux du §16 que le hub a (hubTabs). Un service que le moteur n'a pas encore
-// branché (barman, médecin, technicien) reste visible et grisé.
+// branché (médecin, technicien) reste visible et grisé.
 //   Marchand    inventaire et stock côte à côte ; glisser un objet d'une grille à l'autre, ou
 //               double-clic, pour vendre { service 'marchand', op 'sell' } ou acheter (op 'buy').
 //               Ouvrir l'onglet envoie op 'browse' (réplique du marchand, 0 PA).
+//   Barman      rumeurs à vendre (type et prix, sans le contenu) et rumeurs connues, fraîches
+//               ou périmées. Ouvrir l'onglet envoie { service 'barman', op 'browse' } (le barman
+//               complète son offre, 0 PA) ; Acheter envoie op 'buy' avec l'index de la rumeur.
 //   Coffre      inventaire et coffre côte à côte, mêmes gestes : chest-put / chest-take.
 //   Contrats    le tableau est tiré à la première consultation ({ service 'contrats' }) ;
 //               Accepter envoie { service 'contrats', contract }.
@@ -18,11 +21,15 @@
 //   HUB_REFUSALS { [raison]: texte }
 
 import content from '../content/index.js';
-import { hubScreen, traderScreen, chestScreen, contractsScreen, RANK_NAMES } from './hub.js';
+import { hubScreen, traderScreen, chestScreen, contractsScreen, barmanScreen, RANK_NAMES } from './hub.js';
 
 const itemName = (kind) => content.items[kind]?.name ?? kind;
 const hubName = (id) => content.places[id]?.name ?? id;
 const traderName = (id) => content.npcs[content.traders[id]?.npc]?.name ?? id;
+
+const tileName = (id) => content.tiles[id]?.name ?? id;
+
+const RUMOR_NAMES = { planque: 'Planque', artefact: 'Artefact rare', raccourci: 'Raccourci', patrouille: 'Patrouille' };
 
 const STANDING_NAMES = { hostile: 'hostile', neutre: 'neutre', amical: 'amical', allie: 'allié' };
 
@@ -42,6 +49,7 @@ export const HUB_REFUSALS = {
   'no-service': 'service absent de ce hub',
   'service-unavailable': 'service pas encore branché',
   'unknown-contract': 'contrat retiré du tableau',
+  'no-rumor': 'rumeur plus en vente',
 };
 
 export const HUB_LINES = {
@@ -57,6 +65,11 @@ export const HUB_LINES = {
   'contracts-board': (e) => `Tableau des contrats : ${e.contracts.length} offre(s)`,
   'contract-accepted': () => 'Contrat accepté',
   'contracts-renewed': () => 'Les tableaux des contrats sont renouvelés',
+  'rumors-offered': (e) => `Barman : ${e.rumors.length} rumeur(s) à vendre`,
+  'rumor-bought': (e) => `Rumeur achetée : ${rumorText(e.rumor)} pour ${e.price} ₽`,
+  'stash-revealed': () => 'Planque marquée sur la carte',
+  'rumor-aged': (e) => `Rumeur périmée par l’Émission : ${rumorText(e.rumor)}`,
+  'stash-gone': () => 'Une planque de rumeur a été vidée par l’Émission',
   'contract-failed': (e) => `Contrat raté (réputation : ${content.factions[e.faction]?.name ?? e.faction})`,
 };
 
@@ -94,12 +107,14 @@ export function renderHub(section, campaign, { dispatch, refresh }) {
 function openTab(id, campaign, { dispatch, refresh }) {
   currentTab = id;
   if (id === 'marchand') dispatch({ type: 'service', service: 'marchand', op: 'browse' });
+  else if (id === 'barman') dispatch({ type: 'service', service: 'barman', op: 'browse' });
   else if (id === 'contrats' && !contractsScreen(campaign).drawn) dispatch({ type: 'service', service: 'contrats' });
   else refresh();
 }
 
 const TAB_BODIES = {
   marchand: traderBody,
+  barman: barmanBody,
   coffre: chestBody,
   contrats: contractsBody,
   dormir: bedBody,
@@ -134,6 +149,50 @@ function traderBody(campaign, dispatch) {
       })),
     h('div', { className: 'aide', textContent: 'Glisser un objet vers l’autre grille (ou double-clic) : vendre ou acheter' }),
   ];
+}
+
+function barmanBody(campaign, dispatch) {
+  const bar = barmanScreen(campaign);
+  const forSale = bar.forSale.length
+    ? h('ul', { className: 'hub-contrats' }, ...bar.forSale.map((rumor) => h('li', { className: 'hub-contrat' },
+      h('strong', { textContent: `Rumeur : ${RUMOR_NAMES[rumor.type]}` }),
+      h('span', { className: 'objet-prix', textContent: `${rumor.price} ₽` }),
+      h('button', {
+        type: 'button',
+        textContent: 'Acheter',
+        disabled: Boolean(rumor.refusal),
+        title: rumor.refusal ? HUB_REFUSALS[rumor.refusal] : '',
+        onclick: () => dispatch({ type: 'service', service: 'barman', op: 'buy', index: rumor.index }),
+      }))))
+    : h('p', { className: 'aide', textContent: 'Rien à vendre pour l’instant.' });
+  const known = bar.known.length
+    ? h('ul', { className: 'hub-contrats' }, ...bar.known.map((rumor) => h('li', { className: `hub-contrat${rumor.stale ? ' perimee' : ''}` },
+      h('strong', { textContent: `${RUMOR_NAMES[rumor.type]} · ${rumor.tileName}` }),
+      h('span', { textContent: rumorText(rumor) }),
+      h('span', { className: 'objet-info', textContent: rumorAge(rumor) }))))
+    : h('p', { className: 'aide', textContent: 'Aucune rumeur connue.' });
+  return [
+    h('p', { className: 'hub-replique' }, h('strong', { textContent: bar.name }), ', barman'),
+    h('div', { className: 'hub-grilles' },
+      h('section', { className: 'hub-zone' }, h('h3', { textContent: `Rumeurs à vendre · ${bar.roubles} ₽` }), forSale),
+      h('section', { className: 'hub-zone' }, h('h3', { textContent: 'Rumeurs connues' }), known)),
+    h('div', { className: 'aide', textContent: 'Une rumeur devient fausse après la prochaine Émission.' }),
+  ];
+}
+
+// Contenu d'une rumeur connue (§10.3), lu d'une lecture barmanScreen ou d'un événement du moteur.
+function rumorText(rumor) {
+  const where = tileName(rumor.tile);
+  if (rumor.type === 'planque') return `planque à ${where}, hexagone ${rumor.hex}${rumor.opened ? ' (fouillée)' : ''}`;
+  if (rumor.type === 'artefact') return `${itemName(rumor.item)} à ${where}, hexagone ${rumor.hex}`;
+  if (rumor.type === 'raccourci') return `raccourci à ${where} : ${rumor.path.join(' → ')}`;
+  return `patrouille à ${where}, hexagone ${rumor.hex}`;
+}
+
+function rumorAge(rumor) {
+  if (rumor.stale) return 'Périmée : une Émission est passée';
+  if (rumor.expires === null) return `Fraîche (jour ${rumor.day})`;
+  return `Fraîche jusqu’à l’Émission du jour ${rumor.expires}`;
 }
 
 function chestBody(campaign, dispatch) {

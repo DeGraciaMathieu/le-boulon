@@ -16,6 +16,13 @@
 //   contractsScreen(campaign) -> null | { drawn, offers: [{ id, name, type, tile, tileName,
 //                                         deadline, roubles, xp, daysLeft, refusal }] }
 //     drawn : faux tant que le tableau n'a pas été tiré (première consultation, 0 PA).
+//   barmanScreen(campaign)  -> null | { name, roubles,
+//                                       forSale: [{ index, type, price, refusal }],
+//                                       known: [{ type, tile, tileName, hex, item, itemName, from,
+//                                                 to, path, opened, day, expires, stale }] }
+//     forSale : rumeurs à vendre sans leur contenu (§10.3), index pour l'achat ;
+//     known : rumeurs achetées, fraîches ou périmées (stale, après l'Émission) ; opened : planque
+//     déjà fouillée (rumeur de planque seulement).
 //
 // Les refus sont recalculés ici pour griser les objets ; le moteur reste seul juge à l'action.
 
@@ -23,6 +30,7 @@ import content from '../content/index.js';
 import { hubView, HUB_SERVICES } from '../engine/rules/hubs.js';
 import { traderOf, stockOf, buyPrice, sellPrice, traderLine } from '../engine/rules/traders.js';
 import { contractBoard, OFFER_DAYS } from '../engine/rules/contracts.js';
+import { rumorsForSale, rumorPrice } from '../engine/rules/stashes.js';
 import { standing } from '../engine/rules/factions.js';
 import { RANKS } from '../engine/rules/progression.js';
 import { usedSlots, inventorySlots } from '../engine/rules/equipment.js';
@@ -131,6 +139,41 @@ export function contractsScreen(campaign) {
         refusal: parcel && slots.used + parcel.size > slots.max ? 'inventory-full' : null,
       };
     }),
+  };
+}
+
+export function barmanScreen(campaign) {
+  const view = hubView(campaign);
+  if (!view?.services.includes('barman')) return null;
+  const { roubles } = campaign.player;
+  const barman = Object.values(content.npcs).find(({ place, role }) => place === view.hub && role === 'barman');
+  return {
+    name: barman?.name ?? 'Le barman',
+    roubles,
+    forSale: rumorsForSale(campaign).map((rumor, index) => {
+      const price = rumorPrice(rumor);
+      return { index, type: rumor.type, price, refusal: roubles < price ? 'not-enough-roubles' : null };
+    }),
+    known: campaign.rumors.filter(({ known }) => known).map((rumor) => describeRumor(campaign, rumor)),
+  };
+}
+
+function describeRumor(campaign, rumor) {
+  const stash = rumor.type === 'planque' ? campaign.stashes.find(({ id }) => id === rumor.stash) : null;
+  return {
+    type: rumor.type,
+    tile: rumor.tile,
+    tileName: content.tiles[rumor.tile]?.name ?? rumor.tile,
+    hex: rumor.hex ?? null,
+    item: rumor.item ?? null,
+    itemName: rumor.item ? itemName(rumor.item) : null,
+    from: rumor.from ?? null,
+    to: rumor.to ?? null,
+    path: rumor.path ?? null,
+    opened: stash ? Boolean(stash.opened) : null,
+    day: rumor.day,
+    expires: rumor.expires ?? null,
+    stale: Boolean(rumor.stale),
   };
 }
 
