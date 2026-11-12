@@ -7,7 +7,6 @@
 //   eventEffect(event) -> effet | null   l'effet d'un seul événement (séquenceur, sequencer.js)
 //   campaignEffects(events) -> [effet], dans l'ordre des événements :
 //     { kind: 'transition', tile, firstVisit }   traveled : passage d'une tuile à l'autre
-//     { kind: 'card', cardType }                  place-card : carte de lieu révélée
 //     { kind: 'wake', day }                       day-started : réveil
 //     { kind: 'announce', tone, title, text }     annonce globale de l'Émission
 //       tone 'signes' (carte Météo du matin), 'emission' (elle frappe, ou elle a pris le
@@ -23,7 +22,6 @@ const tileName = (id) => content.tiles[id]?.name ?? id;
 
 const EFFECTS = {
   traveled: (e) => ({ kind: 'transition', tile: tileName(e.to.tile), firstVisit: Boolean(e.firstVisit) }),
-  'place-card': (e) => ({ kind: 'card', cardType: e.cardType }),
   'day-started': (e) => ({ kind: 'wake', day: e.day }),
   weather: (e) => (e.card === 'signes-emission'
     ? { kind: 'announce', tone: 'signes', title: "Signes d'Émission", text: "Elle frappera aujourd'hui : repérer un abri" }

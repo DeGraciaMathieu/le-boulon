@@ -5,10 +5,9 @@
 // SÉQUENCEUR (sequencer.js, lot L1) : chaque type d'événement qui donne un effet est enregistré
 // dans le séquenceur ; un pas dure le temps de l'animation CSS (BEAT_MS). Accélérer finit l'animation CSS en cours ; les annonces et le tampon de rang,
 // qui portent une information, restent affichés jusqu'à leur fin. Mode réduit : fondu du plateau,
-// de la carte ou du réveil ; annonces et rang s'affichent (effets.css coupe leur mouvement).
+// ou du réveil ; annonces et rang s'affichent (effets.css coupe leur mouvement).
 //
 //   transition  la tuile apparaît en fondu, son nom passe au centre du plateau
-//   card        la carte du dessus de la pile du lieu se retourne
 //   wake        l'écran du réveil sort du noir
 //   announce    bande d'annonce de l'Émission en travers de l'écran
 //   rank        tampon du nouveau rang
@@ -24,7 +23,7 @@ import { fade } from './sequencer.js';
 
 const TRACE_MS = 1000;
 const ANNOUNCE_MS = 2600;
-const BEAT_MS = { transition: 700, card: 500, wake: 900, announce: 700, rank: 400 };
+const BEAT_MS = { transition: 700, wake: 900, announce: 700, rank: 400 };
 
 function h(tag, className, text) {
   return Object.assign(document.createElement(tag), { className, textContent: text });
@@ -43,9 +42,9 @@ function settle(node) {
   for (const animation of node?.getAnimations?.({ subtree: true }) ?? []) animation.finish();
 }
 
-// plateau : le SVG de la tuile ; place : la section du lieu ; layer : la couche #ecran ;
+// plateau : le SVG de la tuile ; layer : la couche #ecran ;
 // sequencer : le séquenceur de campagne.js, où les effets s'enregistrent.
-export function mountEffects({ plateau, place, layer, sequencer }) {
+export function mountEffects({ plateau, layer, sequencer }) {
   const overlay = h('div', 'effets');
   document.body.append(overlay);
   let announce = null;
@@ -62,7 +61,6 @@ export function mountEffects({ plateau, place, layer, sequencer }) {
     announce.append(h('strong', '', title), h('span', '', text));
   }
 
-  const topCard = () => place.querySelector('.lieu-pile > li.carte');
   const showTile = ({ tile, firstVisit }) => flash(h('div', 'fx-tuile', firstVisit ? `${tile} · première visite` : tile), TRACE_MS);
   const showRank = ({ name }) => {
     const stamp = flash(h('div', 'fx-rang'), 1600);
@@ -81,11 +79,6 @@ export function mountEffects({ plateau, place, layer, sequencer }) {
         return fade(plateau);
       },
       finish: () => settle(plateau),
-    },
-    card: {
-      play: () => replay(topCard(), 'fx-revele'),
-      reduced: () => fade(topCard()),
-      finish: () => settle(topCard()),
     },
     wake: {
       play: () => replay(layer, 'fx-reveil'),

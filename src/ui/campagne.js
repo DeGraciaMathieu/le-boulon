@@ -37,8 +37,11 @@
 // soins joue { type: 'use' } comme la zone Soins, sa réserve de boulons ouvre le mode ciblage.
 // Ses pas (ficheBeats de fiche.js) suivent ceux du bandeau dans la file du séquenceur.
 //
-// OBJECTIF (objectif.js) : encart en haut du panneau, la quête suivie et sa cible ; un clic
-// met en évidence l'hexagone cible sur la tuile, ou la carte du monde si la cible est ailleurs.
+// CARTES PHYSIQUES (cartes.js, cartes-view.js, lot L5) : paquet Zone posé sur le plateau, cartes
+// du lieu, du réveil et de l'ennemi qui sortent et se retournent ; pas insérés par cardBeats.
+//
+// OBJECTIF (objectif.js) : carte de mission (cartes-view.js) en haut du panneau, la quête suivie
+// et sa cible ; un clic met en évidence l'hexagone cible sur la tuile, ou la carte du monde si la cible est ailleurs.
 // Marqueur « ! » sur le donneur de la quête principale tant qu'elle n'est pas prise.
 //
 // POURQUOI ? (pourquoi.js, lot L7) : chaque ligne du journal liée à un jet ou à une pénalité,
@@ -92,6 +95,8 @@ import { mountBoardMotion } from './plateau-view.js';
 import { boardBeats } from './plateau.js';
 import { eventWhy, trackCauses } from './pourquoi.js';
 import { mountBubbles } from './bulles-view.js';
+import { mountCards } from './cartes-view.js';
+import { cardBeats, wakeCards } from './cartes.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -122,7 +127,7 @@ const pda = mountPda(document.getElementById('pda'), document.getElementById('ou
 });
 const sequencer = createSequencer();
 const bubbles = mountBubbles(sequencer);
-const effects = mountEffects({ plateau, place: placeSection, layer: layerSection, sequencer });
+const effects = mountEffects({ plateau, layer: layerSection, sequencer });
 const barView = mountBar(bar, sequencer);
 const diceTray = mountDiceTray(document.getElementById('bac-place'), sequencer);
 const ficheView = mountFiche(document.getElementById('fiche'), sequencer, {
@@ -130,6 +135,7 @@ const ficheView = mountFiche(document.getElementById('fiche'), sequencer, {
   onBolt: () => setTargeting(!targeting),
 });
 const boardMotion = mountBoardMotion({ plateau, sequencer, board: () => board });
+const cards = mountCards({ table, place: placeSection, layer: layerSection, objective: objectivePanel, sequencer });
 const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
@@ -200,6 +206,7 @@ function renderTable() {
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   barView.render(campaign, causes);
   ficheView.render(campaign, ficheGestures(day));
+  cards.render(campaign, lastEvents);
   renderObjective();
   renderCommands(day);
   renderSaves();
@@ -260,11 +267,7 @@ function renderTileMarks(day) {
 
 function renderObjective() {
   const focus = objectiveFocus(campaign);
-  const target = focus.target && h('div', { className: 'objectif-cible', textContent: `Cible : ${focus.target}${focus.here ? '' : ' · autre tuile'}` });
-  objectivePanel.replaceChildren(h('button', { type: 'button', className: 'objectif-encart', title: 'Montrer la cible', onclick: () => showTarget(focus) },
-    h('span', { className: 'objectif-titre', textContent: `Objectif · ${focus.title}` }),
-    h('span', { className: 'objectif-etape', textContent: focus.step }),
-    target));
+  cards.renderMission(focus, () => showTarget(focus));
 }
 
 // Met en évidence la cible un court instant : son hexagone sur la tuile, sinon la carte du monde.
@@ -474,8 +477,8 @@ const titleHandlers = {
 function afterStep(events, rest) {
   const wake = wakeReport([...dayEvents, ...events], { campaign, rest });
   if (wake) {
+    layer = { kind: 'wake', report: { ...wake, cards: wakeCards([...dayEvents, ...events]) } };
     dayEvents = [];
-    layer = { kind: 'wake', report: wake };
     report(saves.autosave(campaign), 'Sauvegarde automatique');
   } else {
     dayEvents.push(...events);
@@ -542,7 +545,7 @@ function dispatch(action) {
   appendEvents(result.events);
   afterStep(result.events, rest);
   render();
-  const beats = boardBeats(ficheBeats(barBeats(result.events, before, barSnapshot(campaign))), campaign.world.currentTile);
+  const beats = boardBeats(cardBeats(ficheBeats(barBeats(result.events, before, barSnapshot(campaign)))), campaign.world.currentTile);
   boardMotion.stage(beats);
   sequencer.play(beats).then(scheduleBubbles);
 }
@@ -656,6 +659,7 @@ function start(loaded) {
   sequencer.skip();
   effects.reset();
   diceTray.reset();
+  cards.reset();
   render();
 }
 

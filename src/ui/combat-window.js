@@ -13,6 +13,7 @@ import { combatLine, combatWindow, shotOdds } from './combat-screen.js';
 import { shotHint } from './bac.js';
 import { combatOdds } from '../engine/rules/combat.js';
 import { defenseWhy } from './pourquoi.js';
+import { settleEnemies } from './cartes.js';
 
 const PIPS = { 1: [[2, 2]], 2: [[1, 1], [3, 3]], 3: [[1, 1], [2, 2], [3, 3]], 4: [[1, 1], [3, 1], [1, 3], [3, 3]],
   5: [[1, 1], [3, 1], [2, 2], [1, 3], [3, 3]], 6: [[1, 1], [3, 1], [1, 2], [3, 2], [1, 3], [3, 3]] };
@@ -46,18 +47,21 @@ function hpTrack(enemy) {
   return svg;
 }
 
+// onAction absent : combat fini, carte sans bouton. data-index : cartes-view.js (A12).
 function enemyCard(enemy, onAction, aim) {
-  return h('li', { className: `ennemi${enemy.down ? ' abattu' : ''}` },
+  const card = h('li', { className: `ennemi${enemy.down ? ' abattu' : ''}` },
     h('div', { className: 'ennemi-nom', textContent: enemy.name }),
     h('div', { className: 'ennemi-pv' }, hpTrack(enemy), ` ${enemy.hp}/${enemy.maxHp} PV`),
     h('div', { className: 'ennemi-stats', textContent: `Menace ${enemy.threat} · dégâts ${enemy.damage} · ${enemy.type}` }),
     enemy.down
       ? h('div', { className: 'ennemi-etat', textContent: 'Abattu' })
-      : h('button', {
+      : onAction && h('button', {
         type: 'button', textContent: `Tirer · ${shotOdds(enemy.toHit)}`,
         onclick: () => onAction({ type: 'shoot', target: enemy.index }),
         onmouseenter: () => aim(enemy), onfocus: () => aim(enemy),
       }));
+  card.dataset.index = enemy.index;
+  return card;
 }
 
 // La Défense dit sa composition au survol (defenseWhy de pourquoi.js).
@@ -81,6 +85,7 @@ export function mountCombat({ onAction, onClose = () => {}, tray = null }) {
   document.body.append(root);
   let rolls = [];
   let title = '';
+  let enemies = [];
 
   const rollList = () => h('ol', { className: 'jets', 'aria-live': 'polite' }, ...rolls.map(rollItem));
   const aim = (enemy) => tray?.prepare(shotHint(enemy));
@@ -102,6 +107,7 @@ export function mountCombat({ onAction, onClose = () => {}, tray = null }) {
       if (fought.length) rolls = fought;
       if (view) {
         title = view.title;
+        enemies = view.enemies;
         root.hidden = false;
         root.replaceChildren(h('div', { className: 'cadre-fenetre' },
           h('h2', { textContent: `${heading(campaign)} : ${view.title}` }),
@@ -126,6 +132,7 @@ export function mountCombat({ onAction, onClose = () => {}, tray = null }) {
       root.replaceChildren(h('div', { className: 'cadre-fenetre' },
         h('h2', { textContent: `${heading(campaign)} : ${title}` }),
         h('div', { className: 'combat-issue', textContent: combatLine(ended) }),
+        h('ol', { className: 'ennemis' }, ...settleEnemies(enemies, events).map((enemy) => enemyCard(enemy))),
         traySlot(),
         rollList(),
         h('button', { type: 'button', textContent: 'Continuer', onclick: () => { hide(); onClose(); } })));
