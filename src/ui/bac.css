@@ -1,0 +1,132 @@
+/* Bac à dés (lot L3, bac-view.js) en matière « Table de l'abri » : tapis de feutre olive dans un
+   cadre de noyer, dé ivoire aux points d'encre. Couleurs : variables de theme-abri.css. */
+
+.bac {
+  padding: 10px 12px 12px;
+  border-radius: 4px;
+  background: radial-gradient(ellipse at 50% 40%, #4f5e3d, var(--feutre));
+  box-shadow: inset 0 0 0 6px var(--noyer-clair), inset 0 0 0 7px var(--noyer), 0 6px 12px rgb(0 0 0 / 0.5);
+  color: var(--papier);
+  font-family: var(--mono);
+}
+
+#panneau .bac-titre,
+.bac h2.bac-titre {
+  margin: 0 0 6px;
+  padding: 0 2px;
+  color: var(--papier);
+  font-family: var(--titre);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.bac-corps {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 6px 10px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.18);
+}
+
+.bac-scene {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  perspective: 400px;
+}
+
+.bac-cube {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  transform-style: preserve-3d;
+}
+
+.bac-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-areas: "p1 p2 p3" "p4 p5 p6" "p7 p8 p9";
+  gap: 1px;
+  padding: 6px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fbf6e8, #ddd3b8);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+  backface-visibility: hidden;
+}
+
+.bac-face i {
+  width: 7px;
+  height: 7px;
+  align-self: center;
+  justify-self: center;
+  border-radius: 50%;
+  background: var(--encre);
+}
+
+.bac-face.avant { transform: translateZ(20px); }
+.bac-face.arriere { transform: rotateY(180deg) translateZ(20px); }
+.bac-face.droite { transform: rotateY(90deg) translateZ(20px); }
+.bac-face.gauche { transform: rotateY(-90deg) translateZ(20px); }
+.bac-face.haut { transform: rotateX(90deg) translateZ(20px); }
+.bac-face.bas { transform: rotateX(-90deg) translateZ(20px); }
+
+.bac-phrase {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.bac-de,
+.bac-total {
+  font-weight: 700;
+}
+
+.bac-seuil {
+  opacity: 0.8;
+}
+
+.bac-verdict {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--titre);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.bac-verdict.bon {
+  background: var(--papier);
+  color: var(--olive-encre);
+}
+
+.bac-verdict.mauvais {
+  background: var(--rouille-sombre);
+}
+
+/* Vide : sobre, le dé posé en retrait. */
+.bac.vide .bac-scene {
+  opacity: 0.35;
+}
+
+.bac-rien {
+  opacity: 0.6;
+  font-size: 13px;
+}
+
+/* Seuil du prochain tir, inscrit par la fenêtre de combat. */
+.bac-avant {
+  margin: 8px 0 0;
+  padding: 4px 8px;
+  border-left: 3px solid var(--ocre);
+  background: rgb(239 229 201 / 0.13);
+  font-size: 13px;
+}
+
+.fenetre-combat .bac-place {
+  margin: 12px 0;
+}
