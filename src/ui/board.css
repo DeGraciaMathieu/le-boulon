@@ -1,17 +1,36 @@
 body {
   margin: 0;
   min-height: 100vh;
-  display: grid;
-  place-items: center;
   background: #1b1f17;
   color: #cfd8b8;
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
+#table {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-rows: minmax(0, 1fr) 160px;
+  grid-template-areas: "plateau panneau" "journal panneau";
+  gap: 8px;
+  height: 100vh;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
 #plateau {
-  width: min(96vw, calc(96vh * 735 / 679));
-  height: auto;
+  grid-area: plateau;
+  width: 100%;
+  height: 100%;
   user-select: none;
+}
+
+@media (max-width: 800px) {
+  #table {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 160px;
+    grid-template-areas: "plateau" "panneau" "journal";
+    height: auto;
+  }
 }
 
 .hex {
@@ -43,9 +62,6 @@ body {
 }
 
 .jeton {
-  fill: #2c2a24;
-  stroke: #b9a46a;
-  stroke-width: 2;
   pointer-events: none;
 }
 
@@ -68,4 +84,225 @@ body {
   font-size: 13px;
   line-height: 1.5;
   pointer-events: none;
+}
+
+.jeton rect,
+.jeton circle {
+  fill: #2c2a24;
+  stroke: #e3cf6a;
+  stroke-width: 3;
+}
+
+.jeton text {
+  fill: #f4ead0;
+  font: bold 16px ui-monospace, Menlo, monospace;
+}
+
+.suspect.cache text {
+  font-size: 24px;
+}
+
+.suspect.artefact rect {
+  fill: #3d5a2a;
+  stroke: #9fe36a;
+}
+
+.suspect.rien rect {
+  fill: #3a3a36;
+  stroke: #8a8a80;
+}
+
+.suspect.anomalie rect {
+  fill: #5a2219;
+  stroke: #ff6a4a;
+}
+
+.jeton text.bloque {
+  fill: #ff6a4a;
+  font-size: 13px;
+}
+
+.rencontre circle {
+  stroke: #d9772f;
+}
+
+.rencontre.revelee circle {
+  fill: #6a2b14;
+}
+
+.rencontre.revelee text {
+  font-size: 12px;
+}
+
+#panneau {
+  grid-area: panneau;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid #4a5232;
+  background: #20251b;
+  font-size: 13px;
+}
+
+#panneau section {
+  margin-top: 14px;
+}
+
+#panneau h2 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #9aa67a;
+}
+
+.pa {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.pa-valeur {
+  font-size: 64px;
+  font-weight: bold;
+  line-height: 1;
+  color: #e3cf6a;
+}
+
+.piste {
+  margin-bottom: 8px;
+}
+
+.cases {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.case {
+  height: 14px;
+  border: 1px solid #6f7a4a;
+}
+
+.case.seuil {
+  border: 2px solid #d9772f;
+}
+
+.blessures .case.pleine {
+  background: #b5462b;
+}
+
+.radiations .case.pleine {
+  background: #9fbf3a;
+}
+
+.inventaire {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+
+.objet {
+  min-height: 34px;
+  padding: 2px;
+  border: 1px solid #6f7a4a;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.objet.taille-2 {
+  grid-column: span 2;
+}
+
+.objet.vide {
+  border-style: dashed;
+  opacity: 0.4;
+}
+
+.mission.remplie {
+  color: #9fe36a;
+}
+
+.mission.impossible {
+  color: #ff6a4a;
+}
+
+.alerte {
+  color: #ff9a4a;
+}
+
+.alerte.emission {
+  font-weight: bold;
+  color: #ff6a4a;
+}
+
+.commandes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+button {
+  padding: 8px;
+  font: inherit;
+  color: #1b1f17;
+  background: #cfd8b8;
+  border: 0;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #e3cf6a;
+}
+
+.aide {
+  color: #7d8762;
+  font-size: 11px;
+}
+
+#journal {
+  grid-area: journal;
+  margin: 0;
+  padding: 8px 12px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid #4a5232;
+  background: #10140c;
+  color: #9fe36a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#journal li::before {
+  content: "> ";
+  color: #4a5232;
+}
+
+#journal li[data-type="refused"] {
+  color: #ff9a4a;
+}
+
+#fin {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 12, 8, 0.8);
+}
+
+#fin[hidden] {
+  display: none;
+}
+
+.fin-boite {
+  min-width: 300px;
+  padding: 24px;
+  border: 1px solid #6f7a4a;
+  background: #20251b;
+  text-align: center;
+}
+
+.fin-boutons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
 }
