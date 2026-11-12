@@ -279,3 +279,7 @@ body {
 .hub-contrat button {
   align-self: flex-start;
 }
+
+.hub-contrat.perimee {
+  opacity: 0.5;
+}
