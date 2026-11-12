@@ -45,7 +45,7 @@
 //     place?,                      { id, approach? } pendant la visite d'un lieu seulement
 //                                  (rules/places.js)                                 carte 10
 //     npcs: { [id]: { alive, tile, place, met, helped } }  (rules/npcs.js)          carte 19
-//     quests: { [id]: questState }                                                   carte 15
+//     quests: { [id]: questState }  (rules/quests.js)                                carte 15
 //     contracts: { [hubId]: [...] }                                                  carte 22
 //     traders: { [id]: { stock, restockDay } }                                       carte 13
 //     reputation: { [factionId]: -3..3 }  valeurs de départ du §9 (rules/factions.js) carte 16
@@ -106,6 +106,7 @@ import { COMBAT_MODES, combatOnReveal, combatRefusal, shoot, takeCover, grenade,
 import { travel } from './rules/world.js';
 import { talkTo, startingNpcs } from './rules/npcs.js';
 import { enterPlace, explore, boltCard, leavePlace, placesAfterStep, PLACE_OVERRIDES } from './rules/places.js';
+import { questsAfterStep } from './rules/quests.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -126,7 +127,8 @@ export const CAMPAIGN_ACTIONS = {
 };
 
 // combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.
-export const REACTIONS = [combatOnReveal, placesAfterStep];
+// questsAfterStep en dernier : les objectifs de quête lisent tout ce que le step a produit.
+export const REACTIONS = [combatOnReveal, placesAfterStep, questsAfterStep];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);

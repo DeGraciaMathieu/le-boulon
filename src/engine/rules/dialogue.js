@@ -31,8 +31,8 @@
 //     { type: 'reputation', faction, amount }  piste bornée -3..3          -> reputation-changed
 //     { type: 'rejoindre-faction', faction }   refus de joinFaction        -> faction-joined
 //     (ces deux effets : src/engine/rules/factions.js, carte 16)
-//   À brancher par leur carte : 'quete' { quest } (démarrer), 'avancer' { quest, step }
-//   (carte 15), 'reveler' { place } (carte 10) ou { stash } (carte 23) ;
+//   Branchés par leur carte : 'quete' { quest } (démarrer), 'avancer' { quest, step }
+//   (rules/quests.js, carte 15), 'reveler' { place } (carte 10) ; à brancher : { stash } (carte 23) ;
 //   la carte 16 peut remplacer 'reputation'. Un effet sans hook refuse le choix ('unknown-effect').
 //
 // ACTIONS DE CAMPAGNE (enregistrées dans CAMPAIGN_ACTIONS de campaign.js) :
@@ -80,11 +80,11 @@ export const CONDITIONS = {
     };
     return within(RANKS.indexOf(campaign.player.rank), bounds);
   },
-  // Hypothèse v2 : questState porte son étape courante dans `etape` (forme à fixer par la carte 15).
+  // questState : rules/quests.js (carte 15).
   quete: (condition, campaign) => {
     const quest = campaign.quests[condition.quest];
     if (!quest) return false;
-    return condition.step === undefined || quest.etape === condition.step;
+    return condition.step === undefined || quest.step === condition.step;
   },
   stat: (condition, campaign) => within(campaign.player.stats[condition.stat], condition),
   roubles: (condition, campaign) => within(campaign.player.roubles, condition),
