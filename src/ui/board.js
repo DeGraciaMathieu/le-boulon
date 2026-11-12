@@ -10,7 +10,7 @@
 
 import { HEXES, neighbors, isEdge } from '../engine/hex.js';
 import { entryCost } from '../engine/actions/move.js';
-import { encounterCards } from '../engine/rules/tile.js';
+import { encounterCard } from '../engine/rules/tile.js';
 import { isBlocked } from '../engine/rules/suspects.js';
 import { hexCenter, hexPoints } from './geometry.js';
 
@@ -94,7 +94,7 @@ function renderTokens(board, state) {
     const revealed = encounter.card !== null;
     const group = el('g', { class: `jeton rencontre${revealed ? ' revelee' : ''}` }, board.tokens);
     el('circle', { cx: x, cy: y + board.calage.taille * 0.48, r: size * 0.5 }, group);
-    label(group, x, y + board.calage.taille * 0.48, revealed ? encounterCards(state.tile)[encounter.card].name.split(' ')[0] : '!');
+    label(group, x, y + board.calage.taille * 0.48, revealed ? encounterCard(state.tile, encounter.card).name.split(' ')[0] : '!');
   }
 }
 

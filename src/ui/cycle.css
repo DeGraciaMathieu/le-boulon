@@ -1,0 +1,141 @@
+/* Écrans Titre, Fin de journée, Nuit, Réveil, Mort, Fin de campagne (cycle-view.js) : une
+   couche posée sur la table. Palette et typographie de la v1 (board.css). */
+
+#ecran {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgb(16 20 12 / 0.82);
+  font-family: var(--mono);
+}
+
+#ecran[hidden] {
+  display: none;
+}
+
+#ecran[data-ecran="titre"] {
+  background: var(--pda);
+}
+
+.ecran-carte {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(520px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 18px 22px;
+  border: 1px solid var(--olive-sombre);
+  background: var(--panneau);
+  color: var(--texte);
+  font-size: 13px;
+}
+
+.ecran-carte h1 {
+  margin: 0;
+  color: var(--phosphore);
+  font-size: 34px;
+  letter-spacing: 0.3em;
+}
+
+.ecran-carte h2 {
+  margin: 8px 0 0;
+  color: var(--ocre);
+  font-size: 16px;
+}
+
+.ecran-carte h3 {
+  margin: 6px 0 0;
+  color: var(--sauge);
+  font-size: 13px;
+}
+
+.ecran-sous-titre {
+  margin: 0;
+  color: var(--sauge);
+}
+
+.ecran-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.ecran-graine input {
+  padding: 6px;
+  font: inherit;
+  color: var(--texte);
+  background: var(--pda);
+  border: 1px solid var(--olive-sombre);
+}
+
+.ecran-emplacements {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ecran-emplacements li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ecran-emplacements button {
+  min-width: 130px;
+}
+
+.ecran-emplacements button:disabled {
+  color: var(--sauge-sombre);
+  background: var(--olive-sombre);
+  cursor: default;
+}
+
+.ecran-detail,
+.ecran-label {
+  color: var(--sauge);
+}
+
+.ecran-ligne {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 0;
+  border-bottom: 1px dotted var(--olive-sombre);
+}
+
+.ecran-ligne.alerte .ecran-valeur,
+.ecran-carte .alerte {
+  color: var(--rouille);
+}
+
+.ecran-pa {
+  color: var(--sauge);
+}
+
+.ecran-pa span {
+  color: var(--phosphore);
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.ecran-epilogue p {
+  margin: 0 0 8px;
+  color: var(--papier);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ecran-choix {
+  margin: 0;
+  padding-left: 18px;
+}

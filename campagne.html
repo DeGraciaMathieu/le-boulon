@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="src/ui/lieu.css">
   <link rel="stylesheet" href="src/ui/fenetres.css">
   <link rel="stylesheet" href="src/ui/pda.css">
+  <link rel="stylesheet" href="src/ui/cycle.css">
 </head>
 <body>
   <header id="bandeau" aria-live="polite"></header>
@@ -27,13 +28,15 @@
         <button type="button" id="ouvrir-pda">PDA</button>
         <button type="button" id="ouvrir-inventaire">Inventaire</button>
       </div>
-      <button type="button" id="nouvelle">Nouvelle campagne</button>
+      <section id="sauvegarde" class="commandes"></section>
+      <button type="button" id="nouvelle">Écran titre</button>
     </aside>
     <ol id="journal" aria-live="polite"></ol>
   </main>
   <div id="apercu" hidden></div>
   <section id="pda" hidden></section>
   <section id="inventaire" hidden></section>
+  <section id="ecran" hidden aria-live="polite"></section>
   <script type="module" src="src/ui/campagne.js"></script>
 </body>
 </html>

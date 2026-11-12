@@ -125,7 +125,8 @@ export const DAY_HOOKS = Object.freeze({
   patrols: Object.freeze([movePatrols]),
 });
 
-const NIGHT_ACTIONS = Object.freeze(['wake']);
+// respawn : mort pendant la nuit (rules/death.js).
+const NIGHT_ACTIONS = Object.freeze(['wake', 'respawn']);
 
 export function weatherOf(state) {
   if (!state.weather) return null;

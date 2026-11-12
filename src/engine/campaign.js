@@ -22,6 +22,7 @@
 //                                  journées v1 comprises
 //     day,                         compteur de jours, commence à 1                   carte 7
 //     mode,                        'normal' | 'hardcore' (§15)                       carte 29
+//     lastHub?,                    dernier hub visité, réapparition (rules/death.js) carte 29
 //     player: {
 //       stats,                     { tir, survie, discretion, endurance } de la v1    carte 17
 //       rank, xp, perks,           'bleu', 0, [] (rules/progression.js)              carte 17
@@ -121,6 +122,7 @@ import { enterHub, enterHubOrPlace, leaveHub, chestPut, chestTake, useService, h
 import { emissionAfterStep, dropEmissionCard } from './rules/emission.js';
 import { patrolsAfterStep } from './rules/patrols.js';
 import { openStash } from './rules/stashes.js';
+import { respawn, rememberHub } from './rules/death.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -139,14 +141,14 @@ export const CAMPAIGN_ACTIONS = {
   travel, sleep, camp, wake,
   'enter-place': enterHubOrPlace, explore, 'bolt-card': boltCard, 'leave-place': leavePlace,
   'enter-hub': enterHub, 'leave-hub': leaveHub, 'chest-put': chestPut, 'chest-take': chestTake, service: useService,
-  'open-stash': openStash,
+  'open-stash': openStash, respawn,
 };
 
 // combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.
 // emissionAfterStep après endDayOnExhaustion : elle lit la nuit que celle-ci vient de poser.
 // questsAfterStep en dernier : les objectifs de quête lisent tout ce que le step a produit ;
 // contractsAfterStep le suit pour les contrats qu'il a ratés.
-export const REACTIONS = [patrolsAfterStep, combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep, contractsAfterStep];
+export const REACTIONS = [patrolsAfterStep, combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep, contractsAfterStep, rememberHub];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);

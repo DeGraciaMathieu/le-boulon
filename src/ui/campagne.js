@@ -13,10 +13,14 @@
 // ÉCRANS : la tuile, le lieu (place-view.js, carte 25) et l'écran Hub de hub-view.js à la
 // place du plateau pendant une visite ; par-dessus, les fenêtres Dialogue (dialogue-window.js,
 // ouverte par Parler à… sur l'hexagone d'un PNJ), Combat v2 en rounds (combat-window.js),
-// PDA (pda-view.js) et Inventaire (inventory-view.js). La nuit n'a que le bouton Se réveiller,
-// en attendant l'écran Réveil et nuit.
+// PDA (pda-view.js) et Inventaire (inventory-view.js). Couche #ecran
+// (cycle-view.js, carte 29), par priorité : titre, mort (imposée par la campagne), fin de
+// campagne, nuit (imposée), fin de journée (bouton Finir la journée), rapport du réveil.
 //
-// GRAINE : ?seed=<entier> dans l'adresse, sinon une graine au hasard.
+// SAUVEGARDE (storage.js) : autosave à chaque day-started ; emplacements 1 à 3 dans un hub ;
+// export à tout moment ; en hardcore, la mort efface les sauvegardes de la campagne.
+//
+// DÉMARRAGE : écran titre ; ?seed=<entier> dans l'adresse lance tout de suite une partie normale.
 
 import { createCampaign, step, dayState } from '../engine/campaign.js';
 import { travelTarget } from '../engine/rules/world.js';
@@ -41,6 +45,11 @@ import { mountPda } from './pda-view.js';
 import { mountInventory } from './inventory-view.js';
 import { PDA_LINES } from './pda.js';
 import { INVENTORY_LINES } from './inventory.js';
+import { deathView } from '../engine/rules/death.js';
+import { canManualSave } from '../engine/rules/save.js';
+import { saves, MANUAL_SLOTS } from './storage.js';
+import { parseSeed, titleSlots, campPreview, nightView, wakeReport, daySummary, endingView } from './cycle.js';
+import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
 const USABLE = ['bandage', 'vodka', 'ration'];
@@ -68,6 +77,7 @@ const CAMPAIGN_LINES = {
   'quest-step': (e) => `Quête ${questName(e.quest)} : nouvelle étape`,
   'quest-completed': (e) => `Quête terminée : ${questName(e.quest)}`,
   'quest-failed': (e) => `Quête ratée : ${questName(e.quest)}`,
+  respawned: (e) => `Réveil au ${content.places[e.hub].name} : inventaire perdu, XP ${e.xp.before} → ${e.xp.after}`,
   ...HUB_LINES,
   ...PLACE_LINES,
   ...PDA_LINES,
@@ -94,6 +104,8 @@ const hubSection = document.getElementById('hub');
 const worldSvg = document.getElementById('monde');
 const bar = document.getElementById('bandeau');
 const commandsPanel = document.getElementById('commandes');
+const savePanel = document.getElementById('sauvegarde');
+const layerSection = document.getElementById('ecran');
 const journal = document.getElementById('journal');
 const preview = document.getElementById('apercu');
 const table = document.getElementById('table');
@@ -105,6 +117,12 @@ let campaign;
 let board;
 let sizes;
 let lastEvents = [];
+// Écran de la couche choisi par l'interface : { kind: 'title', error? } | { kind: 'camp' }
+// | { kind: 'wake', report } | { kind: 'ending' } ; la nuit et la mort viennent de la campagne.
+let layer = null;
+// Événements depuis le dernier réveil : le résumé de la journée à l'écran nuit.
+let dayEvents = [];
+let deathCause = null;
 
 function loadSize(src) {
   return new Promise((resolve, reject) => {
@@ -127,6 +145,11 @@ function h(tag, attrs = {}, ...children) {
 }
 
 function render() {
+  if (campaign) renderTable();
+  renderLayer();
+}
+
+function renderTable() {
   const day = dayState(campaign);
   if (board?.tileId !== campaign.world.currentTile) mountTile(campaign.world.currentTile);
   renderBoard(board, day);
@@ -138,6 +161,7 @@ function render() {
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   renderBar();
   renderCommands(day);
+  renderSaves();
   const inHub = campaign.screen === 'hub';
   plateau.hidden = inHub;
   hubSection.hidden = !inHub;
@@ -204,7 +228,7 @@ function renderCommands(day) {
   const button = (label, action) => h('button', { type: 'button', textContent: label, onclick: () => dispatch(action) });
   const lines = [];
   if (campaign.screen === 'night') {
-    lines.push(h('div', { className: 'alerte', textContent: 'La nuit tombe.' }), button('Se réveiller', { type: 'wake' }));
+    lines.push(h('div', { className: 'alerte', textContent: 'La nuit tombe.' }));
   } else if (campaign.combat) {
     lines.push(h('div', { className: 'alerte', textContent: 'Combat en cours' }));
   } else if (campaign.dialogue) {
@@ -238,7 +262,7 @@ function renderCommands(day) {
     if (target) lines.push(button(`Passer à ${tileName(target.tile)} (1 PA)`, { type: 'travel' }));
     const hub = hubAt(campaign);
     if (hub) lines.push(button(`Entrer : ${content.places[hub].name}`, { type: 'enter-hub' }));
-    lines.push(button('Bivouac', { type: 'camp' }));
+    lines.push(h('button', { type: 'button', id: 'finir', textContent: 'Finir la journée', onclick: () => showLayer({ kind: 'camp' }) }));
     lines.push(h('div', { className: 'aide', textContent: 'Clic : se déplacer · clic sur le pion : entrer dans le lieu ou voyager · clic droit : boulon' }));
   }
   commandsPanel.replaceChildren(...lines);
@@ -249,6 +273,81 @@ function useButtons(button) {
     .map((kind) => button(`Utiliser ${ITEM_NAMES[kind].toLowerCase()} (1 PA)`, { type: 'use', item: kind }));
 }
 
+function renderSaves() {
+  const lines = [h('button', { type: 'button', textContent: 'Exporter (JSON)', onclick: () => report(saves.exportFile(campaign), 'Sauvegarde exportée') })];
+  if (canManualSave(campaign)) {
+    lines.push(h('div', { className: 'aide', textContent: 'Sauvegarder dans un emplacement :' }));
+    for (const slot of MANUAL_SLOTS) {
+      lines.push(h('button', { type: 'button', textContent: `Emplacement ${slot}`, onclick: () => report(saves.saveSlot(slot, campaign), `Sauvegarde : emplacement ${slot}`) }));
+    }
+  }
+  savePanel.replaceChildren(...lines);
+}
+
+function report(result, success) {
+  appendLine(result.ok ? success : `Refusé : ${result.error}`, 'save');
+}
+
+function renderLayer() {
+  const show = chooseLayer();
+  layerSection.hidden = !show;
+  if (show) show();
+}
+
+function chooseLayer() {
+  if (layer?.kind === 'title') return () => renderTitle(layerSection, { slots: titleSlots(saves.list()), error: layer.error }, titleHandlers);
+  const death = deathView(campaign);
+  if (death) return () => renderDeath(layerSection, death, deathCause, { respawn: () => dispatch({ type: 'respawn' }), title: () => showLayer({ kind: 'title' }) });
+  if (layer?.kind === 'ending') return () => renderEnding(layerSection, endingView(campaign), { close: () => showLayer(null), title: () => showLayer({ kind: 'title' }) });
+  const night = nightView(campaign);
+  if (night) return () => renderNight(layerSection, night, daySummary(dayEvents), { wake: () => dispatch({ type: 'wake' }) });
+  if (layer?.kind === 'camp') return () => renderCamp(layerSection, campPreview(campaign), { confirm: () => { layer = null; dispatch({ type: 'camp' }); }, cancel: () => showLayer(null) });
+  if (layer?.kind === 'wake') return () => renderWake(layerSection, layer.report, { close: () => showLayer(null) });
+  return null;
+}
+
+function showLayer(next) {
+  layer = next;
+  render();
+}
+
+const titleHandlers = {
+  start(mode, seedText) {
+    const seed = seedText.trim() ? parseSeed(seedText) : randomSeed();
+    if (seed === null) return showLayer({ kind: 'title', error: 'graine invalide : un entier de 0 à 4294967295' });
+    start(createCampaign({ seed, mode }));
+  },
+  load(slot) {
+    const loaded = saves.load(slot);
+    if (loaded.error) return showLayer({ kind: 'title', error: loaded.error });
+    start(loaded.campaign);
+  },
+  async import(file) {
+    const loaded = await saves.importFile(file);
+    if (loaded.error) return showLayer({ kind: 'title', error: loaded.error });
+    start(loaded.campaign);
+  },
+};
+
+// Après chaque action : rapport du réveil et autosave, cause de la mort (hardcore : effacement),
+// fin de campagne.
+function afterStep(events) {
+  const wake = wakeReport(events);
+  if (wake) {
+    dayEvents = [];
+    layer = { kind: 'wake', report: wake };
+    report(saves.autosave(campaign), 'Sauvegarde automatique');
+  } else {
+    dayEvents.push(...events);
+  }
+  const died = events.find((event) => event.type === 'died');
+  if (died) {
+    deathCause = died.cause;
+    if (campaign.mode === 'hardcore') report(saves.eraseCampaign(campaign), 'Hardcore : sauvegarde effacée');
+  }
+  if (events.some((event) => event.type === 'quest-completed' && event.quest === 'le-guide')) layer = { kind: 'ending' };
+}
+
 function describe(event) {
   if (event.type === 'refused' && REFUSALS[event.reason]) return `Refusé : ${REFUSALS[event.reason]}`;
   return CAMPAIGN_LINES[event.type]?.(event) ?? combatLine(event) ?? dialogueLine(event) ?? describeEvent(event);
@@ -257,11 +356,14 @@ function describe(event) {
 function appendEvents(events) {
   for (const event of events) {
     const text = describe(event);
-    if (!text) continue;
-    const line = h('li', { textContent: `J${campaign.day} · ${text}` });
-    line.dataset.type = event.type;
-    journal.append(line);
+    if (text) appendLine(text, event.type);
   }
+}
+
+function appendLine(text, type) {
+  const line = h('li', { textContent: `J${campaign.day} · ${text}` });
+  line.dataset.type = type;
+  journal.append(line);
   journal.scrollTop = journal.scrollHeight;
 }
 
@@ -270,6 +372,7 @@ function dispatch(action) {
   campaign = result.state;
   lastEvents = result.events;
   appendEvents(result.events);
+  afterStep(result.events);
   render();
 }
 
@@ -341,19 +444,23 @@ plateau.addEventListener('contextmenu', (event) => {
   if (n) dispatch({ type: 'bolt', target: n });
 });
 
-function start(seed) {
-  campaign = createCampaign({ seed });
+function start(loaded) {
+  campaign = loaded;
   lastEvents = [];
-  history.replaceState(null, '', `?seed=${seed}`);
   journal.replaceChildren();
   board = null;
+  layer = null;
+  dayEvents = [];
+  deathCause = null;
   render();
 }
 
 const dialogueWindow = mountDialogue({ onChoose: dispatch });
 const combatWindow = mountCombat({ onAction: dispatch });
 
-document.getElementById('nouvelle').addEventListener('click', () => start(randomSeed()));
+document.getElementById('nouvelle').addEventListener('click', () => showLayer({ kind: 'title' }));
 
 sizes = await loadSizes();
-start(Number.parseInt(params.get('seed'), 10) || randomSeed());
+const urlSeed = parseSeed(params.get('seed') ?? '');
+if (urlSeed === null) showLayer({ kind: 'title' });
+else start(createCampaign({ seed: urlSeed }));
