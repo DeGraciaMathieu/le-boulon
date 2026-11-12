@@ -11,12 +11,12 @@ test('la tuile compte 19 hexagones numérotés de 1 à 19', () => {
   assert.deepEqual(HEXES.map((h) => h.n), Array.from({ length: 19 }, (_, i) => i + 1));
 });
 
-test('numérotation documentée : centre, cœur puis anneau, en partant du nord, sens horaire', () => {
+test('numérotation documentée : centre, cœur puis anneau, en partant du nord-est, sens horaire', () => {
   const expected = [
     [0, 0],
-    [0, -1], [1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0],
-    [0, -2], [1, -2], [2, -2], [2, -1], [2, 0], [1, 1],
-    [0, 2], [-1, 2], [-2, 2], [-2, 1], [-2, 0], [-1, -1],
+    [1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1],
+    [2, -2], [2, -1], [2, 0], [1, 1], [0, 2], [-1, 2],
+    [-2, 2], [-2, 1], [-2, 0], [-1, -1], [0, -2], [1, -2],
   ];
   assert.deepEqual(HEXES.map(({ q, r }) => [q, r]), expected);
 });
@@ -24,7 +24,7 @@ test('numérotation documentée : centre, cœur puis anneau, en partant du nord,
 test('conversion numéro <-> axial aller-retour', () => {
   for (let n = 1; n <= 19; n++) assert.equal(toNumber(toAxial(n)), n);
   assert.deepEqual(toAxial(1), { q: 0, r: 0 });
-  assert.equal(toNumber({ q: 2, r: -2 }), 10);
+  assert.equal(toNumber({ q: 2, r: -2 }), 8);
 });
 
 test('conversion hors tuile', () => {
@@ -35,10 +35,10 @@ test('conversion hors tuile', () => {
   assert.equal(isOnBoard({ q: 1, r: 1 }), true);
 });
 
-test('les 6 directions : colonnes verticales, hexagones à sommet plat', () => {
-  assert.equal(Object.keys(DIRECTIONS).length, 6);
-  assert.deepEqual(DIRECTIONS.N, { q: 0, r: -1 });
-  assert.deepEqual(DIRECTIONS.S, { q: 0, r: 1 });
+test('les 6 directions : rangées horizontales, hexagones à sommet pointu', () => {
+  assert.deepEqual(Object.keys(DIRECTIONS), ['E', 'NE', 'NO', 'O', 'SO', 'SE']);
+  assert.deepEqual(DIRECTIONS.E, { q: 1, r: 0 });
+  assert.deepEqual(DIRECTIONS.O, { q: -1, r: 0 });
 });
 
 test('voisins : 6 pour le centre, restreints à la tuile au bord', () => {
@@ -63,7 +63,7 @@ test('hexagones de bord : les 12 de l\'anneau extérieur', () => {
   assert.equal(isEdge(4), false);
 });
 
-test('colonnes 3-4-5-4-3 comme sur la tuile', () => {
-  const counts = [-2, -1, 0, 1, 2].map((q) => HEXES.filter((h) => h.q === q).length);
+test('rangées 3-4-5-4-3 comme sur la tuile', () => {
+  const counts = [-2, -1, 0, 1, 2].map((r) => HEXES.filter((h) => h.r === r).length);
   assert.deepEqual(counts, [3, 4, 5, 4, 3]);
 });

@@ -1,0 +1,71 @@
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #1b1f17;
+  color: #cfd8b8;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+#plateau {
+  width: min(96vw, calc(96vh * 735 / 679));
+  height: auto;
+  user-select: none;
+}
+
+.hex {
+  fill: transparent;
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1;
+}
+
+.hex:hover {
+  fill: rgba(255, 255, 255, 0.12);
+}
+
+.hex.atteignable {
+  fill: rgba(214, 196, 92, 0.18);
+  stroke: #e3cf6a;
+  stroke-width: 2.5;
+  cursor: pointer;
+}
+
+.hex.atteignable:hover {
+  fill: rgba(214, 196, 92, 0.35);
+}
+
+.hex.sortie {
+  stroke: #d9772f;
+  stroke-width: 3;
+  stroke-dasharray: 10 6;
+  cursor: pointer;
+}
+
+.jeton {
+  fill: #2c2a24;
+  stroke: #b9a46a;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.pion {
+  fill: #b5462b;
+  stroke: #f4ead0;
+  stroke-width: 4;
+  pointer-events: none;
+}
+
+#plateau:not([data-status="playing"]) .pion {
+  opacity: 0.4;
+}
+
+#apercu {
+  position: fixed;
+  padding: 6px 10px;
+  background: rgba(16, 20, 12, 0.92);
+  border: 1px solid #6f7a4a;
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: none;
+}
