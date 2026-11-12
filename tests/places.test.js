@@ -31,8 +31,8 @@ DECKS.sous_sol = { kind: 'exploration', cards: [{ id: 'cave', type: 'rien', text
 DIALOGUES['pnj-test'] = { start: 'a', nodes: { a: { text: 'Salut.', choices: [{ text: 'Au revoir.' }] } } };
 
 // Campagne de départ, paquet Zone vidé pour que les PA dépensés ne piochent rien.
-function campaignWith({ stats = {}, perks = [], roubles = 0, reputation = {} } = {}) {
-  const campaign = createCampaign({ seed: 7 });
+function campaignWith({ stats = {}, perks = [], roubles = 0, reputation = {}, combatMode } = {}) {
+  const campaign = createCampaign({ seed: 7, combatMode });
   Object.assign(campaign.player.stats, stats);
   campaign.player.perks = perks;
   campaign.player.roubles = roubles;
@@ -225,9 +225,9 @@ test('boulon (1 PA) : désamorce une anomalie avant de la révéler, sinon montr
   assert.equal(step(noBolt, { type: 'bolt-card' }).events[0].reason, 'no-bolt');
 });
 
-test('occupant : combat v1 sur place ; victoire, la carte est jouée ; fuite, on quitte le lieu', () => {
+test('occupant, mode rapide : combat v1 sur place ; victoire, la carte est jouée ; fuite, on quitte le lieu', () => {
   const place = placeWith([{ id: 'o', type: 'occupant', encounter: 'pillard' }]);
-  const inCombat = play(campaignWith({ stats: { tir: SURE } }), [{ type: 'enter-place', place }, { type: 'explore' }]);
+  const inCombat = play(campaignWith({ stats: { tir: SURE }, combatMode: 'rapide' }), [{ type: 'enter-place', place }, { type: 'explore' }]);
   assert.deepEqual(dayState(inCombat.campaign).combat, { hex: null, card: 'pillard', place });
   assert.equal(step(inCombat.campaign, { type: 'explore' }).events[0].reason, 'in-combat');
   assert.equal(step(inCombat.campaign, { type: 'leave-place' }).events[0].reason, 'in-combat');
@@ -243,6 +243,45 @@ test('occupant : combat v1 sur place ; victoire, la carte est jouée ; fuite, on
   assert.equal(dayState(fled.campaign).combat, null);
   assert.equal(fled.campaign.world.hex, 5);
   assert.equal(apLeft(fled.campaign), apLeft(inCombat.campaign) - 2);
+});
+
+test('occupant, mode rounds : combat v2 depuis le lieu ; victoire, retour au lieu, la carte est jouée ; fuite, la carte reste et on quitte le lieu', () => {
+  const place = placeWith([{ id: 'o', type: 'occupant', encounter: 'pillard' }]);
+  const inCombat = play(campaignWith({ stats: { tir: SURE, discretion: SURE } }), [{ type: 'enter-place', place }, { type: 'explore' }]);
+  assert.equal(inCombat.campaign.screen, 'combat');
+  assert.equal(inCombat.campaign.combat.card, 'pillard');
+  assert.equal(ofType(inCombat.events, 'combat-started').length, 1);
+  assert.equal(step(inCombat.campaign, { type: 'explore' }).events[0].reason, 'in-combat');
+  assert.equal(step(inCombat.campaign, { type: 'leave-place' }).events[0].reason, 'in-combat');
+
+  const won = play(inCombat.campaign, [{ type: 'shoot' }]);
+  assert.equal(ofType(won.events, 'combat-ended')[0].outcome, 'victory');
+  assert.equal(won.campaign.combat, null);
+  assert.equal(dayState(won.campaign).combat, null);
+  assert.equal(won.campaign.screen, 'place');
+  assert.deepEqual(won.campaign.place, { id: place });
+  assert.deepEqual(won.campaign.places[place].revealed, ['o']);
+
+  const fled = play(inCombat.campaign, [{ type: 'escape' }]);
+  assert.equal(ofType(fled.events, 'combat-ended')[0].outcome, 'fled');
+  assert.equal(fled.campaign.screen, 'tile');
+  assert.equal(fled.campaign.place, undefined);
+  assert.equal(dayState(fled.campaign).combat, null);
+  assert.equal(fled.campaign.world.hex, 5);
+  assert.equal(apLeft(fled.campaign), apLeft(inCombat.campaign) - 2);
+  assert.deepEqual(fled.campaign.places[place].revealed, []);
+  assert.equal(fled.campaign.places[place].emptied, false);
+  const again = play(fled.campaign, [{ type: 'enter-place', place }, { type: 'explore' }]);
+  assert.equal(ofType(again.events, 'place-card')[0].card, 'o');
+});
+
+test('piège « bruit », mode rounds : la cache ratée ouvre un combat v2 qui ramène au lieu', () => {
+  const place = placeWith([{ id: 'c', type: 'cache', stat: 'survie', trap: 'bruit' }]);
+  const { campaign } = play(campaignWith({ stats: { survie: NEVER, tir: SURE } }), [{ type: 'enter-place', place }, { type: 'explore' }]);
+  assert.equal(campaign.screen, 'combat');
+  const won = play(campaign, Array.from({ length: 4 }, () => ({ type: 'shoot' })));
+  assert.equal(ofType(won.events, 'combat-ended')[0].outcome, 'victory');
+  assert.equal(won.campaign.screen, 'place');
 });
 
 test('PNJ : la carte lance le dialogue, qui ramène au lieu', () => {
@@ -331,13 +370,32 @@ test('lieu occupé (§5.4) : refus sans approche, payer, se faufiler, combattre'
   assert.ok(dayState(spotted.campaign).combat);
   assert.equal(ofType(spotted.events, 'sneak-failed').length, 1);
 
-  const assault = play(campaignWith({ ...hostile, stats: { tir: SURE } }), [{ type: 'enter-place', place, approach: 'combattre' }]);
+  const assault = play(campaignWith({ ...hostile, stats: { tir: SURE }, combatMode: 'rapide' }), [{ type: 'enter-place', place, approach: 'combattre' }]);
   assert.ok(dayState(assault.campaign).combat);
   assert.equal(step(assault.campaign, { type: 'explore' }).events[0].reason, 'in-combat');
   const cleared = play(assault.campaign, [{ type: 'fight' }, { type: 'explore' }]);
   assert.equal(ofType(cleared.events, 'place-cleared').length, 1);
   assert.equal(cleared.campaign.places[place].cleared, true);
   assert.equal(ofType(cleared.events, 'place-card').length, 1);
+});
+
+test('lieu occupé, mode rounds : combattre ouvre un combat v2 ; la victoire vide le lieu, la fuite le quitte', () => {
+  const place = placeWith([{ id: 'a', type: 'rien' }, { id: 'b', type: 'rien' }], { faction: 'militaires' });
+  const hostile = { reputation: { militaires: -2 }, stats: { tir: SURE, discretion: SURE } };
+  const assault = play(campaignWith(hostile), [{ type: 'enter-place', place, approach: 'combattre' }]);
+  assert.equal(assault.campaign.screen, 'combat');
+  assert.equal(assault.campaign.combat.previousScreen, 'place');
+  assert.equal(step(assault.campaign, { type: 'explore' }).events[0].reason, 'in-combat');
+
+  const cleared = play(assault.campaign, [...Array.from({ length: 4 }, () => ({ type: 'shoot' })), { type: 'explore' }]);
+  assert.equal(ofType(cleared.events, 'place-cleared').length, 1);
+  assert.equal(cleared.campaign.places[place].cleared, true);
+  assert.equal(cleared.campaign.screen, 'place');
+  assert.equal(ofType(cleared.events, 'place-card').length, 1);
+
+  const fled = play(assault.campaign, [{ type: 'escape' }]);
+  assert.equal(fled.campaign.place, undefined);
+  assert.equal(fled.campaign.places[place].cleared, false);
 });
 
 test('effet de dialogue « reveler » { place } : le lieu est connu', () => {

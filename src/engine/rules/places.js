@@ -13,8 +13,9 @@
 //                              Survie, raté = effet de l'anomalie (electro, gravitationnelle,
 //                              bruleuse ; sans anomaly, tirée parmi celles de la tuile). Hypothèse
 //                              v2 : la gravitationnelle ne projette pas, on est dans un bâtiment.
-//   'occupant'  encounter?     rencontre : PLACE_COMBAT.start (combat v1 : carte encounter du
-//                              paquet de rencontres de la tuile, sinon piochée dans ce paquet)
+//   'occupant'  encounter?     rencontre : PLACE_COMBAT.start (carte encounter du paquet de
+//                              rencontres de la tuile, sinon piochée dans ce paquet). Combat selon
+//                              campaign.combatMode (voir COMBAT ci-dessous).
 //   'pnj'       npc            lance le dialogue du PNJ (talk de rules/dialogue.js) ; sa fin
 //                              ramène à l'écran du lieu
 //   'indice'    effects?       événement clue-found, puis les effets, au format des effets de
@@ -25,7 +26,18 @@
 //                              v2 : un seul paquet intérieur par lieu, un passage de plus ne fait rien.
 //   'rien'                     rien d'autre que la carte et son texte
 //
-// ÉTAT : campaign.place = { id, approach? } pendant une visite seulement (screen = 'place').
+// COMBAT (occupant, piège 'bruit', se faufiler raté, approche 'combattre') : PLACE_COMBAT.start
+//   pose la rencontre sur la journée (combat.hex = null) et émet 'encounter-revealed'.
+//   - combatMode 'rapide' : combat v1, fight et flee relayés à la journée (PLACE_OVERRIDES.flee).
+//   - combatMode 'rounds' : la réaction combatOnReveal (rules/combat.js) ouvre le combat v2 par
+//     startCombat ; sa fin rend l'écran du lieu (previousScreen). placesAfterStep règle l'issue :
+//     victoire ou parlementer, la carte d'occupant reste jouée (et 'combattre' vide le lieu) ;
+//     fuite ('escape'), on reste sur l'hexagone et on quitte le lieu, la carte d'occupant revient
+//     en tête de son paquet (hypothèse v2 : l'occupant est toujours là à la visite suivante).
+//
+// ÉTAT : campaign.place = { id, approach?, occupant? } pendant une visite seulement
+//   (screen = 'place') ; occupant = zone ('main' | 'inner') de la carte d'occupant dont le
+//   combat v2 est en cours.
 //   campaign.places[id] (créé à la première entrée, à fixCard ou par « reveler ») :
 //   { pool,        cartes restantes du paquet, ids mélangés (un par exemplaire), null avant
 //                  la première entrée
@@ -71,8 +83,9 @@
 //   rollLoot(table, rng, draws = 1) -> [{ item, qty }]                  carte 11 Butin
 //     Tirage pondéré dans loot[table] ({ level, entries: [{ item, weight, qty? }] }) ;
 //     table inconnue : [].
-//   PLACE_COMBAT.start(day, dctx, { place, encounter? })                combat v2
-//     Démarre la rencontre d'un lieu sur la journée v1 day (contexte dayContext de game.js).
+//   PLACE_COMBAT.start(day, dctx, { place, encounter? })                combat
+//     Démarre la rencontre d'un lieu sur la journée v1 day (contexte dayContext de game.js) ;
+//     en mode 'rounds', combatOnReveal en fait un combat v2.
 //   placeView(campaign) -> null | { place, approach, revealed, remaining, emptied }   carte 25
 //   PLACES, DECKS, LOOT : lieux, paquets et tables en plus du contenu (tests), lus avant lui.
 //
@@ -100,6 +113,7 @@ import { encounterCards, anomalyKinds } from './tile.js';
 import { placeAccess } from './factions.js';
 import { hasPerk } from './progression.js';
 import { talk, EFFECTS } from './dialogue.js';
+import { combatMode } from './combat.js';
 
 export const PLACES = {};
 export const DECKS = {};
@@ -269,6 +283,7 @@ export function explore(draft, _action, ctx) {
   });
   rule.day?.(day, dctx, info);
   settleDay(draft, day, spentBefore, dctx);
+  if (card.type === 'occupant' && day.combat && combatMode(draft) === 'rounds') draft.place.occupant = zone;
   const effectRefusal = rule.campaign?.(draft, ctx, info);
   if (effectRefusal) return effectRefusal;
   markEmptied(draft, id, ctx);
@@ -321,14 +336,29 @@ function fleePlace(draft, _action, ctx) {
   exitPlace(draft, ctx);
 }
 
-// Réaction (REACTIONS de campaign.js) : une victoire en approche 'combattre' vide le lieu de
-// ses occupants.
+// Réaction (REACTIONS de campaign.js, après combatOnReveal) : une victoire en approche
+// 'combattre' vide le lieu de ses occupants ; la fin d'un combat v2 règle la visite.
 export function placesAfterStep(draft, events, ctx) {
-  if (!draft.place || draft.place.approach !== 'combattre') return;
+  if (!draft.place) return;
+  clearOccupants(draft, events, ctx);
+  const ended = events.find((event) => event.type === 'combat-ended');
+  if (ended) settlePlaceCombat(draft, ended.outcome, ctx);
+}
+
+function clearOccupants(draft, events, ctx) {
+  if (draft.place.approach !== 'combattre') return;
   const state = draft.places[draft.place.id];
   if (state.cleared || !events.some((event) => event.type === 'encounter-removed')) return;
   state.cleared = true;
   ctx.emit({ type: 'place-cleared', place: draft.place.id });
+}
+
+function settlePlaceCombat(draft, outcome, ctx) {
+  const { id, occupant } = draft.place;
+  delete draft.place.occupant;
+  if (outcome !== 'fled') return;
+  if (occupant) putBack(draft.places[id], occupant);
+  exitPlace(draft, ctx);
 }
 
 export function fixCard(draft, id, cardId, position) {
@@ -443,6 +473,13 @@ function takeCard(state, deck) {
   else state.pool.shift();
   state.revealed.push(next.card);
   return { card: cardOf(next), zone: 'main', position: state.revealed.length };
+}
+
+// Remet la dernière carte jouée de la zone en tête de sa pioche.
+function putBack(state, zone) {
+  const pile = zone === 'inner' ? state.inner : state;
+  pile.pool.unshift(pile.revealed.pop());
+  state.emptied = false;
 }
 
 function cardOf({ deck, card }) {

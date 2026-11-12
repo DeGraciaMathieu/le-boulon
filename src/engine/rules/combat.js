@@ -39,7 +39,8 @@
 //                                   retire use.wounds. Refus 'no-item' | 'not-healing'.
 //   { type: 'escape' }              2 PA et un test de Discrétion. Échec : attaque gratuite de
 //                                   l'ennemi le plus menaçant. Puis retour sur l'hexagone
-//                                   précédent, le jeton reste. Refus 'not-enough-ap'.
+//                                   précédent, le jeton reste ; dans un lieu (hex null), on
+//                                   reste sur l'hexagone. Refus 'not-enough-ap'.
 //   { type: 'parley' }              humains seulement, selon la faction du groupe :
 //                                   membre ou allié -> 'fin' ; amical -> 'echange' (encounterStance) ;
 //                                   neutre ou sans faction -> 'peage' payé en roubles ;
@@ -234,9 +235,14 @@ function resolveEscape(day, _action, ctx, draft) {
     if (day.status !== 'playing') return;
   }
   const from = day.player.hex;
-  const to = day.player.previousHex ?? from;
-  day.player.hex = to;
-  day.player.previousHex = from;
+  // Rencontre d'un lieu (hex null, rules/places.js) : on reste sur l'hexagone du lieu, comme la
+  // fuite v1 dans un lieu ; places.js fait quitter le lieu.
+  const inPlace = ctx.combat.hex === null;
+  const to = inPlace ? from : day.player.previousHex ?? from;
+  if (!inPlace) {
+    day.player.hex = to;
+    day.player.previousHex = from;
+  }
   ctx.emit({ type: 'fled', from, to, cost: ESCAPE_COST });
   endCombat(draft, day, 'fled', ctx);
 }

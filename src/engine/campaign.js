@@ -125,6 +125,7 @@ export const CAMPAIGN_ACTIONS = {
   'enter-place': enterPlace, explore, 'bolt-card': boltCard, 'leave-place': leavePlace,
 };
 
+// combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.
 export const REACTIONS = [combatOnReveal, placesAfterStep];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
