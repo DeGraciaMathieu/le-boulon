@@ -23,7 +23,7 @@
 //     mode,                        'normal' | 'hardcore' (§15)                       carte 29
 //     player: {
 //       stats,                     { tir, survie, discretion, endurance } de la v1    carte 17
-//       rank, xp, perks,           'bleu', 0, []                                     carte 17
+//       rank, xp, perks,           'bleu', 0, [] (rules/progression.js)              carte 17
 //       wounds, radiation,         pistes 0-6 de la v1 (rules/sheet.js)
 //       hunger,                    jours sans manger                                 carte 7
 //       roubles,                   0 (hypothèse v2)                                  cartes 12, 13
@@ -58,6 +58,8 @@
 // par la campagne et retirés de tileState :
 //   rng -> campaign.rng ; inventory -> campaign.inventory ; seed -> campaign.seed ;
 //   player.hex -> world.hex ; player.wounds, radiation, stats -> campaign.player.
+// player.perks -> campaign.player : dayState les prête aux règles v1 (savoir-faire), storeDay
+// ne les range pas dans la tuile.
 // equipment -> campaign.equipment : dayState le prête aux règles v1, qui le lisent sans le changer.
 // Restent dans tileState : tile (données), status, turn, ap, player.{ previousHex,
 // woundPenalty }, tokens, detector, encounters, encounterDeck, combat, zone, mission, outcome.
@@ -92,6 +94,7 @@ import content from '../content/index.js';
 import { talk, choose } from './rules/dialogue.js';
 import { join, startingReputation } from './rules/factions.js';
 import { emptyEquipment, outfit, equip, unequip } from './rules/equipment.js';
+import { raiseStat, learnPerk } from './rules/progression.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -105,7 +108,9 @@ const START_FACTION = 'solitaires';
 // Hypothèse v2 : le brief ne fixe pas les roubles de départ.
 const START_ROUBLES = 0;
 
-export const CAMPAIGN_ACTIONS = { talk, choose, join, equip, unequip };
+export const CAMPAIGN_ACTIONS = {
+  talk, choose, join, equip, unequip, 'raise-stat': raiseStat, 'learn-perk': learnPerk,
+};
 
 export const REACTIONS = [];
 
@@ -183,6 +188,7 @@ export function dayState(campaign) {
       wounds: player.wounds,
       radiation: player.radiation,
       stats: player.stats,
+      perks: player.perks,
     },
   };
 }
@@ -190,7 +196,8 @@ export function dayState(campaign) {
 export function storeDay(draft, day) {
   // equipment, prêté par dayState et jamais modifié par les règles v1, est laissé de côté.
   const { seed, rng, inventory, equipment, player, ...tile } = day;
-  const { hex, wounds, radiation, stats, ...tilePlayer } = player;
+  // perks, prêtés comme equipment, restent dans campaign.player.
+  const { hex, wounds, radiation, stats, perks, ...tilePlayer } = player;
   draft.rng = rng;
   draft.inventory = inventory;
   draft.world.hex = hex;

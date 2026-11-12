@@ -3,9 +3,11 @@
 // DEPUIS UN HANDLER OU UNE RÉACTION (ctx, voir src/engine/game.js) :
 //   ctx.wound(n, cause)            +n blessures (piste 0-6). En atteignant 4 : -1 PA sur le
 //                                  budget restant (jamais sous 0, une seule fois par partie,
-//                                  ap.spent ne bouge pas). À 6 : status 'dead'.
+//                                  ap.spent ne bouge pas). À 6 : status 'dead' ; à 7 avec le
+//                                  savoir-faire Coriace (piste 0-7, rules/progression.js).
 //   ctx.irradiate(n, cause)        +n radiations (piste 0-6), moins la protection de l'armure
-//                                  et de la ceinture (equipment.js). À 6 : 1 blessure (cause
+//                                  et de la ceinture (equipment.js), et 1 de moins avec Peau
+//                                  dure (jamais sous 0). À 6 : 1 blessure (cause
 //                                  'radiation'), puis la piste retombe à 3.
 //   ctx.addItem(item) -> bool      range un objet (createItem) ; false si la grille (12 cases,
 //                                  15 avec sac ou Mule : inventorySlots d'equipment.js) n'a
@@ -26,7 +28,7 @@
 //                                  choisir lequel détruire
 //
 // ACTION JOUEUR { type: 'use', item } : tout objet du catalogue avec un champ use. 1 PA (ou
-//   use.cost), consomme l'objet. Soins : blessures ; antiradiations : radiations ;
+//   use.cost), consomme l'objet. Soins : blessures (bandage : 2 avec Infirmier) ; antiradiations : radiations ;
 //   nourriture : sans effet tant que la faim n'existe pas (carte 7) ; boisson énergétique :
 //   +2 PA restants, une fois par jour (ap.boosted, remis à zéro avec le budget de PA).
 //   Refus : 'not-usable' | 'no-item' | 'not-enough-ap' | 'once-per-day'.
@@ -40,10 +42,14 @@
 
 import catalog from '../../content/objets.js';
 import { BASE_INVENTORY_SLOTS, inventorySlots, radiationProtection, usedSlots } from './equipment.js';
+import { hasPerk } from './progression.js';
 
 export { usedSlots };
 
 export const TRACK_MAX = 6;
+const TOUGH_TRACK_MAX = 7;
+const THICK_SKIN = 1;
+const MEDIC_BANDAGE_WOUNDS = -2;
 export const INVENTORY_SLOTS = BASE_INVENTORY_SLOTS;
 const WOUND_PENALTY_AT = 4;
 const RADIATION_RESET = 3;
@@ -75,8 +81,8 @@ export function consumables(inventory) {
 
 export function wound(draft, amount, cause, emit) {
   const { player } = draft;
-  const before = player.wounds;
-  player.wounds = Math.min(TRACK_MAX, before + amount);
+  const deathAt = hasPerk(draft, 'coriace') ? TOUGH_TRACK_MAX : TRACK_MAX;
+  player.wounds = Math.min(deathAt, player.wounds + amount);
   emit({ type: 'wounded', amount, cause });
 
   if (player.wounds >= WOUND_PENALTY_AT && !player.woundPenalty) {
@@ -84,7 +90,7 @@ export function wound(draft, amount, cause, emit) {
     draft.ap.left = Math.max(0, draft.ap.left - 1);
     emit({ type: 'ap-penalty', amount: 1, cause: 'wounds' });
   }
-  if (player.wounds === TRACK_MAX) {
+  if (player.wounds === deathAt) {
     draft.status = 'dead';
     emit({ type: 'died', cause });
   }
@@ -92,7 +98,8 @@ export function wound(draft, amount, cause, emit) {
 
 export function irradiate(draft, amount, cause, emit) {
   const { player } = draft;
-  const taken = Math.max(0, amount - radiationProtection(draft.equipment));
+  const protection = radiationProtection(draft.equipment) + (hasPerk(draft, 'peau-dure') ? THICK_SKIN : 0);
+  const taken = Math.max(0, amount - protection);
   const blocked = amount - taken;
   player.radiation = Math.min(TRACK_MAX, player.radiation + taken);
   emit({ type: 'irradiated', amount: taken, cause, ...(blocked > 0 && { blocked }) });
@@ -142,7 +149,8 @@ export function use(draft, { item }, ctx) {
 
   ctx.spend(cost);
   draft.inventory.splice(index, 1);
-  ctx.emit({ type: 'used', item, ...applyUse(draft, effect) });
+  const medic = item === 'bandage' && hasPerk(draft, 'infirmier');
+  ctx.emit({ type: 'used', item, ...applyUse(draft, medic ? { ...effect, wounds: MEDIC_BANDAGE_WOUNDS } : effect) });
 }
 
 function applyUse(draft, { wounds, radiation, ap }) {

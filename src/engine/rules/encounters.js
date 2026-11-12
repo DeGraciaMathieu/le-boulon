@@ -27,7 +27,8 @@
 //                      Arme : pistolet avec munitions +1, sinon -1. Couverture : forêt +1, bâtiment +2.
 //                      Avec un champ equipment (journée de campagne) : arme équipée chargée au
 //                      plus fort bonus (activeWeapon d'equipment.js), sinon -1 ; la défaite
-//                      dépense une munition dédiée de cette arme ; Tir compte les bonus de ceinture.
+//                      dépense une munition dédiée de cette arme ; Tir compte les bonus de ceinture,
+//                      et +1 avec le savoir-faire Tireur si cette arme est un fusil (arme d'épaule).
 //   { type: 'flee' }   2 PA, retour sur player.previousHex, le jeton reste. 'not-enough-ap'.
 //   combatRefusal(state, action) -> 'in-combat' | undefined, appelé par step pour refuser
 //   toute autre action pendant un combat.
@@ -47,6 +48,8 @@ import { distance } from '../hex.js';
 import { countCharges } from './sheet.js';
 import { TILE_DEFAULTS, DEFAULT_ENCOUNTER_CARDS, encounterCards, encounterCount, hasHex, tileHexes } from './tile.js';
 import { activeWeapon, statBonus } from './equipment.js';
+import { hasPerk } from './progression.js';
+import catalog from '../../content/objets.js';
 
 export const ENCOUNTER_COUNT = TILE_DEFAULTS.encounters;
 const FLEE_COST = 2;
@@ -57,6 +60,7 @@ export const ENCOUNTER_CARDS = DEFAULT_ENCOUNTER_CARDS;
 const WEAPON_BONUS = { loaded: 1, empty: -1 };
 const COVER = { foret: 1, batiment: 2 };
 const STEALTH_BONUS = { foret: 1 };
+const MARKSMAN_BONUS = 1;
 
 export function setupEncounters(game) {
   const rng = createRng(game.rng);
@@ -125,7 +129,7 @@ export function fight(draft, _action, ctx) {
   const { threat, wounds } = encounterCards(draft.tile)[card];
 
   const roll = ctx.rng.d6();
-  const tir = draft.player.stats.tir + statBonus(draft.equipment, 'tir');
+  const tir = draft.player.stats.tir + statBonus(draft.equipment, 'tir') + marksmanBonus(draft);
   const weapon = weaponBonus(draft.inventory, draft.equipment);
   const cover = COVER[draft.tile.hexes[draft.player.hex].terrain] ?? 0;
   const total = roll + tir + weapon + cover;
@@ -141,6 +145,13 @@ export function fight(draft, _action, ctx) {
   ctx.wound(wounds, 'combat');
   const ammo = draft.equipment ? activeWeapon(draft.equipment, draft.inventory)?.ammo : 'munitions';
   if (ammo) ctx.useCharge(ammo);
+}
+
+// Savoir-faire Tireur (rules/progression.js) : +1 Tir quand l'arme active est une arme d'épaule.
+function marksmanBonus(draft) {
+  if (!draft.equipment || !hasPerk(draft, 'tireur')) return 0;
+  const weapon = activeWeapon(draft.equipment, draft.inventory);
+  return weapon && catalog[weapon.kind].category === 'arme-epaule' ? MARKSMAN_BONUS : 0;
 }
 
 export function flee(draft, _action, ctx) {

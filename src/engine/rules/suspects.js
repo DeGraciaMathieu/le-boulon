@@ -33,9 +33,11 @@
 //      Avec un champ equipment (journée de campagne) : portée du détecteur porté (Écho 1,
 //      Ours 2, Vélès 3, aucun détecteur : rien) ; le Vélès révèle aussi les anomalies et leur
 //      type (hypothèse v2 : une anomalie ainsi révélée bloque l'hexagone comme au boulon).
+//      Savoir-faire Œil de lynx : portée +1, seulement avec un détecteur (rules/progression.js).
 //
 // ACTIONS JOUEUR :
 //   { type: 'bolt', target }  1 PA + 1 boulon, hexagone adjacent ; révèle le jeton (ou rien).
+//     Savoir-faire Bouliste : révèle aussi l'hexagone suivant en ligne, s'il est sur la tuile.
 //     Refus : 'not-adjacent' | 'no-bolt' | 'not-enough-ap'.
 //   { type: 'pickup' }        1 PA + test de Survie sur un artefact révélé sous le joueur.
 //     Réussi : l'objet { kind: 'artefact', size: 1, value } entre dans l'inventaire et le
@@ -59,15 +61,17 @@
 //   - Une composition sans anomalie ne demande pas d'artefact adjacent (sinon pose impossible).
 //   - Plus de jetons que d'hexagones libres : erreur à la mise en place.
 
-import { neighbors, distance } from '../hex.js';
+import { neighbors, distance, toAxial, toNumber } from '../hex.js';
 import { hasHex, tileHexes, suspectComposition, anomalyKinds } from './tile.js';
 import { consumables, createItem, countCharges, usedSlots, inventoryCapacity } from './sheet.js';
 import { detectorOf } from './equipment.js';
+import { hasPerk } from './progression.js';
 
 export const ARTEFACT_VALUE = 1000;
 export const DETECTOR_RANGE = 2;
 const BOLT_COST = 1;
 const PICKUP_COST = 1;
+const LYNX_RANGE = 1;
 
 const ANOMALY_EFFECTS = {
   electro: (draft, ctx) => {
@@ -177,8 +181,9 @@ function scanWithDetector(draft, ctx) {
     ? (detectorOf(draft.equipment) ?? { range: -1, anomalyType: false })
     : { range: DETECTOR_RANGE, anomalyType: false };
   const detected = anomalyType ? ['artefact', 'anomalie'] : ['artefact'];
+  const reach = range >= 0 && hasPerk(draft, 'oeil-de-lynx') ? range + LYNX_RANGE : range;
   for (const token of draft.tokens) {
-    const inRange = distance(draft.player.hex, token.hex) <= range;
+    const inRange = distance(draft.player.hex, token.hex) <= reach;
     if (detected.includes(token.kind) && !token.revealed && inRange) reveal(token, 'detector', ctx);
   }
 }
@@ -191,8 +196,18 @@ export function bolt(draft, { target }, ctx) {
   ctx.spend(BOLT_COST);
   ctx.useCharge('boulons');
   ctx.emit({ type: 'bolt-thrown', target });
-  const token = tokenAt(draft, target);
-  if (token && !token.revealed) reveal(token, 'bolt', ctx);
+  const targets = hasPerk(draft, 'bouliste') ? [target, nextInLine(draft.player.hex, target)] : [target];
+  for (const hex of targets) {
+    const token = tokenAt(draft, hex);
+    if (token && !token.revealed) reveal(token, 'bolt', ctx);
+  }
+}
+
+// Hexagone qui suit target dans la direction from -> target, s'il est sur la tuile.
+function nextInLine(from, target) {
+  const a = toAxial(from);
+  const b = toAxial(target);
+  return toNumber({ q: 2 * b.q - a.q, r: 2 * b.r - a.r });
 }
 
 export function pickup(draft, _action, ctx) {

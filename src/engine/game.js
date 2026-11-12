@@ -66,11 +66,10 @@ import { setupEncounters, combatRefusal, fight, flee } from './rules/encounters.
 import { setupZone, zoneRefusal, zoneAfterAction } from './rules/zone.js';
 import { setupMission, missionAfterStep } from './rules/mission.js';
 import { statBonus } from './rules/equipment.js';
+import { START_STATS } from './rules/progression.js';
 import { use, wound, irradiate, addItem, removeItem, useCharge, startingInventory } from './rules/sheet.js';
 
 export const BASE_AP = 10;
-
-const START_STATS = Object.freeze({ tir: 1, survie: 1, discretion: 1, endurance: 0 });
 
 const ACTIONS = { move, exit, use, bolt, pickup, fight, flee };
 
