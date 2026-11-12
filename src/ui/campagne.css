@@ -130,3 +130,152 @@ body {
 #nouvelle {
   margin-top: 14px;
 }
+
+/* Écran Hub et Marchand (hub-view.js), à la place du plateau. */
+#hub {
+  grid-area: plateau;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--olive-sombre);
+  background: var(--panneau);
+  font-size: 13px;
+}
+
+#hub[hidden],
+#plateau[hidden] {
+  display: none;
+}
+
+.hub-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+}
+
+.hub-tete h2 {
+  margin: 0;
+  color: var(--ocre);
+}
+
+.hub-faction {
+  color: var(--sauge);
+}
+
+.hub-surete {
+  color: var(--phosphore);
+  font-size: 11px;
+}
+
+.hub-quitter {
+  margin-left: auto;
+}
+
+.hub-onglets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--olive-sombre);
+}
+
+.hub-onglets button {
+  color: var(--texte);
+  background: var(--pda);
+  border: 1px solid var(--olive-sombre);
+  border-bottom: 0;
+}
+
+.hub-onglets button.actif {
+  color: var(--fond);
+  background: var(--ocre);
+}
+
+.hub-onglets button:disabled,
+.hub-contrat button:disabled,
+.hub-contenu > button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hub-contenu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hub-replique {
+  margin: 0;
+  color: var(--papier);
+}
+
+.hub-grilles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.hub-zone {
+  padding: 8px;
+  border: 1px solid var(--olive-sombre);
+  background: var(--pda);
+}
+
+.hub-zone h3 {
+  margin: 0 0 6px;
+  color: var(--sauge);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.hub-grille {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+
+.hub-grille .objet {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  cursor: grab;
+}
+
+.hub-grille .objet.refuse {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.objet-prix {
+  color: var(--ocre);
+  font-weight: bold;
+}
+
+.objet-info {
+  color: var(--sauge);
+}
+
+.hub-contrats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-contrat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--olive-sombre);
+  background: var(--pda);
+}
+
+.hub-contrat button {
+  align-self: flex-start;
+}

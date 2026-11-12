@@ -9,7 +9,8 @@
 //   clic sur le pion       { type: 'travel' } si le pion est sur un hexagone de liaison ;
 //   clic droit             { type: 'bolt', target }.
 //
-// ÉCRANS : seule la tuile existe ici. Les combats de rencontre se jouent en mode 'rapide'
+// ÉCRANS : la tuile, et l'écran Hub de hub-view.js à la place du plateau pendant une visite.
+// Les autres écrans restent à venir. Les combats de rencontre se jouent en mode 'rapide'
 // (Combattre / Fuir de la v1) tant que l'écran de combat v2 n'existe pas ; la nuit n'a que
 // le bouton Se réveiller, en attendant l'écran Réveil et nuit.
 //
@@ -26,12 +27,15 @@ import { hexCenter } from './geometry.js';
 import { describeEvent, ITEM_NAMES } from './journal.js';
 import { linkExits, tileQuestMarkers, topBar } from './world-map.js';
 import { renderWorld } from './world-view.js';
+import { renderHub, HUB_LINES, HUB_REFUSALS } from './hub-view.js';
+import { hubAt } from '../engine/rules/hubs.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
 const USABLE = ['bandage', 'vodka', 'ration'];
 
 const tileName = (id) => content.tiles[id].name;
-const questName = (id) => content.quests[id]?.name ?? id;
+// Un contrat est une quête générée : son nom est dans la campagne (rules/contracts.js).
+const questName = (id) => content.quests[id]?.name ?? campaign.quests[id]?.quest?.name ?? id;
 
 // Lignes du journal pour les événements de campagne ; les autres passent par la v1.
 const CAMPAIGN_LINES = {
@@ -52,14 +56,16 @@ const CAMPAIGN_LINES = {
   'quest-step': (e) => `Quête ${questName(e.quest)} : nouvelle étape`,
   'quest-completed': (e) => `Quête terminée : ${questName(e.quest)}`,
   'quest-failed': (e) => `Quête ratée : ${questName(e.quest)}`,
+  ...HUB_LINES,
 };
 
-const REFUSALS = { 'not-a-link': 'pas sur un hexagone de liaison', night: "c'est la nuit : se réveiller d'abord" };
+const REFUSALS = { ...HUB_REFUSALS, 'not-a-link': 'pas sur un hexagone de liaison', night: "c'est la nuit : se réveiller d'abord" };
 
 const params = new URLSearchParams(location.search);
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 
 const plateau = document.getElementById('plateau');
+const hubSection = document.getElementById('hub');
 const worldSvg = document.getElementById('monde');
 const bar = document.getElementById('bandeau');
 const commandsPanel = document.getElementById('commandes');
@@ -98,6 +104,10 @@ function render() {
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   renderBar();
   renderCommands(day);
+  const inHub = campaign.screen === 'hub';
+  plateau.hidden = inHub;
+  hubSection.hidden = !inHub;
+  if (inHub) renderHub(hubSection, campaign, { dispatch, refresh: render });
 }
 
 function mountTile(id) {
@@ -159,6 +169,8 @@ function renderCommands(day) {
     lines.push(h('div', { className: 'alerte', textContent: 'La nuit tombe.' }), button('Se réveiller', { type: 'wake' }));
   } else if (campaign.combat) {
     lines.push(h('div', { className: 'alerte', textContent: 'Combat en cours (écran de combat à venir)' }));
+  } else if (campaign.screen === 'hub') {
+    lines.push(h('div', { className: 'aide', textContent: 'Dans le hub : onglets à gauche' }));
   } else if (day.status !== 'playing') {
     lines.push(h('div', { className: 'alerte', textContent: day.status === 'dead' ? 'Mort dans la Zone.' : 'Journée finie.' }));
   } else if (day.combat) {
@@ -178,6 +190,8 @@ function renderCommands(day) {
     }
     const target = travelTarget(campaign);
     if (target) lines.push(button(`Passer à ${tileName(target.tile)} (1 PA)`, { type: 'travel' }));
+    const hub = hubAt(campaign);
+    if (hub) lines.push(button(`Entrer : ${content.places[hub].name}`, { type: 'enter-hub' }));
     lines.push(button('Bivouac', { type: 'camp' }));
     lines.push(h('div', { className: 'aide', textContent: 'Clic : se déplacer · clic sur le pion : voyager · clic droit : boulon' }));
   }
