@@ -11,6 +11,8 @@
 import { el } from './board.js';
 import { combatLine, combatWindow, shotOdds } from './combat-screen.js';
 import { shotHint } from './bac.js';
+import { combatOdds } from '../engine/rules/combat.js';
+import { defenseWhy } from './pourquoi.js';
 
 const PIPS = { 1: [[2, 2]], 2: [[1, 1], [3, 3]], 3: [[1, 1], [2, 2], [3, 3]], 4: [[1, 1], [3, 1], [1, 3], [3, 3]],
   5: [[1, 1], [3, 1], [2, 2], [1, 3], [3, 3]], 6: [[1, 1], [3, 1], [1, 2], [3, 2], [1, 3], [3, 3]] };
@@ -58,14 +60,16 @@ function enemyCard(enemy, onAction, aim) {
       }));
 }
 
-function statusLine(view) {
+// La Défense dit sa composition au survol (defenseWhy de pourquoi.js).
+function statusLine(view, campaign) {
   const { weapon } = view;
   const ammo = weapon.charges === null ? '' : `, ${weapon.charges} munitions`;
+  const defense = h('span', { className: 'pourquoi', textContent: `Défense ${view.defense}`, title: defenseWhy(combatOdds(campaign)) });
   const parts = [`Round ${view.round}`, `Arme : ${weapon.name} (${weapon.bonus >= 0 ? '+' : ''}${weapon.bonus}, dégâts ${weapon.damage}${ammo})`,
-    `Tir : 1d6 + ${view.attack}`, `Défense ${view.defense}`];
+    `Tir : 1d6 + ${view.attack}`, defense];
   if (view.coverRounds > 0) parts.push(`À couvert (${view.coverRounds} round${view.coverRounds > 1 ? 's' : ''})`);
   if (view.absorb > 0) parts.push(`Armure : absorbe encore ${view.absorb}`);
-  return parts.join(' · ');
+  return parts.flatMap((part, i) => (i ? [' · ', part] : [part]));
 }
 
 const heading = (campaign) => (campaign.night ? 'Combat de nuit' : 'Combat');
@@ -101,7 +105,7 @@ export function mountCombat({ onAction, onClose = () => {}, tray = null }) {
         root.hidden = false;
         root.replaceChildren(h('div', { className: 'cadre-fenetre' },
           h('h2', { textContent: `${heading(campaign)} : ${view.title}` }),
-          h('div', { className: 'combat-etat', textContent: statusLine(view) }),
+          h('div', { className: 'combat-etat' }, ...statusLine(view, campaign)),
           h('ol', { className: 'ennemis' }, ...view.enemies.map((enemy) => enemyCard(enemy, onAction, aim))),
           h('div', { className: 'actions-round' }, ...view.actions.map((action) => h('button', {
             type: 'button', textContent: action.label, disabled: !action.available, title: action.reason ?? '',

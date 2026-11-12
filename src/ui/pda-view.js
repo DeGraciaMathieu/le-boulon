@@ -21,8 +21,9 @@ const TABS = {
 };
 
 // dispatch(action) : envoie une action à la campagne (campagne.js) ;
-// drawWorld(svg, campaign) : dessine la carte du monde dans svg.
-export function mountPda(root, toggle, { dispatch, drawWorld }) {
+// drawWorld(svg, campaign) : dessine la carte du monde dans svg ;
+// replayBubbles() : oublie les bulles déjà vues (bouton « Revoir les bulles » de l'onglet Aide).
+export function mountPda(root, toggle, { dispatch, drawWorld, replayBubbles }) {
   const screen = mountScreen(root, toggle, 'PDA');
   const tabs = h('nav', { className: 'onglets' });
   const content = h('div', { className: 'onglet-contenu' });
@@ -38,7 +39,7 @@ export function mountPda(root, toggle, { dispatch, drawWorld }) {
       textContent: label,
       onclick: () => { current = id; render(); },
     })));
-    content.replaceChildren(...TABS[current](campaign, { dispatch, drawWorld }));
+    content.replaceChildren(...TABS[current](campaign, { dispatch, drawWorld, replayBubbles }));
   }
   return { render, close: screen.close };
 }
@@ -126,12 +127,18 @@ function renderSheet(campaign, { dispatch }) {
   ];
 }
 
-function renderHelp() {
-  return HELP_SECTIONS.flatMap(({ title, entries }) => [
+function renderHelp(_campaign, { replayBubbles }) {
+  const replay = h('button', { type: 'button', className: 'aide-bulles', textContent: 'Revoir les bulles', title: 'Les bulles des règles se montreront de nouveau à la prochaine rencontre' });
+  replay.onclick = () => {
+    replayBubbles?.();
+    replay.textContent = 'Bulles réactivées';
+    replay.disabled = true;
+  };
+  return [replay, ...HELP_SECTIONS.flatMap(({ title, entries }) => [
     h('h3', { textContent: title }),
     h('dl', { className: 'aide-liste' }, ...entries.flatMap(({ term, text }) => [
       h('dt', { textContent: term }),
       h('dd', { textContent: text }),
     ])),
-  ]);
+  ])];
 }
