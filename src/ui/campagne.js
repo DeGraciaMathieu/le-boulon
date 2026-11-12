@@ -62,6 +62,7 @@ import { canManualSave } from '../engine/rules/save.js';
 import { saves, MANUAL_SLOTS } from './storage.js';
 import { parseSeed, titleSlots, campPreview, nightView, wakeReport, daySummary, endingView, returnReminder } from './cycle.js';
 import { mountEffects } from './effets-view.js';
+import { readMotion, saveMotion, applyMotion } from './animations.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -374,7 +375,7 @@ function renderLayer() {
 
 function chooseLayer() {
   if (layer?.kind === 'intro') return () => renderIntro(layerSection);
-  if (layer?.kind === 'title') return () => renderTitle(layerSection, { slots: titleSlots(saves.list()), error: layer.error }, titleHandlers);
+  if (layer?.kind === 'title') return () => renderTitle(layerSection, { slots: titleSlots(saves.list()), error: layer.error, motion: readMotion() }, titleHandlers);
   const death = deathView(campaign);
   if (death) return () => renderDeath(layerSection, death, deathCause, { respawn: () => dispatch({ type: 'respawn' }), title: () => showLayer({ kind: 'title' }) });
   if (layer?.kind === 'ending') return () => renderEnding(layerSection, endingView(campaign), { close: () => showLayer(null), title: () => showLayer({ kind: 'title' }) });
@@ -415,6 +416,11 @@ const titleHandlers = {
     const loaded = await saves.importFile(file);
     if (loaded.error) return showLayer({ kind: 'title', error: loaded.error });
     start(loaded.campaign);
+  },
+  motion(mode) {
+    saveMotion(undefined, mode);
+    applyMotion();
+    showLayer({ kind: 'title' });
   },
 };
 
@@ -591,6 +597,7 @@ const combatWindow = mountCombat({ onAction: dispatch, onClose: finishNightFight
 
 document.getElementById('nouvelle').addEventListener('click', () => showLayer({ kind: 'title' }));
 
+applyMotion();
 sizes = await loadSizes();
 const urlSeed = parseSeed(params.get('seed') ?? '');
 if (urlSeed === null) showLayer({ kind: 'title' });

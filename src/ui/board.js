@@ -2,7 +2,7 @@
 // Lecture seule : ce module ne modifie jamais l'état, il le dessine.
 //
 // COUCHES (dans l'ordre, de bas en haut) :
-//   fond    l'image de la tuile ;
+//   fond    l'image de la tuile, découpée aux hexagones (le fond blanc du PNG disparaît) ;
 //   grille  un polygone transparent par hexagone, data-hex = numéro ;
 //   jetons  les jetons suspects (cachés ou révélés) et les rencontres ;
 //   couts   le coût en PA écrit sur chaque hexagone atteignable ;
@@ -31,7 +31,9 @@ export function el(name, attrs = {}, parent) {
 export function mountBoard(svg, { image, calage, width = TILE_WIDTH, height = TILE_HEIGHT }) {
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.replaceChildren();
-  el('image', { href: image, width, height }, svg);
+  const clip = el('clipPath', { id: 'tuile-decoupe' }, el('defs', {}, svg));
+  for (const { n } of HEXES) el('polygon', { points: hexPoints(n, calage) }, clip);
+  el('image', { href: image, width, height, 'clip-path': 'url(#tuile-decoupe)' }, svg);
 
   const grid = el('g', { class: 'grille' }, svg);
   for (const { n } of HEXES) el('polygon', { class: 'hex', 'data-hex': n, points: hexPoints(n, calage) }, grid);
