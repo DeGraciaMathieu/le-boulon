@@ -46,8 +46,11 @@
 //       (slot, charges, consumable, use, weapon, armor, detector, backpack, grenade, belt) :
 //       en-tête de src/content/objets.js.
 //   loot (butin.js, §5.3)    { [tableId]: { level, entries: [{ item, weight, qty? }] } }
-//   npcs (pnj.js, §7)        { [npcId]: { name, faction, place, dialogue } }
-//       place : lieu fixe, ou null pour un PNJ itinérant (il porte alors tile).
+//   npcs (pnj.js, §7)        { [npcId]: { name, faction, place, dialogue, role?, tile?,
+//                              places? } }
+//       place : lieu fixe, ou null pour un PNJ itinérant (il porte alors tile, et places :
+//       les lieux de cette tuile où il se tient, il part de places[0]). role : 'marchand' |
+//       'barman' | 'medecin' | 'technicien' (§6.1) | 'stalker' (src/engine/rules/npcs.js).
 //   dialogues (dialogues/<pnj>.js, §7)
 //       { [dialogueId]: { id?, start, nodes: { [nodeId]: { text, effects?, choices: [
 //         { text, next?, conditions?, effects? } ] } } } }
@@ -60,6 +63,7 @@
 //         effets 'donner' | 'prendre' { item }, 'roubles' { amount }, 'reputation'
 //         { faction, amount }, 'rejoindre-faction' { faction }, 'quete' { quest }, 'avancer'
 //         { quest, step }, 'reveler' { place } | { stash }.
+//       Ajoutés par src/engine/rules/npcs.js : condition 'premiere-visite' ; effet 'aider' { npc }.
 //   quests (quetes/<id>.js, §8.2)
 //       { [questId]: { name, giver?, start, deadline?, rewards?, steps: { [stepId]: {
 //         objective: { type, ...références }, next: [stepId…] } } } }

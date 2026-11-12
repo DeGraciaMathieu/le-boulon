@@ -40,7 +40,7 @@
 //       emission: { nextDay, today }  null, false                                    carte 8
 //     },
 //     places: { [id]: placeState }                                                   carte 10
-//     npcs: { [id]: npcState }                                                       carte 19
+//     npcs: { [id]: { alive, tile, place, met, helped } }  (rules/npcs.js)          carte 19
 //     quests: { [id]: questState }                                                   carte 15
 //     contracts: { [hubId]: [...] }                                                  carte 22
 //     traders: { [id]: { stock, restockDay } }                                       carte 13
@@ -95,6 +95,7 @@ import { talk, choose } from './rules/dialogue.js';
 import { join, startingReputation } from './rules/factions.js';
 import { emptyEquipment, outfit, equip, unequip } from './rules/equipment.js';
 import { raiseStat, learnPerk } from './rules/progression.js';
+import { talkTo, startingNpcs } from './rules/npcs.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -108,7 +109,7 @@ const START_FACTION = 'solitaires';
 const START_ROUBLES = 0;
 
 export const CAMPAIGN_ACTIONS = {
-  talk, choose, join, equip, unequip, 'raise-stat': raiseStat, 'learn-perk': learnPerk,
+  talk: talkTo, choose, join, equip, unequip, 'raise-stat': raiseStat, 'learn-perk': learnPerk,
 };
 
 export const REACTIONS = [];
@@ -144,7 +145,7 @@ export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles
       emission: { nextDay: null, today: false },
     },
     places: {},
-    npcs: {},
+    npcs: startingNpcs(),
     quests: {},
     contracts: {},
     traders: {},

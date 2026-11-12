@@ -10,6 +10,8 @@
 //   perks    { [id]: savoir-faire } (src/content/savoir-faire.js)       carte 17 (Progression)
 //   links    liaisons entre tuiles (§3.2)                                carte 5
 //   places   lieux des tuiles (§3.4)                                     carte 5
+//   npcs     { [id]: PNJ } (src/content/pnj.js)                         carte 19 (PNJ)
+//   dialogues { [id]: dialogue } (src/content/dialogues/)               carte 19
 //
 // src/engine/data/agroprom.js reste l'Agroprom v1 de l'interface et du banc ; la v2 est
 // src/content/tuiles/agroprom.js.
@@ -28,6 +30,8 @@ import places from './lieux.js';
 import factions from './factions.js';
 import items from './objets.js';
 import perks from './savoir-faire.js';
+import npcs from './pnj.js';
+import dialogues from './dialogues/index.js';
 import { deepFreeze } from './freeze.js';
 
 export default deepFreeze({
@@ -37,4 +41,6 @@ export default deepFreeze({
   factions,
   items,
   perks,
+  npcs,
+  dialogues,
 });

@@ -49,7 +49,8 @@
 //   { npc, dialogue, node, text, choices: [{ index, text, available, conditions? }] }
 //
 // DIALOGUES : où talk trouve l'arbre d'un PNJ. DIALOGUES[npc] d'abord (tests, ajouts), puis
-// content.dialogues[npc] (carte 19).
+// content.dialogues[content.npcs[npc].dialogue], ou content.dialogues[npc] (carte 19).
+// L'action talk de campagne passe d'abord par talkTo (rules/npcs.js : PNJ vivant et présent).
 //
 // ÉVÉNEMENTS :
 //   { type: 'dialogue-started', npc, dialogue }   { type: 'dialogue-node', npc, dialogue, node }
@@ -190,7 +191,7 @@ function applyEffects(draft, effects, ctx) {
 }
 
 function dialogueOf(npc) {
-  return DIALOGUES[npc] ?? content.dialogues?.[npc];
+  return DIALOGUES[npc] ?? content.dialogues?.[content.npcs?.[npc]?.dialogue ?? npc];
 }
 
 function currentNode(campaign) {
