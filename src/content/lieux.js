@@ -1,5 +1,5 @@
-// Lieux des 7 tuiles (brief v2 §3.4) : { [placeId]: { name, label, tile, hex, tags,
-// faction?, services? } }, format en tête de src/content/validate.js.
+// Lieux des 7 tuiles (brief v2 §3.4) : { [placeId]: { name, label, tile, hex, tags, deck?,
+// loot?, faction?, services? } }, format en tête de src/content/validate.js.
 //
 // label : étiquette ukrainienne de l'image, égale au champ lieu de l'hexagone de la tuile.
 // tags : 'hub', 'abri' (hexagone abri), 'irradie' (hexagone irradié), 'repaire' (hexagone
@@ -7,14 +7,45 @@
 // (solitaires, devoir, liberte, ciel-pur, bandits, militaires).
 // services : ceux du §6.1, pour les 4 hubs.
 //
-// Champs omis jusqu'à leurs cartes : deck (paquet d'exploration, cartes 10-11) et loot
-// (table de butin, carte 11).
+// deck : paquet d'exploration (src/content/paquets/exploration.js), même id que le lieu.
+// loot : table de butin (src/content/butin.js) au niveau de la tuile (§5.3), thème choisi par
+// les tags et l'occupant (hypothèse v2). Les hubs n'ont ni l'un ni l'autre (zones sûres,
+// hypothèse v2).
 
 import { deepFreeze } from './freeze.js';
 
 const place = (name, label, tile, hex, tags, more = {}) => ({ name, label, tile, hex, tags, ...more });
 
-export default deepFreeze({
+// Table de butin de chaque lieu hors hub.
+const LOOT = {
+  'ferme-cordon': 'n1-commun', elevateur: 'n1-commun', atp: 'n1-militaire', 'fosse-dechets': 'n1-irradie',
+  'avant-poste': 'n1-militaire',
+
+  'ruines-village': 'n2-irradie', 'cour-mecanisee-marais': 'n2-commun', 'station-pompage': 'n2-commun',
+  'ferme-incendiee': 'n2-irradie', 'hameau-pecheurs': 'n2-commun', eglise: 'n2-irradie', hameau: 'n2-commun',
+  fortin: 'n2-militaire',
+
+  barrage: 'n2-militaire', 'ruines-decharge': 'n2-irradie', 'tunnel-decharge': 'n2-commun', depot: 'n2-commun',
+  'arret-bus': 'n2-commun', 'cimetiere-vehicules': 'n2-irradie', kpp: 'n2-militaire',
+
+  'institut-agroprom': 'n3-militaire', 'usine-agroprom': 'n3-commun', souterrains: 'n3-commun',
+  'marais-agroprom': 'n3-irradie',
+
+  'usine-vallee': 'n3-militaire', complexe: 'n3-commun', gorge: 'n3-irradie', 'poste-detruit': 'n3-militaire',
+  'station-service': 'n3-commun', pont: 'n3-commun', 'ferme-vallee': 'n3-commun',
+
+  'cour-mecanisee-rostok': 'n4-commun', 'usine-rostok': 'n4-commun', 'barriere-devoir': 'n4-militaire',
+  dortoirs: 'n4-commun',
+
+  'village-abandonne': 'n4-commun', 'champ-anomalies': 'n4-irradie', lac: 'n4-irradie',
+  'cabane-forestier': 'n4-commun',
+};
+
+const withExploration = (places) =>
+  Object.fromEntries(Object.entries(places).map(([id, entry]) =>
+    [id, LOOT[id] ? { ...entry, deck: id, loot: LOOT[id] } : entry]));
+
+export default deepFreeze(withExploration({
   // Cordon
   'camp-novices': place('Camp des novices', 'Табір новачків', 'cordon', 5, ['hub', 'abri', 'pnj'], {
     faction: 'solitaires',
@@ -89,4 +120,4 @@ export default deepFreeze({
   lac: place('Lac', 'Озеро', 'entrepots', 10, []),
   // Hypothèse v2 : cercle sans étiquette autour d'une cabane.
   'cabane-forestier': place('Cabane du garde forestier', 'Лісова сторожка', 'entrepots', 7, ['abri']),
-});
+}));

@@ -23,15 +23,7 @@ export default deepFreeze({
   level: 4,
   // Hypothèse v2 : on arrive par la liaison de Rostok.
   entry: 13,
-  // Hypothèse v2 : niveau 4, Menace 5 à 8, 2 à 3 blessures.
-  encounterCards: {
-    zombies: { name: 'Zombies', threat: 5, wounds: 2 },
-    'pseudo-chien': { name: 'Pseudo-chien', threat: 5, wounds: 2 },
-    snork: { name: 'Snork', threat: 6, wounds: 2 },
-    mercenaires: { name: 'Mercenaires', threat: 7, wounds: 3 },
-    sangsue: { name: 'Suceur de sang', threat: 7, wounds: 3 },
-    chimere: { name: 'Chimère', threat: 8, wounds: 3 },
-  },
+  encounters: 'rencontres-entrepots',
   hexes: {
     1: { terrain: 'route' },
     // Rochers au nord-est (§3.4).

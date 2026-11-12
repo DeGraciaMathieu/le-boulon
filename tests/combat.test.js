@@ -82,7 +82,7 @@ test('enemiesOf : une carte v1 donne un ennemi humain par défaut, count forme u
 });
 
 test('paquet Agroprom : champs v1 gardés, champs v2 valides, trophées au catalogue', () => {
-  for (const [id, card] of Object.entries(AGROPROM_ENCOUNTERS)) {
+  for (const { id, ...card } of AGROPROM_ENCOUNTERS.cards) {
     assert.ok(Number.isInteger(card.threat) && Number.isInteger(card.wounds), id);
     assert.ok(card.hp >= 1 && card.hp <= 4, `${id} : PV 1-4`);
     assert.ok(card.damage >= 1, id);
@@ -94,7 +94,7 @@ test('paquet Agroprom : champs v1 gardés, champs v2 valides, trophées au catal
       assert.equal(items[card.trophy]?.category, 'trophee', `${id} : trophée ${card.trophy}`);
     }
   }
-  assert.ok(Object.values(AGROPROM_ENCOUNTERS).some((card) => (card.count ?? 1) > 1), 'au moins un groupe');
+  assert.ok(AGROPROM_ENCOUNTERS.cards.some((card) => (card.count ?? 1) > 1), 'au moins un groupe');
   for (const trophy of ['queue-chien', 'sabot']) {
     assert.equal(items[trophy].category, 'trophee');
     assert.ok(items[trophy].price > 0, 'revendable');

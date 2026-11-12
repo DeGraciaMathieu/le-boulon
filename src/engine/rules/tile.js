@@ -3,7 +3,8 @@
 // Les règles suspects, encounters et zone lisent la tuile courante (state.tile) par ces
 // fonctions au lieu de supposer l'Agroprom. Une tuile au format de src/engine/data/agroprom.js
 // peut ajouter :
-//   encounterCards   { [id]: { name, threat, wounds } }  son paquet de rencontres
+//   encounterCards   { [id]: { name, threat, wounds } }  son paquet de rencontres (tuile v1)
+//   encounters       id d'un paquet de content.decks de kind 'rencontres' (tuiles v2)
 //   composition: {   chaque champ surcharge la valeur globale de TILE_DEFAULTS
 //     suspects,      ['anomalie' | 'artefact' | 'rien', ...]  jetons suspects posés
 //     anomalies,     ['electro' | 'gravitationnelle' | 'bruleuse', ...]  types tirés
@@ -17,14 +18,23 @@
 //   tileHexes(tile)           [n] numéros des hexagones de la tuile, triés
 //   hasHex(tile, n)           true si n est un hexagone de la tuile
 //   suspectComposition(tile)  anomalyKinds(tile)  encounterCount(tile)  zoneCards(tile)
-//   encounterCards(tile)      paquet de la tuile, sinon DEFAULT_ENCOUNTER_CARDS
+//   encounterCards(tile)      paquet de la tuile par id de carte, sinon DEFAULT_ENCOUNTER_CARDS
+//   cardsById(deck)           { [id]: carte } d'un paquet decks, même objet gelé à chaque appel
 //
-// HYPOTHÈSE V2 : une tuile sans encounterCards (tuiles factices des tests v1) joue le paquet
-// de l'Agroprom, seul paquet existant.
+// HYPOTHÈSE V2 : une tuile sans paquet (tuiles factices des tests v1) joue le paquet de
+// l'Agroprom.
 
+import content from '../../content/index.js';
 import AGROPROM_ENCOUNTERS from '../../content/paquets/rencontres-agroprom.js';
 
-export const DEFAULT_ENCOUNTER_CARDS = AGROPROM_ENCOUNTERS;
+const byDeck = new WeakMap();
+
+export function cardsById(deck) {
+  if (!byDeck.has(deck)) byDeck.set(deck, Object.freeze(Object.fromEntries(deck.cards.map((card) => [card.id, card]))));
+  return byDeck.get(deck);
+}
+
+export const DEFAULT_ENCOUNTER_CARDS = cardsById(AGROPROM_ENCOUNTERS);
 
 export const TILE_DEFAULTS = Object.freeze({
   suspects: Object.freeze(['anomalie', 'anomalie', 'artefact', 'artefact', 'rien']),
@@ -52,5 +62,7 @@ export const encounterCount = (tile) => composition(tile, 'encounters');
 export const zoneCards = (tile) => composition(tile, 'zone');
 
 export function encounterCards(tile) {
-  return tile.encounterCards ?? DEFAULT_ENCOUNTER_CARDS;
+  if (tile.encounterCards) return tile.encounterCards;
+  const deck = content.decks?.[tile.encounters];
+  return deck ? cardsById(deck) : DEFAULT_ENCOUNTER_CARDS;
 }

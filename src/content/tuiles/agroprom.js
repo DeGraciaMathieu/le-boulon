@@ -9,7 +9,6 @@
 //   14  13  12
 
 import { deepFreeze } from '../freeze.js';
-import encounterCards from '../paquets/rencontres-agroprom.js';
 
 export default deepFreeze({
   name: 'Agroprom',
@@ -21,7 +20,7 @@ export default deepFreeze({
   // Bord sud, côté Marais (entrée de la v1).
   entry: 14,
   // Paquet de la v1 (Menace 3 à 7), déjà au niveau 3.
-  encounterCards,
+  encounters: 'rencontres-agroprom',
   hexes: {
     1: { terrain: 'herbe' },
     2: { terrain: 'route' },
