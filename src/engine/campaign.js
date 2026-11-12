@@ -118,6 +118,7 @@ import { sleep, camp, wake, endDayOnExhaustion, nightRefusal } from './rules/tim
 import { questsAfterStep } from './rules/quests.js';
 import { enterHub, enterHubOrPlace, leaveHub, chestPut, chestTake, useService, hubsAfterStep, HUB_OVERRIDES } from './rules/hubs.js';
 import { emissionAfterStep, dropEmissionCard } from './rules/emission.js';
+import { patrolsAfterStep } from './rules/patrols.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -141,7 +142,7 @@ export const CAMPAIGN_ACTIONS = {
 // combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.
 // emissionAfterStep après endDayOnExhaustion : elle lit la nuit que celle-ci vient de poser.
 // questsAfterStep en dernier : les objectifs de quête lisent tout ce que le step a produit.
-export const REACTIONS = [combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep];
+export const REACTIONS = [patrolsAfterStep, combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);

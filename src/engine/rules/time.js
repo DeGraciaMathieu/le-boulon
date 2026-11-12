@@ -42,6 +42,7 @@
 //        traders   restock des marchands (restockTraders de rules/traders.js)
 //        emission  calendrier de l'Émission (carte 8) : pose world.emission avant la Météo
 //        quests    délais des quêtes (carte 15)
+//        patrols   circulation des patrouilles (movePatrols de rules/patrols.js, LBL-49)
 //      Chaque carte ajoute sa fonction dans son tableau de DAY_HOOKS ci-dessous.
 //   3. carte Météo : 'signes-emission' si world.emission.nextDay === day (le paquet reste à la
 //      carte 8 pour l'annonce, l'Émission elle-même n'est pas jouée ici), sinon pioche pondérée
@@ -97,6 +98,7 @@ import { memberPerks } from './factions.js';
 import { stealthBonus } from './progression.js';
 import { TRACK_MAX, RADIATION_RESET, WOUND_PENALTY_AT, irradiate, wound } from './sheet.js';
 import { restockTraders } from './traders.js';
+import { movePatrols } from './patrols.js';
 import content from '../../content/index.js';
 
 export const BED_PRICE = 50;
@@ -109,13 +111,14 @@ const WOUND_AP_MALUS = 1;
 const MEAL = 'ration';
 const UINT32_MAX = 0xffffffff;
 
-export const DAY_HOOK_ORDER = Object.freeze(['npcs', 'traders', 'emission', 'quests']);
+export const DAY_HOOK_ORDER = Object.freeze(['npcs', 'traders', 'emission', 'quests', 'patrols']);
 
 export const DAY_HOOKS = Object.freeze({
   npcs: Object.freeze([]),
   traders: Object.freeze([restockTraders]),
   emission: Object.freeze([scheduleEmission]),
   quests: Object.freeze([]),
+  patrols: Object.freeze([movePatrols]),
 });
 
 const NIGHT_ACTIONS = Object.freeze(['wake']);

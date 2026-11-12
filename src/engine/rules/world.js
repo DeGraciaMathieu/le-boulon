@@ -28,6 +28,9 @@
 //   knownTiles(campaign)          -> [id]   tuiles visitées (carte du monde, carte 24)
 //   daysAway(campaign, id)        -> nombre de jours depuis le départ de la tuile, 0 si jamais quittée
 //
+// PATROUILLES (LBL-49) : à l'arrivée, après la repose, syncPatrols (rules/patrols.js) pose les
+// jetons des patrouilles présentes sur la tuile et retire ceux des autres tuiles.
+//
 // ÉVÉNEMENTS :
 //   { type: 'traveled', from: { tile, hex }, to: { tile, hex }, cost, firstVisit }
 //   { type: 'encounters-reset', tile, hexes }
@@ -53,6 +56,7 @@
 import { createGame } from '../game.js';
 import { dayState, storeDay } from '../campaign.js';
 import { setupEncounters } from './encounters.js';
+import { syncPatrols } from './patrols.js';
 import content from '../../content/index.js';
 
 export const TRAVEL_COST = 1;
@@ -105,6 +109,7 @@ export function travel(draft, _action, ctx) {
     ctx.emit({ type: 'day-ended', reason: 'no-ap' });
   }
   storeDay(draft, arrival);
+  syncPatrols(draft, ctx);
 }
 
 // État v1 neuf de la tuile, jetons posés hors de l'hexagone d'arrivée, sans les champs tenus

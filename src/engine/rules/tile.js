@@ -20,6 +20,8 @@
 //   suspectComposition(tile)  anomalyKinds(tile)  encounterCount(tile)  zoneCards(tile)
 //   encounterCards(tile)      paquet de la tuile par id de carte, sinon DEFAULT_ENCOUNTER_CARDS
 //   cardsById(deck)           { [id]: carte } d'un paquet decks, même objet gelé à chaque appel
+//   encounterCard(tile, id)   carte d'un jeton de rencontre : celle du paquet de la tuile, sinon
+//                             celle d'une patrouille (content.patrols, rules/patrols.js)
 //
 // HYPOTHÈSE V2 : une tuile sans paquet (tuiles factices des tests v1) joue le paquet de
 // l'Agroprom.
@@ -65,4 +67,8 @@ export function encounterCards(tile) {
   if (tile.encounterCards) return tile.encounterCards;
   const deck = content.decks?.[tile.encounters];
   return deck ? cardsById(deck) : DEFAULT_ENCOUNTER_CARDS;
+}
+
+export function encounterCard(tile, id) {
+  return encounterCards(tile)[id] ?? content.patrols?.[id];
 }

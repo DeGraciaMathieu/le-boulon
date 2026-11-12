@@ -46,7 +46,7 @@
 import { createRng } from '../rng.js';
 import { distance } from '../hex.js';
 import { countCharges } from './sheet.js';
-import { TILE_DEFAULTS, DEFAULT_ENCOUNTER_CARDS, encounterCards, encounterCount, hasHex, tileHexes } from './tile.js';
+import { TILE_DEFAULTS, DEFAULT_ENCOUNTER_CARDS, encounterCard, encounterCards, encounterCount, hasHex, tileHexes } from './tile.js';
 import { activeWeapon, statBonus } from './equipment.js';
 import { hasPerk } from './progression.js';
 import catalog from '../../content/objets.js';
@@ -126,7 +126,7 @@ export function weaponBonus(inventory, equipment) {
 export function fight(draft, _action, ctx) {
   if (!draft.combat) return 'not-in-combat';
   const { hex, card } = draft.combat;
-  const { threat, wounds } = encounterCards(draft.tile)[card];
+  const { threat, wounds } = encounterCard(draft.tile, card);
 
   const roll = ctx.rng.d6();
   const tir = draft.player.stats.tir + statBonus(draft.equipment, 'tir') + marksmanBonus(draft);
