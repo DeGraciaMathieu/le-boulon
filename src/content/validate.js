@@ -20,10 +20,14 @@
 // l'entrée est facultatif et doit valoir la clé). Les clés suivent les noms de l'état de
 // campagne (src/engine/campaign.js) ; entre parenthèses, le fichier du brief §17.2.
 //
-//   tiles (tuiles/<id>.js)   { [tileId]: { name, entry, level?, hexes } }
+//   tiles (tuiles/<id>.js)   { [tileId]: { name, label?, image?, calage?, entry, level?,
+//                              encounterCards?, hexes } }
 //       Format v1 de src/engine/data/agroprom.js. hexes : { 1..19 : { terrain, lieu?, abri?,
-//       radiation? } }, les 19 numéros de hex.js. terrain : TERRAINS (coûts dans
-//       src/engine/actions/move.js). entry : hexagone d'arrivée v1. level : 1-4 (§5.3).
+//       radiation?, repaire?, faction?, pnj? } }, les 19 numéros de hex.js. terrain : TERRAINS
+//       (coûts dans src/engine/actions/move.js). lieu : étiquette ukrainienne du lieu de
+//       places posé sur l'hexagone. repaire, faction, pnj : symboles de la légende (§3.3).
+//       entry : hexagone d'arrivée v1. level : 1-4 (§5.3). calage : { cx, cy, taille } de
+//       l'image. encounterCards : paquet de rencontres (src/engine/rules/tile.js).
 //   links (§3.2)             { [tileId]: { [hex]: { tile, hex } } }
 //       Les sorties de chaque tuile : sortir par l'hexagone de bord `hex` de `tileId` mène à
 //       l'hexagone de bord `hex` de `tile`. Chaque liaison est écrite des deux côtés et le
@@ -70,7 +74,8 @@
 //
 // RÉFÉRENCES : partout dans une entrée (sauf tiles et links, vérifiés à part), un champ de
 // REF_FIELDS désigne un id de la collection dite ; son pluriel (places, items…) désigne un
-// tableau d'ids. null = pas de référence. Champs liés à un contexte :
+// tableau d'ids. null = pas de référence. Une référence vers une collection absente du
+// contenu n'est pas vérifiée tant que sa carte n'est pas arrivée. Champs liés à un contexte :
 //   node   nœud du dialogue `dialogue`, ou de celui du PNJ `npc`, dans le même objet ;
 //   step   étape de la quête `quest` du même objet ;
 //   card   carte du paquet `deck`, ou de celui du lieu `place`, du même objet ;
@@ -168,7 +173,9 @@ export function checkIds(content) {
 
 export function checkReferences(content) {
   const errors = [];
-  const exists = (collection, id) => Object.hasOwn(content[collection] ?? {}, id);
+  // Une collection pas encore écrite (absente du contenu) n'est pas vérifiée : sa carte
+  // activera la règle (les lieux nomment leurs factions avant la carte des factions).
+  const exists = (collection, id) => !content[collection] || Object.hasOwn(content[collection], id);
   const checkRef = (field, id, path) => {
     if (id === null || id === undefined) return;
     const [collection, label] = REF_FIELDS[field];

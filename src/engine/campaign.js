@@ -94,9 +94,8 @@ export const CAMPAIGN_VERSION = 1;
 
 export const MODES = Object.freeze(['normal', 'hardcore']);
 
-// Hypothèse v2 : le départ est le Cordon (§3.1), mais seule l'Agroprom v1 existe en données
-// avant la carte 5.
-const START_TILE = 'agroprom';
+// Départ au Cordon (§3.1), sur son entrée : le Camp des novices.
+const START_TILE = 'cordon';
 const START_RANK = 'bleu';
 const START_FACTION = 'solitaires';
 // Hypothèse v2 : le brief ne fixe pas les roubles de départ.

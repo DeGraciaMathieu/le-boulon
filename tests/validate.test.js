@@ -154,6 +154,14 @@ test('références : un objet, un PNJ, une faction… inconnus sont signalés', 
   hasError(errors, /^factions\.solitaires\.places\[1\] : lieu inconnu « bar »/);
 });
 
+test('références : une collection pas encore écrite ne fait pas d’erreur', () => {
+  const errors = checkReferences(broken((c) => {
+    delete c.factions;
+    c.places.camp.faction = 'solitaires';
+  }));
+  assert.deepEqual(errors, []);
+});
+
 test('références : un nœud de dialogue inconnu est signalé', () => {
   const errors = checkReferences(broken((c) => {
     c.quests.courrier.steps.rapport.objective.node = 'adieu';

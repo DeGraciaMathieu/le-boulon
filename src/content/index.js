@@ -5,16 +5,27 @@
 // à elle. Le moteur lit le contenu par cet index ; l'état de campagne ne garde que des ids.
 //
 //   tiles    { [id]: tuile au format de src/engine/data/agroprom.js }   carte 5 (Données des tuiles)
+//   links    liaisons entre tuiles (§3.2)                                carte 5
+//   places   lieux des tuiles (§3.4)                                     carte 5
 //
-// En attendant la carte 5, la seule tuile est l'Agroprom de la v1, importée telle quelle :
-// src/engine/data/agroprom.js reste en place pour l'interface et le banc v1.
+// src/engine/data/agroprom.js reste l'Agroprom v1 de l'interface et du banc ; la v2 est
+// src/content/tuiles/agroprom.js.
 
 // Format de chaque collection et test de cohérence : src/content/validate.js.
-// deepFreeze gèle aussi les hexagones d'Agroprom, que la v1 ne gelait qu'en surface.
 
-import agroprom from '../engine/data/agroprom.js';
+import cordon from './tuiles/cordon.js';
+import marais from './tuiles/marais.js';
+import decharge from './tuiles/decharge.js';
+import agroprom from './tuiles/agroprom.js';
+import valleeSombre from './tuiles/vallee-sombre.js';
+import rostok from './tuiles/rostok.js';
+import entrepots from './tuiles/entrepots.js';
+import links from './liaisons.js';
+import places from './lieux.js';
 import { deepFreeze } from './freeze.js';
 
 export default deepFreeze({
-  tiles: { agroprom },
+  tiles: { cordon, marais, decharge, agroprom, 'vallee-sombre': valleeSombre, rostok, entrepots },
+  links,
+  places,
 });
