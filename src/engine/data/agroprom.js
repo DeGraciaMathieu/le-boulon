@@ -1,8 +1,7 @@
 // Tuile Agroprom, case par case. Les numéros sont ceux de src/engine/hex.js.
 //
 // L'image assets/tuile-agroprom.png a des hexagones à sommet pointu (rangées
-// 3-4-5-4-3) : c'est la grille de hex.js tournée de 30° dans le sens horaire.
-// Le « N » de hex.js pointe donc vers le haut-droite de l'image.
+// 3-4-5-4-3), comme la grille de hex.js : aucune rotation à appliquer.
 //
 // Vue de l'image (rangée du haut à celle du bas) :
 //   18  19   8
@@ -12,9 +11,8 @@
 //   14  13  12
 
 // Pose de la grille sur l'image, en pixels de l'image (735 x 679) :
-// cx, cy = centre de l'hexagone 1 ; taille = rayon d'un hexagone (centre -> sommet) ;
-// rotation = degrés, sens horaire, à appliquer au pixel de hex.js autour de (cx, cy).
-export const calage = Object.freeze({ cx: 367.5, cy: 339.5, taille: 84.9, rotation: 30 });
+// cx, cy = centre de l'hexagone 1 ; taille = rayon d'un hexagone (centre -> sommet).
+export const calage = Object.freeze({ cx: 367.5, cy: 339.5, taille: 84.9 });
 
 export default Object.freeze({
   name: 'Agroprom',

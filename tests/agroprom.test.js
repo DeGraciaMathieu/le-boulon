@@ -12,12 +12,9 @@ const entries = Object.entries(agroprom.hexes).map(([n, hex]) => ({ n: Number(n)
 // Centre de l'hexagone n en pixels de l'image, d'après le calage.
 function pixelOf(n) {
   const { q, r } = HEXES[n - 1];
-  const x = 1.5 * calage.taille * q;
-  const y = Math.sqrt(3) * calage.taille * (r + q / 2);
-  const angle = (calage.rotation * Math.PI) / 180;
   return {
-    x: calage.cx + x * Math.cos(angle) - y * Math.sin(angle),
-    y: calage.cy + x * Math.sin(angle) + y * Math.cos(angle),
+    x: calage.cx + Math.sqrt(3) * calage.taille * (q + r / 2),
+    y: calage.cy + 1.5 * calage.taille * r,
   };
 }
 
@@ -48,6 +45,15 @@ test('l\'entrée est un hexagone de bord, sur la rangée sud de l\'image', () =>
   assert.ok(isEdge(agroprom.entry));
   const southY = Math.max(...HEXES.map((h) => pixelOf(h.n).y));
   assert.ok(Math.abs(pixelOf(agroprom.entry).y - southY) < 1);
+});
+
+test('disposition de l\'image : rangées 18 19 8 / 17 7 2 9 / 16 6 1 3 10 / 15 5 4 11 / 14 13 12', () => {
+  const rows = [[18, 19, 8], [17, 7, 2, 9], [16, 6, 1, 3, 10], [15, 5, 4, 11], [14, 13, 12]];
+  rows.forEach((row, i) => {
+    const centers = row.map(pixelOf);
+    for (const { y } of centers) assert.ok(Math.abs(y - (calage.cy + 1.5 * calage.taille * (i - 2))) < 0.01);
+    for (let k = 1; k < centers.length; k++) assert.ok(centers[k].x > centers[k - 1].x, `rangée ${i}`);
+  });
 });
 
 test('le calage tient la grille dans l\'image (735 x 679)', () => {
