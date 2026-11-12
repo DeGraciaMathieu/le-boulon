@@ -10,6 +10,8 @@
 //   15   5   4  11
 //   14  13  12
 
+import encounterCards from '../../content/paquets/rencontres-agroprom.js';
+
 // Pose de la grille sur l'image, en pixels de l'image (735 x 679) :
 // cx, cy = centre de l'hexagone 1 ; taille = rayon d'un hexagone (centre -> sommet).
 export const calage = Object.freeze({ cx: 367.5, cy: 339.5, taille: 84.9 });
@@ -18,6 +20,8 @@ export default Object.freeze({
   name: 'Agroprom',
   // Bord sud, côté Cordon.
   entry: 14,
+  // Paquet de rencontres de la tuile (src/engine/rules/tile.js). Composition par défaut.
+  encounterCards,
   hexes: Object.freeze({
     1: { terrain: 'herbe' },
     2: { terrain: 'route' },

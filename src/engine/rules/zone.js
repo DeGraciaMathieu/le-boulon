@@ -9,11 +9,13 @@
 //     emissionPassed,  true une fois l'Émission subie ou évitée
 //   }
 //
-// PAQUET (10 cartes) : patrouille, chiens, brouillard, cachette, radio, calme ×4, emission.
-//   Le brief en liste 9 (calme ×3) ; une 4e carte calme complète les 10.
-//   Les 9 cartes hors Émission sont mélangées, puis l'Émission est insérée au hasard dans
+// PAQUET (10 cartes par défaut) : patrouille, chiens, brouillard, cachette, radio, calme ×4,
+//   emission. Le brief en liste 9 (calme ×3) ; une 4e carte calme complète les 10.
+//   Une tuile peut remplacer les cartes hors Émission (composition.zone, src/engine/rules/tile.js) ;
+//   une carte sans effet connu ne fait rien. Les cartes hors Émission sont mélangées, puis l'Émission est insérée au hasard dans
 //   le dernier tiers des cartes RÉELLEMENT piochables (sinon elle ne sortirait jamais) :
 //     nbPioches = floor(PA de départ (ap.max) / DRAW_EVERY), plafonné à la taille du paquet
+//     (Émission comprise)
 //     positions possibles : de nbPioches - ceil(nbPioches / 3) + 1 à nbPioches (1 = première
 //     carte piochée), élargies à nbPioches - 1 si nbPioches ≥ 2 pour garder au moins 2 positions.
 //   Exemple : 10 PA -> 3 pioches -> Émission en 2e ou 3e pioche.
@@ -31,7 +33,7 @@
 // EFFETS DES CARTES :
 //   patrouille  une rencontre au hasard va sur un voisin libre au hasard (ni autre
 //               rencontre, ni joueur, ni entrée) ; aucune rencontre ou aucun voisin libre : rien
-//   chiens      placeEncounter avec allowed = hexagones à distance 2 du joueur
+//   chiens      placeEncounter avec allowed = hexagones de la tuile à distance 2 du joueur
 //   brouillard  zone.fog = true jusqu'à la pioche suivante
 //   cachette    un consommable au hasard (bandage, vodka, ration) ; perdu si l'inventaire
 //               est plein
@@ -61,11 +63,12 @@
 //   - Une patrouille ne déclenche ni test de Discrétion ni combat, même à côté du joueur.
 //   - Fin de partie en cours d'action (mort) : plus de pioche.
 
-import { distance, neighbors, HEXES } from '../hex.js';
+import { distance, neighbors } from '../hex.js';
 import { placeEncounter } from './encounters.js';
 import { placeSuspects } from './suspects.js';
 import { createItem } from './sheet.js';
 import { createRng } from '../rng.js';
+import { TILE_DEFAULTS, tileHexes, zoneCards } from './tile.js';
 
 export const DRAW_EVERY = 3;
 export const EMISSION_COUNTDOWN = 3;
@@ -73,13 +76,12 @@ export const EMISSION_WOUNDS = 5;
 const DOGS_DISTANCE = 2;
 const CACHE_ITEMS = ['bandage', 'vodka', 'ration'];
 
-const OTHER_CARDS = ['patrouille', 'chiens', 'brouillard', 'cachette', 'radio', 'calme', 'calme', 'calme', 'calme'];
-export const ZONE_DECK_SIZE = OTHER_CARDS.length + 1;
+export const ZONE_DECK_SIZE = TILE_DEFAULTS.zone.length + 1;
 
 export function setupZone(game) {
   const rng = createRng(game.rng);
-  const deck = rng.shuffle(OTHER_CARDS);
-  const { first, last } = emissionPositions(game.ap.max);
+  const deck = rng.shuffle(zoneCards(game.tile));
+  const { first, last } = emissionPositions(game.ap.max, deck.length + 1);
   deck.splice(rng.int(first - 1, last - 1), 0, 'emission');
   game.zone = { deck, fog: false, emission: null, emissionPassed: false };
   game.rng = rng.state();
@@ -87,9 +89,9 @@ export function setupZone(game) {
 }
 
 // Positions (1 = première carte piochée) où l'Émission peut tomber : le dernier tiers des pioches
-// que le budget de PA de départ permet.
-export function emissionPositions(apMax) {
-  const draws = Math.max(1, Math.min(ZONE_DECK_SIZE, Math.floor(apMax / DRAW_EVERY)));
+// que le budget de PA de départ permet, dans un paquet de deckSize cartes (Émission comprise).
+export function emissionPositions(apMax, deckSize = ZONE_DECK_SIZE) {
+  const draws = Math.max(1, Math.min(deckSize, Math.floor(apMax / DRAW_EVERY)));
   const lastThird = draws - Math.ceil(draws / 3) + 1;
   const first = draws >= 2 ? Math.min(lastThird, draws - 1) : 1;
   return { first, last: draws };
@@ -120,7 +122,7 @@ function drawZoneCard(draft, ctx) {
 const CARD_EFFECTS = {
   patrouille: patrol,
   chiens: (draft, ctx) => {
-    const allowed = HEXES.map(({ n }) => n).filter((n) => distance(draft.player.hex, n) === DOGS_DISTANCE);
+    const allowed = tileHexes(draft.tile).filter((n) => distance(draft.player.hex, n) === DOGS_DISTANCE);
     ctx.emit({ type: 'dogs-placed', hex: placeEncounter(draft, ctx.rng, allowed) });
   },
   brouillard: (draft) => {

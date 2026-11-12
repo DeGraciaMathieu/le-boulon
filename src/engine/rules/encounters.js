@@ -1,15 +1,17 @@
-// Rencontres et combat : 3 jetons de rencontre, test de Discrétion, combat ou fuite.
+// Rencontres et combat : jetons de rencontre (3 par défaut), test de Discrétion, combat ou fuite.
+// Nombre de jetons et paquet de cartes viennent de la tuile (src/engine/rules/tile.js).
 //
 // ÉTAT (ajouté par setupEncounters dans createGame) :
 //   encounters      [{ hex, card }]  card = id de carte une fois révélée, null avant
-//   encounterDeck   [id]             paquet Agroprom mélangé, on pioche en tête
+//   encounterDeck   [id]             paquet de la tuile (encounterCards) mélangé, on pioche en tête
 //   combat          null | { hex, card }   rencontre en cours ; seules fight et flee sont permises
 //
 // MISE EN PLACE ET RÉUTILISATION :
-//   setupEncounters(game) -> game    pose 3 jetons et mélange le paquet (avance game.rng)
+//   setupEncounters(game) -> game    pose encounterCount(tile) jetons et mélange le paquet
+//                                    de la tuile (avance game.rng)
 //   placeEncounter(draft, rng, allowed?) -> hex | null
-//                                    d20, relance sur 20, sur une rencontre déjà posée et sur
-//                                    l'entrée. allowed (liste d'hexagones) restreint la pose,
+//                                    d20, relance hors de la tuile (20 compris), sur une
+//                                    rencontre déjà posée et sur l'entrée. allowed (liste d'hexagones) restreint la pose,
 //                                    par exemple « à 2 hexagones » pour la carte Zone chiens
 //                                    attirés ; null si aucun hexagone ne convient.
 //
@@ -34,25 +36,19 @@
 //
 // HYPOTHÈSES v1 : se battre ne coûte pas de PA ; une victoire ne dépense pas de munition ;
 // une rencontre déjà révélée garde sa carte et redemande un test de Discrétion ; la fuite ne
-// déclenche pas les réactions d'entrée ; paquet vide : on remélange les 6 cartes.
+// déclenche pas les réactions d'entrée ; paquet vide : on remélange toutes les cartes de la tuile.
+// HYPOTHÈSE v2 : plus de jetons que d'hexagones libres : on pose ce qui tient.
 
 import { createRng } from '../rng.js';
 import { distance } from '../hex.js';
 import { countCharges } from './sheet.js';
+import { TILE_DEFAULTS, DEFAULT_ENCOUNTER_CARDS, encounterCards, encounterCount, hasHex, tileHexes } from './tile.js';
 
-export const ENCOUNTER_COUNT = 3;
-const BOARD_SIZE = 19;
+export const ENCOUNTER_COUNT = TILE_DEFAULTS.encounters;
 const FLEE_COST = 2;
 
-// Paquet Agroprom (hypothèse v1) : Menace 3 à 7, blessures en cas de défaite 1 à 3.
-export const ENCOUNTER_CARDS = Object.freeze({
-  pillard: { name: 'Pillard', threat: 3, wounds: 1 },
-  chiens: { name: 'Chiens aveugles', threat: 4, wounds: 1 },
-  bandits: { name: 'Bandits', threat: 5, wounds: 2 },
-  sanglier: { name: 'Sanglier muté', threat: 5, wounds: 2 },
-  militaires: { name: 'Militaires', threat: 6, wounds: 2 },
-  mercenaires: { name: 'Mercenaires', threat: 7, wounds: 3 },
-});
+// Paquet Agroprom (src/content/paquets/rencontres-agroprom.js), gardé pour l'interface et le banc v1.
+export const ENCOUNTER_CARDS = DEFAULT_ENCOUNTER_CARDS;
 
 const WEAPON_BONUS = { loaded: 1, empty: -1 };
 const COVER = { foret: 1, batiment: 2 };
@@ -61,8 +57,8 @@ const STEALTH_BONUS = { foret: 1 };
 export function setupEncounters(game) {
   const rng = createRng(game.rng);
   game.encounters = [];
-  for (let i = 0; i < ENCOUNTER_COUNT; i++) placeEncounter(game, rng);
-  game.encounterDeck = rng.shuffle(Object.keys(ENCOUNTER_CARDS));
+  for (let i = 0; i < encounterCount(game.tile); i++) placeEncounter(game, rng);
+  game.encounterDeck = rng.shuffle(Object.keys(encounterCards(game.tile)));
   game.combat = null;
   game.rng = rng.state();
   return game;
@@ -70,10 +66,11 @@ export function setupEncounters(game) {
 
 export function placeEncounter(draft, rng, allowed = null) {
   const taken = new Set(draft.encounters.map((encounter) => encounter.hex));
+  const { tile } = draft;
   const isFree = (hex) =>
-    hex <= BOARD_SIZE && hex !== draft.tile.entry && !taken.has(hex) && (!allowed || allowed.includes(hex));
+    hasHex(tile, hex) && hex !== tile.entry && !taken.has(hex) && (!allowed || allowed.includes(hex));
 
-  const hasRoom = Array.from({ length: BOARD_SIZE }, (_, i) => i + 1).some(isFree);
+  const hasRoom = tileHexes(tile).some(isFree);
   if (!hasRoom) return null;
 
   let hex = rng.d20();
@@ -103,7 +100,7 @@ export function encounterOnEnter(draft, ctx) {
 }
 
 function drawCard(draft, rng) {
-  if (draft.encounterDeck.length === 0) draft.encounterDeck = rng.shuffle(Object.keys(ENCOUNTER_CARDS));
+  if (draft.encounterDeck.length === 0) draft.encounterDeck = rng.shuffle(Object.keys(encounterCards(draft.tile)));
   return draft.encounterDeck.shift();
 }
 
@@ -120,7 +117,7 @@ export function weaponBonus(inventory) {
 export function fight(draft, _action, ctx) {
   if (!draft.combat) return 'not-in-combat';
   const { hex, card } = draft.combat;
-  const { threat, wounds } = ENCOUNTER_CARDS[card];
+  const { threat, wounds } = encounterCards(draft.tile)[card];
 
   const roll = ctx.rng.d6();
   const tir = draft.player.stats.tir;

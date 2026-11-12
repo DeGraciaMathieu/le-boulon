@@ -1,7 +1,9 @@
 // État de campagne v2 (brief v2 §17.1) autour du moteur v1, sans le réécrire.
 //
 // API :
-//   createCampaign({ seed, mode = 'normal' })  -> campaign     mode : 'normal' | 'hardcore'
+//   createCampaign({ seed, mode = 'normal', tile, tiles })  -> campaign     mode : 'normal' | 'hardcore'
+//     tile : id de la tuile de départ (START_TILE par défaut), cherché dans tiles
+//     (content.tiles par défaut) ; toute tuile au format de src/engine/data/agroprom.js convient.
 //   step(campaign, action)                     -> { state, events }
 //     Même contrat que src/engine/game.js : pur, la campagne reçue n'est jamais modifiée ;
 //     une action refusée rend le même objet campaign et un seul événement
@@ -104,9 +106,10 @@ export const CAMPAIGN_ACTIONS = { talk, choose };
 
 export const REACTIONS = [];
 
-export function createCampaign({ seed, mode = 'normal' }) {
+export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);
-  const day = createGame({ seed, tile: content.tiles[START_TILE] });
+  if (!tiles[tile]) throw new Error(`tuile inconnue : ${tile}`);
+  const day = createGame({ seed, tile: tiles[tile] });
   const campaign = {
     version: CAMPAIGN_VERSION,
     seed,
@@ -128,7 +131,7 @@ export function createCampaign({ seed, mode = 'normal' }) {
     equipment: {},
     world: {
       tiles: {},
-      currentTile: START_TILE,
+      currentTile: tile,
       hex: day.player.hex,
       weather: null,
       emission: { nextDay: null, today: false },

@@ -10,11 +10,13 @@
 //
 // MISE EN PLACE :
 //   placeSuspects(state, rng, { original = true })
-//     remplace state.tokens par 5 jetons neufs face cachée : 2 anomalies (type tiré au
-//     hasard pour chacune), 2 artefacts, 1 rien. Chaque jeton est posé au d20, relancé sur
-//     20, sur un hexagone déjà pris par un autre jeton suspect, sur l'entrée ou sous le
-//     joueur. Si un artefact n'est pas adjacent à une anomalie, on retire tout et on
-//     recommence. L'Émission (LBL-8) l'appelle avec { original: false }.
+//     remplace state.tokens par des jetons neufs face cachée, selon la composition de la
+//     tuile (src/engine/rules/tile.js ; par défaut 5 : 2 anomalies, type tiré au hasard
+//     parmi ceux de la tuile pour chacune, 2 artefacts, 1 rien). Chaque jeton est posé au
+//     d20, relancé hors de la tuile (20 compris), sur un hexagone déjà pris par un autre
+//     jeton suspect, sur l'entrée ou sous le joueur. Si un artefact n'est pas adjacent à une
+//     anomalie, on retire tout et on recommence. L'Émission (LBL-8) l'appelle avec
+//     { original: false }.
 //
 // LECTURE (pures) :
 //   tokenAt(state, hex)            jeton de cet hexagone ou undefined
@@ -50,17 +52,18 @@
 //   - Projection : l'hexagone d'arrivée ne refait pas le test du marais ; les réactions
 //     suivantes de ON_ENTER (rencontres) voient la nouvelle position. previousHex ne change pas.
 //   - Ramasser raté : on peut réessayer.
+// HYPOTHÈSES V2 :
+//   - Une composition sans anomalie ne demande pas d'artefact adjacent (sinon pose impossible).
+//   - Plus de jetons que d'hexagones libres : erreur à la mise en place.
 
 import { neighbors, distance } from '../hex.js';
+import { hasHex, tileHexes, suspectComposition, anomalyKinds } from './tile.js';
 import { consumables, createItem, countCharges, usedSlots, INVENTORY_SLOTS } from './sheet.js';
 
 export const ARTEFACT_VALUE = 1000;
 export const DETECTOR_RANGE = 2;
 const BOLT_COST = 1;
 const PICKUP_COST = 1;
-
-const COMPOSITION = ['anomalie', 'anomalie', 'artefact', 'artefact', 'rien'];
-const ANOMALIES = ['electro', 'gravitationnelle', 'bruleuse'];
 
 const ANOMALY_EFFECTS = {
   electro: (draft, ctx) => {
@@ -80,35 +83,40 @@ const ANOMALY_EFFECTS = {
 };
 
 export function placeSuspects(state, rng, { original = true } = {}) {
-  const forbidden = new Set([state.tile.entry, state.player.hex]);
+  const { tile } = state;
+  const forbidden = new Set([tile.entry, state.player.hex]);
+  const composition = suspectComposition(tile);
+  const room = tileHexes(tile).filter((n) => !forbidden.has(n)).length;
+  if (composition.length > room) throw new Error(`tuile ${tile.name} : pas assez d'hexagones libres pour les jetons`);
   let tokens;
   do {
-    tokens = drawTokens(rng, forbidden, original);
+    tokens = drawTokens(rng, tile, forbidden, original);
   } while (!artefactsNextToAnomalies(tokens));
   state.tokens = tokens;
 }
 
-function drawTokens(rng, forbidden, original) {
+function drawTokens(rng, tile, forbidden, original) {
   const taken = new Set(forbidden);
-  return COMPOSITION.map((kind) => {
-    const hex = rollFreeHex(rng, taken);
+  return suspectComposition(tile).map((kind) => {
+    const hex = rollFreeHex(rng, tile, taken);
     taken.add(hex);
     const token = { hex, kind, revealed: false, original };
-    if (kind === 'anomalie') token.anomaly = rng.pick(ANOMALIES);
+    if (kind === 'anomalie') token.anomaly = rng.pick(anomalyKinds(tile));
     return token;
   });
 }
 
-function rollFreeHex(rng, taken) {
+function rollFreeHex(rng, tile, taken) {
   let hex;
   do {
     hex = rng.d20();
-  } while (hex === 20 || taken.has(hex));
+  } while (!hasHex(tile, hex) || taken.has(hex));
   return hex;
 }
 
 function artefactsNextToAnomalies(tokens) {
   const anomalyHexes = tokens.filter((t) => t.kind === 'anomalie').map((t) => t.hex);
+  if (anomalyHexes.length === 0) return true;
   return tokens
     .filter((t) => t.kind === 'artefact')
     .every((t) => neighbors(t.hex).some((n) => anomalyHexes.includes(n)));
