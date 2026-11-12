@@ -1,7 +1,9 @@
 // Jetons suspects, boulon et détecteur.
 //
 // JETON (state.tokens[]) :
-//   { hex, kind: 'anomalie' | 'artefact' | 'rien', anomaly?, revealed, original }
+//   { hex, kind: 'anomalie' | 'artefact' | 'rien', anomaly?, revealed, original, item? }
+//   item     : artefact rare posé par l'Émission globale (rules/emission.js), id d'objet ;
+//              ramassé, il donne cet objet au lieu de l'artefact v1 sans nom.
 //   anomaly  : 'electro' | 'gravitationnelle' | 'bruleuse' (anomalies seulement)
 //   original : true pour les 5 jetons de la mise en place, false pour ceux reposés
 //              après l'Émission (mission Cartographie).
@@ -50,6 +52,7 @@
 //   { type: 'detector-broken' }                 { type: 'thrown', from, to }
 //   { type: 'bolt-thrown', target }
 //   { type: 'artefact-picked', hex, value }     { type: 'pickup-failed', hex }
+//   { type: 'artefact-picked', hex, item }      artefact rare (jeton avec item)
 //
 // HYPOTHÈSES V1 :
 //   - Un artefact vaut ARTEFACT_VALUE roubles, la même valeur pour tous.
@@ -217,7 +220,8 @@ export function pickup(draft, _action, ctx) {
   const hex = draft.player.hex;
   const token = tokenAt(draft, hex);
   if (!token || token.kind !== 'artefact' || !token.revealed) return 'no-artefact';
-  const item = createItem('artefact', { value: ARTEFACT_VALUE });
+  // Artefact rare posé par l'Émission (rules/emission.js) : l'objet nommé du jeton.
+  const item = token.item ? createItem(token.item) : createItem('artefact', { value: ARTEFACT_VALUE });
   if (usedSlots(draft.inventory) + item.size > inventoryCapacity(draft)) return 'inventory-full';
   if (draft.ap.left < PICKUP_COST) return 'not-enough-ap';
 
@@ -228,5 +232,6 @@ export function pickup(draft, _action, ctx) {
   }
   ctx.addItem(item);
   draft.tokens.splice(draft.tokens.indexOf(token), 1);
-  ctx.emit({ type: 'artefact-picked', hex, value: item.value });
+  const picked = token.item ? { item: token.item } : { value: item.value };
+  ctx.emit({ type: 'artefact-picked', hex, ...picked });
 }

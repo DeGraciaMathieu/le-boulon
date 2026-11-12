@@ -260,7 +260,7 @@ test('cartographier : tous les jetons suspects de la tuile révélés', () => {
 test('survivre : être au jour J, ou passer l’Émission', () => {
   assert.equal(react(withQuest('jour', (c) => { c.day = 3; }), []).campaign.quests.jour.status, 'active');
   assert.equal(react(withQuest('jour', (c) => { c.day = 4; }), []).campaign.quests.jour.status, 'done');
-  assert.equal(react(withQuest('emission'), [{ type: 'emission-ended' }]).campaign.quests.emission.status, 'done');
+  assert.equal(react(withQuest('emission'), [{ type: 'emission-aftermath' }]).campaign.quests.emission.status, 'done');
 });
 
 test('changement d’étape : les événements ne remplissent que l’étape active, l’état oui', () => {

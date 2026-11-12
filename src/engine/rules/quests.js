@@ -25,8 +25,7 @@
 //                                        à l'arrivée.
 //   'cartographier' { tile }             tous les jetons suspects de la tuile révélés (état)
 //   'survivre'      { day } | { emission: true }  campaign.day >= day ; ou événement
-//                                        emission-ended (hypothèse v2 : nom à fixer par la
-//                                        carte 8 Émission)
+//                                        emission-aftermath (rules/emission.js)
 //   Un objectif rempli par des événements ne compte que ceux du step où l'étape est active :
 //   après un changement d'étape dans la même réaction, seule l'étape suivante est revue sur
 //   l'état (cartographier, survivre { day }).
@@ -111,7 +110,7 @@ const OBJECTIVE_MET = {
   },
   survivre: (o, draft, events) => (o.day !== undefined
     ? draft.day >= o.day
-    : o.emission === true && has(events, (e) => e.type === 'emission-ended')),
+    : o.emission === true && has(events, (e) => e.type === 'emission-aftermath')),
 };
 
 // Effets d'un objectif rempli, avant le passage à la suite.

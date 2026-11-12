@@ -39,7 +39,7 @@
 //       currentTile,               id de la tuile courante (clé de content.tiles)    carte 6
 //       hex,                       hexagone du joueur sur la tuile courante (1-19)
 //       weather,                   null, id de la carte Météo du matin (rules/time.js) carte 7
-//       emission: { nextDay, today }  null, false                                    carte 8
+//       emission: { nextDay, today }  null, false (rules/emission.js)                carte 8
 //     },
 //     places: { [id]: placeState }  progression des lieux (rules/places.js)          carte 10
 //     place?,                      { id, approach? } pendant la visite d'un lieu seulement
@@ -117,6 +117,7 @@ import { explore, boltCard, leavePlace, placesAfterStep, PLACE_OVERRIDES } from 
 import { sleep, camp, wake, endDayOnExhaustion, nightRefusal } from './rules/time.js';
 import { questsAfterStep } from './rules/quests.js';
 import { enterHub, enterHubOrPlace, leaveHub, chestPut, chestTake, useService, hubsAfterStep, HUB_OVERRIDES } from './rules/hubs.js';
+import { emissionAfterStep, dropEmissionCard } from './rules/emission.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -138,8 +139,9 @@ export const CAMPAIGN_ACTIONS = {
 };
 
 // combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.
+// emissionAfterStep après endDayOnExhaustion : elle lit la nuit que celle-ci vient de poser.
 // questsAfterStep en dernier : les objectifs de quête lisent tout ce que le step a produit.
-export const REACTIONS = [combatOnReveal, placesAfterStep, endDayOnExhaustion, hubsAfterStep, questsAfterStep];
+export const REACTIONS = [combatOnReveal, placesAfterStep, endDayOnExhaustion, emissionAfterStep, hubsAfterStep, questsAfterStep];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);
@@ -185,6 +187,7 @@ export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles
     combat: null,
     screen: 'tile',
   };
+  dropEmissionCard(day.zone);
   storeDay(campaign, day);
   outfit(campaign);
   return campaign;

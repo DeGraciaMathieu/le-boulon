@@ -42,7 +42,7 @@
 //        traders   restock des marchands (carte 13)
 //        emission  calendrier de l'Émission (carte 8) : pose world.emission avant la Météo
 //        quests    délais des quêtes (carte 15)
-//      DAY_HOOKS est vide : chaque carte ajoute sa fonction dans son tableau ci-dessous.
+//      Chaque carte ajoute sa fonction dans son tableau de DAY_HOOKS ci-dessous.
 //   3. carte Météo : 'signes-emission' si world.emission.nextDay === day (le paquet reste à la
 //      carte 8 pour l'annonce, l'Émission elle-même n'est pas jouée ici), sinon pioche pondérée
 //      (count) parmi les autres cartes du paquet 'meteo'. world.weather = id de la carte.
@@ -54,7 +54,8 @@
 //      énergétique de nouveau permise). Journée v1 de la tuile courante en 'playing'.
 //   6. coût de ceinture : beltRadiation(equipment) radiations (cause 'ceinture'), puis faim de
 //      2 jours ou plus : 1 blessure (cause 'faim'). Ces blessures passent par wound (sheet.js).
-//   7. paquet Zone de la tuile courante remélangé (setupZone, Émission v1 comprise).
+//   7. paquet Zone de la tuile courante remélangé (setupZone), avec la carte Émission le jour
+//      annoncé seulement (world.emission.today, rules/emission.js).
 //   8. screen 'tile', campaign.night retiré, événement day-started (l'autosave de la carte 29
 //      s'y branche).
 //
@@ -90,6 +91,7 @@ import { BASE_AP, skillCheck } from '../game.js';
 import { startCombat } from './combat.js';
 import { encounterCards } from './tile.js';
 import { setupZone } from './zone.js';
+import { scheduleEmission } from './emission.js';
 import { apBonus, beltRadiation } from './equipment.js';
 import { memberPerks } from './factions.js';
 import { stealthBonus } from './progression.js';
@@ -111,7 +113,7 @@ export const DAY_HOOK_ORDER = Object.freeze(['npcs', 'traders', 'emission', 'que
 export const DAY_HOOKS = Object.freeze({
   npcs: Object.freeze([]),
   traders: Object.freeze([]),
-  emission: Object.freeze([]),
+  emission: Object.freeze([scheduleEmission]),
   quests: Object.freeze([]),
 });
 
@@ -198,7 +200,7 @@ export function newDay(draft, ctx, hooks = DAY_HOOKS) {
   const cost = beltRadiation(draft.equipment);
   if (cost > 0) payBelt(day, cost, ctx);
   if (draft.player.hunger >= STARVING_DAYS) wound(day, STARVING_WOUNDS, 'faim', ctx.emit);
-  reshuffleZone(day, ctx);
+  reshuffleZone(day, draft.world.emission.today, ctx);
   storeDay(draft, day);
 
   delete draft.night;
@@ -322,10 +324,10 @@ function payBelt(day, cost, ctx) {
   wound(day, 1, 'radiation', ctx.emit);
 }
 
-function reshuffleZone(day, ctx) {
+function reshuffleZone(day, emission, ctx) {
   const { rng } = day;
   day.rng = ctx.rng.int(0, UINT32_MAX);
-  setupZone(day);
+  setupZone(day, { emission });
   day.rng = rng;
 }
 
