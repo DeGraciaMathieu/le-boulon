@@ -5,10 +5,10 @@
 //
 // API : createSaveStore({ storage, now, document, URL }) -> store ; tout est injectable pour
 // les tests, par défaut les objets du navigateur. saves = createSaveStore() pour l'interface.
-//   store.autosave(campaign)        emplacement 'auto' ; à appeler au réveil (cartes 7, 29)
-//   store.saveSlot(n, campaign)     emplacement manuel n de MANUAL_SLOTS, dans un hub seulement
-//                                   (canManualSave, src/engine/rules/save.js)
-//   store.load(slot)                slot : 'auto' | 1 | 2 | 3
+//   store.autosave(campaign, places?)   emplacement 'auto' ; à appeler au réveil (cartes 7, 29)
+//   store.saveSlot(n, campaign, places?)  emplacement manuel n de MANUAL_SLOTS, dans un hub
+//                                   seulement (canManualSave, src/engine/rules/save.js)
+//   store.load(slot) -> { campaign, places }   slot : 'auto' | 1 | 2 | 3
 //   store.list()                    [{ slot, day, savedAt, mode, seed }] des emplacements
 //                                   occupés, 'auto' en tête ; { slot, error } si illisible
 //   store.eraseCampaign(campaign)   hardcore : efface l'autosave et les emplacements de cette
@@ -16,8 +16,9 @@
 //   store.exportFile(campaign)      téléchargement le-boulon-jour-<day>.json
 //   store.importFile(file) -> Promise<{ campaign?, error? }>   file : File ou Blob
 //
-// FORMAT : chaque clé garde { savedAt, day, mode, seed, save } où save est le texte de
-// serialize() ; le fichier exporté est ce texte seul.
+// FORMAT : chaque clé garde { savedAt, day, mode, seed, save, places? } où save est le texte de
+// serialize() et places les résultats des cartes de lieu (placeOutcomes de place-view.js, que le
+// moteur ne garde pas) ; le fichier exporté est le texte de serialize() seul.
 
 import { serialize, deserialize, canManualSave } from '../engine/rules/save.js';
 
@@ -35,10 +36,10 @@ export function createSaveStore({
   // globalThis.localStorage lève une exception.
   const backend = () => storage ?? globalThis.localStorage;
 
-  function write(slot, campaign) {
+  function write(slot, campaign, places) {
     try {
       const entry = { savedAt: now().toISOString(), day: campaign.day, mode: campaign.mode, seed: campaign.seed };
-      backend().setItem(KEY_PREFIX + slot, JSON.stringify({ ...entry, save: serialize(campaign) }));
+      backend().setItem(KEY_PREFIX + slot, JSON.stringify({ ...entry, save: serialize(campaign), places }));
       return { ok: true };
     } catch (error) {
       return { ok: false, error: `sauvegarde impossible : ${error.message}` };
@@ -50,21 +51,21 @@ export function createSaveStore({
     return raw === null ? null : JSON.parse(raw);
   }
 
-  function autosave(campaign) {
-    return write('auto', campaign);
+  function autosave(campaign, places) {
+    return write('auto', campaign, places);
   }
 
-  function saveSlot(slot, campaign) {
+  function saveSlot(slot, campaign, places) {
     if (!MANUAL_SLOTS.includes(slot)) return { ok: false, error: `emplacement inconnu : ${slot}` };
     if (!canManualSave(campaign)) return { ok: false, error: 'sauvegarde manuelle dans un hub seulement' };
-    return write(slot, campaign);
+    return write(slot, campaign, places);
   }
 
   function load(slot) {
     try {
       const entry = readEntry(slot);
       if (!entry) return { error: `emplacement ${slot} vide` };
-      return { campaign: deserialize(entry.save) };
+      return { campaign: deserialize(entry.save), places: entry.places ?? null };
     } catch (error) {
       return { error: error.message };
     }

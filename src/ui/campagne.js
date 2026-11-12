@@ -76,7 +76,7 @@ import { renderWorld } from './world-view.js';
 import { renderHub } from './hub-view.js';
 import { hubAt } from '../engine/rules/hubs.js';
 import { placeEntry, tilePlaces } from './place.js';
-import { renderPlace, renderPlaceMarks } from './place-view.js';
+import { renderPlace, renderPlaceMarks, placeOutcomes, restorePlaceOutcomes } from './place-view.js';
 import { mountDialogue } from './dialogue-window.js';
 import { npcsHere } from './dialogue-screen.js';
 import { mountCombat } from './combat-window.js';
@@ -422,7 +422,7 @@ function renderSaves() {
   if (canManualSave(campaign)) {
     lines.push(h('div', { className: 'aide', textContent: 'Sauvegarder dans un emplacement :' }));
     for (const slot of MANUAL_SLOTS) {
-      lines.push(h('button', { type: 'button', textContent: `Emplacement ${slot}`, onclick: () => report(saves.saveSlot(slot, campaign), `Sauvegarde : emplacement ${slot}`) }));
+      lines.push(h('button', { type: 'button', textContent: `Emplacement ${slot}`, onclick: () => report(saves.saveSlot(slot, campaign, placeOutcomes(lastEvents)), `Sauvegarde : emplacement ${slot}`) }));
     }
   }
   savePanel.replaceChildren(...lines);
@@ -476,7 +476,7 @@ const titleHandlers = {
   load(slot) {
     const loaded = saves.load(slot);
     if (loaded.error) return showLayer({ kind: 'title', error: loaded.error });
-    start(loaded.campaign);
+    start(loaded.campaign, loaded.places);
   },
   async import(file) {
     const loaded = await saves.importFile(file);
@@ -500,7 +500,7 @@ function afterStep(events, rest) {
   if (wake) {
     layer = { kind: 'wake', report: { ...wake, cards: wakeCards([...dayEvents, ...events]) } };
     dayEvents = [];
-    report(saves.autosave(campaign), 'Sauvegarde automatique');
+    report(saves.autosave(campaign, placeOutcomes(events)), 'Sauvegarde automatique');
   } else {
     dayEvents.push(...events);
     if (events.some((event) => event.type === 'night-encounter')) layer = { kind: 'night-fight' };
@@ -668,7 +668,8 @@ plateau.addEventListener('contextmenu', (event) => {
   if (n) dispatch({ type: 'bolt', target: n });
 });
 
-function start(loaded) {
+// places : résultats des cartes de lieu gardés avec la sauvegarde (aucun : nouvelle partie, import).
+function start(loaded, places = null) {
   campaign = loaded;
   lastEvents = [];
   causes = trackCauses(null, [], loaded.player);
@@ -682,12 +683,14 @@ function start(loaded) {
   effects.reset();
   diceTray.reset();
   cards.reset();
+  restorePlaceOutcomes(places);
   tutorial.attach(loaded);
   render();
 }
 
 const dialogueWindow = mountDialogue({ onChoose: dispatch });
-const combatWindow = mountCombat({ onAction: dispatch, onClose: finishNightFight, tray: diceTray });
+// Continuer ferme la fenêtre de combat : une bulle retenue pendant le combat peut s'afficher.
+const combatWindow = mountCombat({ onAction: dispatch, onClose: () => { finishNightFight(); scheduleBubbles(); }, tray: diceTray });
 
 document.getElementById('nouvelle').addEventListener('click', () => showLayer({ kind: 'title' }));
 

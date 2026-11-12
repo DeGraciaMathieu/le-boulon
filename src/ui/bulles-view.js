@@ -1,14 +1,16 @@
 // Bulles contextuelles, vue (direction plateau, lot L7) : un papier crème scotché en surimpression,
 // qui pointe un objet de l'écran et dit une règle en une phrase. Une bulle à la fois ; elle se
-// ferme d'un clic (n'importe où) ou d'Échap. Aucune bulle pendant une séquence d'animation.
+// ferme d'un clic (n'importe où) ou d'Échap. Aucune bulle pendant une séquence d'animation ni
+// tant qu'une fenêtre (combat, dialogue) est ouverte ; une bulle ne se pose jamais sur un bouton.
 // Déclencheurs et mémoire : bulles.js (purs).
 //
 //   const bubbles = mountBubbles(sequencer)
 //   bubbles.check(ctx, muted?)           montre la première bulle due et pas vue (TRIGGERS de bulles.js),
 //                                        sauf les ids de muted (tutoriel : étape en cours), gardées pour plus tard
 //   bubbles.showBubble({ id, target, text, step?, onSkip? })   montre une bulle (target : sélecteur ou
-//                                        élément) ; false si une séquence joue, si une bulle est ouverte
-//                                        ou si la cible est introuvable ou cachée. Mémorise id comme vue,
+//                                        élément) ; false si une séquence joue, si une bulle ou une
+//                                        fenêtre est ouverte, ou si la cible est introuvable ou cachée.
+//                                        Mémorise id comme vue,
 //                                        sauf une bulle du tutoriel : step (« 2 / 6 ») et onSkip
 //                                        (lien « Passer le tutoriel ») la signalent.
 //   bubbles.register(trigger)            ajoute un déclencheur au registre (tutoriel joué, L8)
@@ -20,6 +22,11 @@ import { TRIGGERS, nextBubble, readSeen, saveSeen } from './bulles.js';
 
 const GAP = 14;
 const MARGIN = 8;
+
+// Fenêtres modales : combat-window.js et dialogue-window.js.
+const modalOpen = () => [...document.querySelectorAll('.fenetre')].some((node) => !node.hidden);
+
+const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
 export function mountBubbles(sequencer, storage) {
   const triggers = [...TRIGGERS];
@@ -44,19 +51,49 @@ export function mountBubbles(sequencer, storage) {
   node.append(text, hint, tutorial);
   document.body.append(node);
 
-  // Sous la cible si la place le permet, sinon au-dessus ; la flèche suit le centre de la cible.
+  // Boutons visibles, hors bulle et hors cible : la bulle ne doit en couvrir aucun.
+  function buttonRects() {
+    return [...document.querySelectorAll('button')]
+      .filter((button) => !node.contains(button) && !button.contains(open.target) && !open.target.contains(button))
+      .map((button) => button.getBoundingClientRect())
+      .filter((r) => r.width > 0 && r.height > 0);
+  }
+
+  // Sous la cible, au-dessus, à gauche puis à droite : la première place dans l'écran qui ne couvre
+  // aucun bouton ; à défaut, dessous ou dessus comme avant. La flèche suit le centre de la cible.
+  function spot(rect, box) {
+    const clampX = (x) => Math.min(Math.max(MARGIN, x), innerWidth - box.width - MARGIN);
+    const clampY = (y) => Math.min(Math.max(MARGIN, y), innerHeight - box.height - MARGIN);
+    const centerX = clampX(rect.left + rect.width / 2 - box.width / 2);
+    const centerY = clampY(rect.top + rect.height / 2 - box.height / 2);
+    const spots = [
+      { side: 'dessous', top: rect.bottom + GAP, left: centerX },
+      { side: 'dessus', top: rect.top - GAP - box.height, left: centerX },
+      { side: 'gauche', top: centerY, left: rect.left - GAP - box.width },
+      { side: 'droite', top: centerY, left: rect.right + GAP },
+    ].filter(({ top, left }) => top >= MARGIN && left >= MARGIN
+      && top + box.height <= innerHeight - MARGIN && left + box.width <= innerWidth - MARGIN);
+    const buttons = buttonRects();
+    const free = spots.find(({ top, left }) => !buttons.some((r) => overlaps(r, { top, left, right: left + box.width, bottom: top + box.height })));
+    return free ?? spots[0] ?? { side: 'dessus', top: Math.max(MARGIN, rect.top - GAP - box.height), left: centerX };
+  }
+
+  let placed = null;
   function place() {
     if (!open) return;
     const rect = open.target.getBoundingClientRect();
     const box = node.getBoundingClientRect();
-    const below = rect.bottom + GAP + box.height <= innerHeight - MARGIN;
-    const top = below ? rect.bottom + GAP : Math.max(MARGIN, rect.top - GAP - box.height);
-    const center = rect.left + rect.width / 2;
-    const left = Math.min(Math.max(MARGIN, center - box.width / 2), innerWidth - box.width - MARGIN);
+    // Les boutons ne sont relus que si la cible ou la bulle a bougé.
+    const key = [rect.left, rect.top, rect.width, rect.height, box.width, box.height, innerWidth, innerHeight].join();
+    if (key === placed) return;
+    placed = key;
+    const { side, top, left } = spot(rect, box);
     node.style.top = `${top}px`;
     node.style.left = `${left}px`;
-    node.style.setProperty('--fleche-x', `${Math.min(Math.max(16, center - left), box.width - 16)}px`);
-    node.classList.toggle('dessus', !below);
+    node.style.setProperty('--fleche-x', `${Math.min(Math.max(16, rect.left + rect.width / 2 - left), box.width - 16)}px`);
+    node.style.setProperty('--fleche-y', `${Math.min(Math.max(12, rect.top + rect.height / 2 - top - node.clientTop), box.height - node.clientTop - 12)}px`);
+    node.classList.remove('dessus', 'gauche', 'droite');
+    if (side !== 'dessous') node.classList.add(side);
   }
 
   // La cible peut bouger après la pose (image chargée, écran mis en page) : la bulle la suit.
@@ -76,10 +113,11 @@ export function mountBubbles(sequencer, storage) {
   const api = {
     onClose: () => {},
     showBubble({ id, target, text: rule, step = null, onSkip = null }) {
-      if (sequencer.busy || open) return false;
+      if (sequencer.busy || open || modalOpen()) return false;
       const element = resolve(target);
       if (!element) return false;
       open = { id, target: element, onSkip };
+      placed = null;
       if (!step) {
         seen.add(id);
         saveSeen(storage, seen);
@@ -93,7 +131,7 @@ export function mountBubbles(sequencer, storage) {
       return true;
     },
     check(ctx, muted = []) {
-      if (sequencer.busy || open) return false;
+      if (sequencer.busy || open || modalOpen()) return false;
       const due = nextBubble(triggers, ctx, new Set([...seen, ...muted]));
       return due ? api.showBubble(due) : false;
     },

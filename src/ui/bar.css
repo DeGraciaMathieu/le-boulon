@@ -235,6 +235,34 @@ body:has(#ecran[data-ecran="reveil"]:not([hidden])) #bandeau {
   box-shadow: 0 1px 1px rgb(0 0 0 / 0.6), inset 0 -1px 0 #7d6630;
 }
 
+/* ---------- Téléphone : les pistes passent à la ligne au lieu d'élargir la page ---------- */
+
+@media (max-width: 800px) {
+  .piste-pa {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  /* Titre, dépensés et chiffre sur une ligne ; les alvéoles dessous, sur toute la largeur. */
+  .piste-pa .alveoles {
+    order: 1;
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+  }
+
+  .alveole {
+    flex: 0 1 28px;
+    min-width: 22px;
+  }
+
+  .pistes-etat {
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    max-width: 100%;
+    margin-left: 0;
+  }
+}
+
 /* ---------- Animations (séquenceur, bar-view.js) ---------- */
 
 /* A1 : le cube retenu en cours de journée. */
