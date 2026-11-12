@@ -24,6 +24,7 @@ import { apTrack, notchTracks, coinStack, BEATS } from './bar.js';
 import { BAR_HINTS } from './aide.js';
 import { topBar } from './world-map.js';
 import { fade } from './sequencer.js';
+import { notchWhy } from './pourquoi.js';
 
 const TRAY_SHOWN = 12;
 const CELL_CLASS = { cube: 'pleine', vide: 'vide', retenu: 'retenu' };
@@ -80,14 +81,20 @@ function apTrackNode(track) {
     h('span', { className: 'piste-chiffre' }, h('strong', { textContent: track.left }), ` / ${track.max}`));
 }
 
-function notchTrackNode(id, label, track) {
-  const notches = track.notches.map((notch) => h('span', { className: `cran${notch.lit ? ' allume' : ''}${notch.mark ? ' seuil' : ''}`, title: notch.mark?.title ?? '' },
+// causes : trackCauses de pourquoi.js ; un cran allumé dit sa cause au survol, avant son seuil.
+function notchTrackNode(id, label, track, causes) {
+  const notches = track.notches.map((notch) => h('span', { className: `cran${notch.lit ? ' allume' : ''}${notch.mark ? ' seuil' : ''}`, title: notchTitle(id, notch, causes) },
     h('i'),
     notch.mark ? h('small', { textContent: notch.mark.tag }) : null));
   return h('div', { className: `piste piste-crans piste-${id}`, title: BAR_HINTS[id] },
     h('b', { className: 'piste-titre', textContent: label }),
     h('span', { className: 'crans' }, ...notches),
     h('strong', { className: 'piste-chiffre', textContent: track.value }));
+}
+
+function notchTitle(id, notch, causes) {
+  const why = notch.lit ? notchWhy(id, notch.n, causes) : null;
+  return [why, notch.mark?.title].filter(Boolean).join(' · ');
 }
 
 function coinsNode(roubles) {
@@ -165,7 +172,8 @@ export function mountBar(bar, sequencer) {
   }
 
   return {
-    render(campaign) {
+    // causes : cause de chaque cran allumé (trackCauses de pourquoi.js), tenue par campagne.js.
+    render(campaign, causes) {
       const data = topBar(campaign);
       const tracks = notchTracks(campaign);
       const item = (hint, label, value) => h('div', { className: 'bandeau-item', title: BAR_HINTS[hint] },
@@ -176,7 +184,7 @@ export function mountBar(bar, sequencer) {
         item('tuile', data.tile, ''),
         apTrackNode(apTrack(campaign)),
         h('div', { className: 'pistes-etat' },
-          ...TRACKS.map(([id, label]) => notchTrackNode(id, label, tracks[id])),
+          ...TRACKS.map(([id, label]) => notchTrackNode(id, label, tracks[id], causes)),
           coinsNode(data.roubles)),
       );
       if (data.emission) bar.append(h('div', { className: 'bandeau-emission', textContent: "ÉMISSION AUJOURD'HUI : restez près d'un abri" }));

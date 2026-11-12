@@ -1,0 +1,84 @@
+/* Bulles contextuelles (lot L7) : papier crème scotché, comme la bulle de la maquette 1 (Table de
+   l'abri). Posée en surimpression (position fixe), au-dessus des fenêtres ; bulles-view.js la place
+   et règle --fleche-x, l'abscisse de la flèche. */
+
+.bulle {
+  --bulle-papier: var(--papier-clair, #fbf3dc);
+  position: fixed;
+  z-index: 60;
+  width: min(280px, calc(100vw - 16px));
+  padding: 12px 14px 9px;
+  background: var(--bulle-papier);
+  color: var(--encre, #2a241c);
+  border-radius: 3px;
+  border-top: 14px solid rgb(214 200 150 / 0.7);
+  box-shadow: 0 8px 16px rgb(0 0 0 / 0.55);
+  transform: rotate(1.4deg);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  animation: bulle-pose 0.25s ease-out;
+}
+
+.bulle[hidden] {
+  display: none;
+}
+
+.bulle p {
+  margin: 0;
+}
+
+.bulle small {
+  display: block;
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--encre-douce, rgb(42 36 28 / 0.62));
+}
+
+/* Flèche vers la cible : au-dessus de la bulle, ou dessous quand la bulle est posée au-dessus. */
+.bulle::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--fleche-x, 24px) - 12px);
+  top: -26px;
+  border: 12px solid transparent;
+  border-top: 0;
+  border-bottom-color: rgb(214 200 150);
+  filter: drop-shadow(0 -2px 1px rgb(0 0 0 / 0.55));
+}
+
+.bulle.dessus::before {
+  top: auto;
+  bottom: -12px;
+  border: 12px solid transparent;
+  border-bottom: 0;
+  border-top-color: var(--bulle-papier);
+  filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.55));
+}
+
+@keyframes bulle-pose {
+  from { opacity: 0; transform: translateY(-6px) rotate(1.4deg); }
+  to { opacity: 1; transform: rotate(1.4deg); }
+}
+
+.animations-reduites .bulle {
+  animation: none;
+}
+
+.aide-bulles {
+  margin: 0 0 12px;
+}
+
+/* « Pourquoi ? » (lot L7) : un objet qui porte sa cause au survol (title) le signale. */
+.pourquoi {
+  cursor: help;
+}
+
+#journal li.pourquoi {
+  text-decoration: underline dotted rgb(42 36 28 / 0.35);
+  text-underline-offset: 3px;
+}
+
+.alveole.retenu {
+  cursor: help;
+}

@@ -15,6 +15,7 @@
 
 import { DICE_TYPES, faceTurn, rollParts, rollView } from './bac.js';
 import { fade } from './sequencer.js';
+import { rollWhy } from './pourquoi.js';
 
 export const ROLL_MS = 900;
 export const WRITE_MS = 300;
@@ -61,6 +62,8 @@ export function mountDiceTray(home, sequencer) {
 
   function empty() {
     title.textContent = 'Dernier jet';
+    sentence.title = '';
+    sentence.classList.remove('pourquoi');
     node.classList.add('vide');
     sentence.replaceChildren(h('span', 'bac-rien', 'aucun jet pour l’instant'));
     cube.style.transform = pose(faceTurn(1));
@@ -87,14 +90,23 @@ export function mountDiceTray(home, sequencer) {
     }));
   }
 
-  function settle(view) {
+  // « Pourquoi ? » : la règle du jet, le dé qu'il fallait et sa chance, au survol de la phrase.
+  function explain(event) {
+    sentence.title = rollWhy(event) ?? '';
+    sentence.classList.add('pourquoi');
+  }
+
+  function settle(event) {
+    const view = rollView(event);
     begin(view);
     write(view);
+    explain(event);
   }
 
   async function play(event, ctx) {
     const view = rollView(event);
     begin(view);
+    explain(event);
     const turn = faceTurn(view.roll);
     const tumble = { x: turn.x - 720, y: turn.y + 540 };
     cube.animate([
@@ -112,10 +124,10 @@ export function mountDiceTray(home, sequencer) {
       duration: ROLL_MS + WRITE_MS,
       finish: (event) => {
         stop();
-        settle(rollView(event));
+        settle(event);
       },
       reduced: (event) => {
-        settle(rollView(event));
+        settle(event);
         return fade(sentence);
       },
     });

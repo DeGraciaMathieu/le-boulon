@@ -41,6 +41,14 @@
 // met en évidence l'hexagone cible sur la tuile, ou la carte du monde si la cible est ailleurs.
 // Marqueur « ! » sur le donneur de la quête principale tant qu'elle n'est pas prise.
 //
+// POURQUOI ? (pourquoi.js, lot L7) : chaque ligne du journal liée à un jet ou à une pénalité,
+// chaque cran allumé du bandeau, le verdict du bac et la Défense portent leur cause au survol.
+// La cause des crans (trackCauses) est tenue ici d'un step à l'autre.
+//
+// BULLES (bulles.js, bulles-view.js, lot L7) : après chaque rendu et à la fin de chaque séquence,
+// la première règle rencontrée et jamais montrée se dit dans une bulle ; jamais pendant une
+// séquence, ni sous un écran de la couche, le PDA ou l'Inventaire.
+//
 // DÉMARRAGE : écran titre ; ?seed=<entier> dans l'adresse lance tout de suite une partie normale.
 // Une nouvelle campagne s'ouvre sur l'écran d'introduction (3 phrases).
 
@@ -82,6 +90,8 @@ import { mountFiche } from './fiche-view.js';
 import { ficheBeats } from './fiche.js';
 import { mountBoardMotion } from './plateau-view.js';
 import { boardBeats } from './plateau.js';
+import { eventWhy, trackCauses } from './pourquoi.js';
+import { mountBubbles } from './bulles-view.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -108,8 +118,10 @@ const placeSection = document.getElementById('lieu');
 const pda = mountPda(document.getElementById('pda'), document.getElementById('ouvrir-pda'), {
   dispatch,
   drawWorld: (svg, current) => renderWorld(svg, current, { tiles: content.tiles, sizes }),
+  replayBubbles: () => bubbles.reset(),
 });
 const sequencer = createSequencer();
+const bubbles = mountBubbles(sequencer);
 const effects = mountEffects({ plateau, place: placeSection, layer: layerSection, sequencer });
 const barView = mountBar(bar, sequencer);
 const diceTray = mountDiceTray(document.getElementById('bac-place'), sequencer);
@@ -124,6 +136,8 @@ let campaign;
 let board;
 let sizes;
 let lastEvents = [];
+// Cause de chaque cran allumé du bandeau (trackCauses de pourquoi.js).
+let causes = null;
 // Écran de la couche choisi par l'interface : { kind: 'intro' } | { kind: 'title', error? } | { kind: 'camp' }
 // | { kind: 'night-fight' } | { kind: 'wake', report } | { kind: 'ending' } ; la nuit et la mort
 // viennent de la campagne. 'night-fight' : combat de nuit ouvert par le réveil ; l'écran nuit reste
@@ -160,6 +174,18 @@ function h(tag, attrs = {}, ...children) {
 function render() {
   if (campaign) renderTable();
   renderLayer();
+  scheduleBubbles();
+}
+
+// Après le rendu courant : si dispatch lance une séquence juste derrière, la bulle attend sa fin.
+function scheduleBubbles() {
+  setTimeout(checkBubbles, 0);
+}
+
+function checkBubbles() {
+  const covered = [layerSection, document.getElementById('pda'), document.getElementById('inventaire')].some((node) => !node.hidden);
+  if (!campaign || covered) return;
+  bubbles.check({ campaign, day: dayState(campaign), events: lastEvents });
 }
 
 function renderTable() {
@@ -172,7 +198,7 @@ function renderTable() {
   const tile = content.tiles[campaign.world.currentTile];
   renderPlace(placeSection, campaign, { tile, size: sizes[campaign.world.currentTile], dispatch, events: lastEvents });
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
-  barView.render(campaign);
+  barView.render(campaign, causes);
   ficheView.render(campaign, ficheGestures(day));
   renderObjective();
   renderCommands(day);
@@ -474,12 +500,16 @@ function finishNightFight() {
 function appendEvents(events) {
   for (const event of events) {
     const text = journalLine(event, campaign);
-    if (text) appendLine(text, event.type, journalLevel(event));
+    if (text) appendLine(text, event.type, journalLevel(event), eventWhy(event));
   }
 }
 
-function appendLine(text, type, level = 'detail') {
+function appendLine(text, type, level = 'detail', why = null) {
   const line = h('li', { textContent: `J${campaign.day} · ${text}` });
+  if (why) {
+    line.title = why;
+    line.classList.add('pourquoi');
+  }
   line.dataset.type = type;
   line.dataset.level = level;
   journal.append(line);
@@ -508,12 +538,13 @@ function dispatch(action) {
   const result = step(campaign, action);
   campaign = result.state;
   lastEvents = result.events;
+  causes = trackCauses(causes, result.events, campaign.player);
   appendEvents(result.events);
   afterStep(result.events, rest);
   render();
   const beats = boardBeats(ficheBeats(barBeats(result.events, before, barSnapshot(campaign))), campaign.world.currentTile);
   boardMotion.stage(beats);
-  sequencer.play(beats);
+  sequencer.play(beats).then(scheduleBubbles);
 }
 
 // Pendant une séquence, un clic ou une touche l'accélère et s'arrête là (phase de capture).
@@ -615,6 +646,7 @@ plateau.addEventListener('contextmenu', (event) => {
 function start(loaded) {
   campaign = loaded;
   lastEvents = [];
+  causes = trackCauses(null, [], loaded.player);
   journal.replaceChildren();
   board = null;
   layer = null;
