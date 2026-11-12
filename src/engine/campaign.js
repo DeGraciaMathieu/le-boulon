@@ -118,6 +118,7 @@ import { sleep, camp, wake, endDayOnExhaustion, nightRefusal } from './rules/tim
 import { questsAfterStep } from './rules/quests.js';
 import { enterHub, enterHubOrPlace, leaveHub, chestPut, chestTake, useService, hubsAfterStep, HUB_OVERRIDES } from './rules/hubs.js';
 import { emissionAfterStep, dropEmissionCard } from './rules/emission.js';
+import { openStash } from './rules/stashes.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -136,6 +137,7 @@ export const CAMPAIGN_ACTIONS = {
   travel, sleep, camp, wake,
   'enter-place': enterHubOrPlace, explore, 'bolt-card': boltCard, 'leave-place': leavePlace,
   'enter-hub': enterHub, 'leave-hub': leaveHub, 'chest-put': chestPut, 'chest-take': chestTake, service: useService,
+  'open-stash': openStash,
 };
 
 // combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.

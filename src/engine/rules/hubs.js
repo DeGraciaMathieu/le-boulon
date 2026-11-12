@@ -33,8 +33,8 @@
 //   la carte 8 (Émission) lit inHub(campaign) pour épargner le joueur.
 //
 // POINTS D'ACCROCHE :
-//   HUB_SERVICES = { [service]: handler }    'marchand' (rules/traders.js), carte 22 'contrats',
-//                                            barman, medecin, technicien
+//   HUB_SERVICES = { [service]: handler }    'marchand' (rules/traders.js), 'barman'
+//                                            (rules/stashes.js), carte 22 'contrats', medecin, technicien
 //   hubAt(campaign) -> hubId | null          hub sur l'hexagone du joueur
 //   inHub(campaign) -> bool                  carte 8 Émission
 //   hubView(campaign) -> null | { hub, faction, services, bedPrice, chest }   carte 26 Écran Hub
@@ -54,8 +54,9 @@ import { usedSlots, inventorySlots } from './equipment.js';
 import { memberPerks } from './factions.js';
 import { BED_PRICE } from './time.js';
 import { trade } from './traders.js';
+import { barman } from './stashes.js';
 
-export const HUB_SERVICES = { marchand: trade };
+export const HUB_SERVICES = { marchand: trade, barman };
 
 const refuseInHub = () => 'in-hub';
 
