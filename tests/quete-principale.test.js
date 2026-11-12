@@ -79,7 +79,7 @@ test('le Guide : cinq actes, une vingtaine d’étapes, deux voies à l’acte 4
 
 test('le Guide : l’indice de l’acte 1 sort en 3e position à l’ATP (§5.1)', () => {
   assert.deepEqual(guide.steps[guide.start].objective, {
-    type: 'explorer', place: 'atp', card: 'indice-acte1', position: 3,
+    type: 'explorer', place: 'atp', card: 'indice-acte1', position: 3, goal: 'retrouver le PDA du courrier',
   });
 });
 

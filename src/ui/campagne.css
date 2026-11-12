@@ -90,6 +90,87 @@ body {
   stroke-width: 2;
 }
 
+/* Donneur de la quête principale tant qu'elle n'est pas prise (objectif.js). */
+.marqueur-donneur {
+  pointer-events: none;
+}
+
+.marqueur-donneur circle {
+  fill: var(--ocre);
+  stroke: var(--pda);
+  stroke-width: 3;
+}
+
+.marqueur-donneur text {
+  fill: var(--pda);
+  font-family: var(--mono);
+  font-weight: bold;
+}
+
+/* Cible montrée depuis l'encart Objectif. */
+.hex.repere {
+  animation: repere 0.5s ease-in-out 4 alternate;
+}
+
+#monde.repere {
+  animation: repere-monde 0.5s ease-in-out 4 alternate;
+}
+
+@keyframes repere {
+  to {
+    fill: rgba(227, 207, 106, 0.55);
+    stroke: var(--ocre);
+    stroke-width: 6;
+  }
+}
+
+@keyframes repere-monde {
+  to {
+    outline: 3px solid var(--ocre);
+  }
+}
+
+/* Encart Objectif : en tête du panneau, avant PDA et Inventaire. */
+#table.campagne #objectif {
+  order: -2;
+}
+
+.objectif-encart {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  color: var(--texte);
+  background: var(--pda);
+  border: 1px solid var(--ocre);
+}
+
+.objectif-encart:hover {
+  background: var(--jeton);
+}
+
+.objectif-titre {
+  color: var(--ocre);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.objectif-etape {
+  color: var(--papier);
+  font-weight: bold;
+}
+
+.objectif-cible {
+  color: var(--sauge);
+  font-size: 12px;
+}
+
+#commandes button.donneur {
+  background: var(--ocre);
+}
+
 /* Panneau de droite : PDA et Inventaire en tête, toujours visibles ; la carte du monde y est
    réduite (vue complète dans l'onglet Carte du monde du PDA). */
 #table.campagne #panneau {

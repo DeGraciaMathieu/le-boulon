@@ -4,7 +4,8 @@
 // touchent pas au DOM (testées par tests/pda.test.js). Le rendu est dans pda-view.js.
 //
 //   PDA_TABS                      [{ id, label }] onglets, dans l'ordre affiché
-//   objectiveText(objective, campaign) -> texte de l'objectif d'une étape
+//   objectiveText(objective, campaign) -> texte de l'objectif d'une étape ; « explorer » dit le
+//                                       rang de la carte cherchée, goal dit ce qu'on cherche
 //   pdaQuests(campaign)  -> { active: [{ quest, name, objective, place, deadline, options }],
 //                             done: [{ quest, name }], failed: [{ quest, name, reason }] }
 //   pdaJournal(campaign) -> [{ day, text }]  journal du PDA (campaign.journal), le plus récent
@@ -16,6 +17,7 @@
 //                             available, wounds, radiation, faction }
 //     stats : [{ id, label, value, canRaise }] ; perks : savoir-faire appris
 //     [{ id, name, effect }] ; available : ceux qu'on peut encore apprendre (même forme).
+//   targetText(target) -> « Lieu (Tuile) » ou « Tuile » : cible d'une quête (questLog)
 //   PDA_LINES  { [type]: (event) -> texte } lignes du journal du bas pour les actions de la
 //              fiche (stat-raised, perk-learned), reprises par campagne.js
 
@@ -64,7 +66,7 @@ const questOf = (id, campaign) => campaign.quests[id]?.quest ?? content.quests[i
 
 const OBJECTIVES = {
   visiter: (o) => `Se rendre à ${placeName(o.place)}`,
-  explorer: (o) => `Explorer ${placeName(o.place)}`,
+  explorer: (o, campaign) => `Fouiller ${placeName(o.place)}${cardHint(o, campaign)}`,
   parler: (o) => `Parler à ${npcName(o.npc)}`,
   rapporter: (o) => `Rapporter ${nameOf('items', o.item)} à ${npcName(o.npc)}`,
   eliminer: (o) => `Éliminer ${o.encounter}${o.tile ? ` (${tileName(o.tile)})` : ''}`,
@@ -78,8 +80,21 @@ export const PDA_LINES = Object.freeze({
   'perk-learned': (e) => `Savoir-faire appris : ${content.perks[e.perk]?.name ?? e.perk}`,
 });
 
+// goal (facultatif, contenu des quêtes) : ce que l'étape cherche, en clair.
 export function objectiveText(objective, campaign) {
-  return OBJECTIVES[objective.type]?.(objective, campaign) ?? objective.type;
+  const text = OBJECTIVES[objective.type]?.(objective, campaign) ?? objective.type;
+  return objective.goal ? `${text} : ${objective.goal}` : text;
+}
+
+// Rang de la carte fixée par la quête dans le paquet du lieu (fixCard de rules/places.js), et
+// combien il en reste à tirer une fois la fouille commencée.
+function cardHint({ place, card }, campaign) {
+  const state = campaign.places?.[place];
+  const position = Object.entries(state?.fixed ?? {}).find(([, id]) => id === card)?.[0];
+  if (!position) return '';
+  const left = position - (state.revealed?.length ?? 0);
+  if (left <= 1) return ' (prochaine carte)';
+  return left < position ? ` (carte ${position}, encore ${left} à tirer)` : ` (carte ${position})`;
 }
 
 export function pdaQuests(campaign) {
@@ -161,6 +176,6 @@ export function pdaSheet(campaign) {
   };
 }
 
-function targetText({ tile, place }) {
+export function targetText({ tile, place }) {
   return place ? `${placeName(place)} (${tileName(tile)})` : tileName(tile);
 }

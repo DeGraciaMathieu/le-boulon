@@ -51,10 +51,25 @@ test('rumeurs : contenu lisible, fraîches d’abord, la plus récente en premie
 
 test('objectif : texte lisible avec les noms du contenu', () => {
   const campaign = createCampaign({ seed: 1 });
-  assert.equal(objectiveText({ type: 'explorer', place: 'pont', card: 'riviere' }, campaign), 'Explorer Pont');
+  assert.equal(objectiveText({ type: 'explorer', place: 'pont', card: 'riviere' }, campaign), 'Fouiller Pont');
   assert.equal(objectiveText({ type: 'cartographier', tile: 'cordon' }, campaign), 'Cartographier Cordon');
   assert.equal(objectiveText({ type: 'survivre', emission: true }, campaign), "Survivre à l'Émission");
   assert.equal(objectiveText({ type: 'inconnu' }, campaign), 'inconnu');
+});
+
+test('objectif explorer : rang de la carte cherchée et ce qu’on cherche (P3)', () => {
+  const campaign = withQuest('le-guide');
+  const objective = content.quests['le-guide'].steps['a1-atp'].objective;
+  assert.equal(objectiveText(objective, campaign), 'Fouiller ATP (carte 3) : retrouver le PDA du courrier');
+  campaign.places.atp.revealed = ['cache'];
+  assert.equal(objectiveText(objective, campaign), 'Fouiller ATP (carte 3, encore 2 à tirer) : retrouver le PDA du courrier');
+  campaign.places.atp.revealed.push('rien');
+  assert.equal(objectiveText(objective, campaign), 'Fouiller ATP (prochaine carte) : retrouver le PDA du courrier');
+});
+
+test('objectif : goal s’ajoute à tout type d’objectif', () => {
+  const campaign = createCampaign({ seed: 1 });
+  assert.equal(objectiveText({ type: 'cartographier', tile: 'cordon', goal: 'noter les anomalies' }, campaign), 'Cartographier Cordon : noter les anomalies');
 });
 
 test('quêtes : au départ, aucune', () => {
@@ -64,7 +79,7 @@ test('quêtes : au départ, aucune', () => {
 test('quêtes : une quête active montre son objectif et son lieu cible', () => {
   const [entry] = pdaQuests(withQuest('ami-du-pont')).active;
   assert.equal(entry.name, content.quests['ami-du-pont'].name);
-  assert.equal(entry.objective, 'Explorer Pont');
+  assert.equal(entry.objective, 'Fouiller Pont (prochaine carte)');
   assert.equal(entry.place, `Pont (${content.tiles['vallee-sombre'].name})`);
   assert.equal(entry.deadline, null);
   assert.deepEqual(entry.options, []);
@@ -87,7 +102,7 @@ test('journal : une ligne par note de quête, la plus récente en premier', () =
   const lines = pdaJournal(campaign);
   assert.equal(lines.length, campaign.journal.length);
   assert.equal(lines.at(-1).text, `Quête reçue : ${content.quests['ami-du-pont'].name}`);
-  assert.equal(lines.at(-2).text, `Nouvelle étape : ${content.quests['ami-du-pont'].name} · Explorer Pont`);
+  assert.equal(lines.at(-2).text, `Nouvelle étape : ${content.quests['ami-du-pont'].name} · Fouiller Pont (prochaine carte)`);
   assert.ok(lines[0].text.includes(content.quests['chiens-cordon'].name));
   assert.equal(lines[0].day, 1);
 });

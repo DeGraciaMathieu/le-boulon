@@ -23,7 +23,12 @@
 // RETOURS VISUELS (effets-view.js, carte 32) : joués après chaque rendu, à partir des événements
 // du step ; l'ambiance d'Émission suit la campagne à chaque rendu.
 //
+// OBJECTIF (objectif.js) : encart en haut du panneau, la quête suivie et sa cible ; un clic
+// met en évidence l'hexagone cible sur la tuile, ou la carte du monde si la cible est ailleurs.
+// Marqueur « ! » sur le donneur de la quête principale tant qu'elle n'est pas prise.
+//
 // DÉMARRAGE : écran titre ; ?seed=<entier> dans l'adresse lance tout de suite une partie normale.
+// Une nouvelle campagne s'ouvre sur l'écran d'introduction (3 phrases).
 
 import { createCampaign, step, dayState } from '../engine/campaign.js';
 import { travelTarget } from '../engine/rules/world.js';
@@ -47,6 +52,7 @@ import { combatLine } from './combat-screen.js';
 import { mountPda } from './pda-view.js';
 import { mountInventory } from './inventory-view.js';
 import { PDA_LINES } from './pda.js';
+import { INTRO_LINES, objectiveFocus, giverMarkers } from './objectif.js';
 import { INVENTORY_LINES } from './inventory.js';
 import { deathView } from '../engine/rules/death.js';
 import { canManualSave } from '../engine/rules/save.js';
@@ -108,6 +114,7 @@ const hubSection = document.getElementById('hub');
 const worldSvg = document.getElementById('monde');
 const bar = document.getElementById('bandeau');
 const commandsPanel = document.getElementById('commandes');
+const objectivePanel = document.getElementById('objectif');
 const savePanel = document.getElementById('sauvegarde');
 const layerSection = document.getElementById('ecran');
 const journal = document.getElementById('journal');
@@ -125,7 +132,7 @@ let campaign;
 let board;
 let sizes;
 let lastEvents = [];
-// Écran de la couche choisi par l'interface : { kind: 'title', error? } | { kind: 'camp' }
+// Écran de la couche choisi par l'interface : { kind: 'intro' } | { kind: 'title', error? } | { kind: 'camp' }
 // | { kind: 'wake', report } | { kind: 'ending' } ; la nuit et la mort viennent de la campagne.
 let layer = null;
 // Événements depuis le dernier réveil : le résumé de la journée à l'écran nuit.
@@ -168,6 +175,7 @@ function renderTable() {
   renderPlace(placeSection, campaign, { tile, size: sizes[campaign.world.currentTile], dispatch });
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   renderBar();
+  renderObjective();
   renderCommands(day);
   renderSaves();
   const inHub = campaign.screen === 'hub';
@@ -214,6 +222,34 @@ function renderTileMarks(day) {
     el('path', { d: `M${x + calage.taille * 0.45},${y - s - calage.taille * 0.2} l${s},${s} l${-s},${s} l${-s},${-s} z` }, group);
     el('title', {}, group).textContent = marker.name;
   }
+  for (const giver of giverMarkers(campaign)) {
+    const { x, y } = hexCenter(giver.hex, calage);
+    const group = el('g', { class: 'marqueur-donneur' }, board.marks);
+    el('circle', { cx: x - calage.taille * 0.45, cy: y - calage.taille * 0.38, r: calage.taille * 0.16 }, group);
+    const mark = el('text', { x: x - calage.taille * 0.45, y: y - calage.taille * 0.38, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': calage.taille * 0.24 }, group);
+    mark.textContent = '!';
+    el('title', {}, group).textContent = `${giver.name} a du travail`;
+  }
+}
+
+function renderObjective() {
+  const focus = objectiveFocus(campaign);
+  const target = focus.target && h('div', { className: 'objectif-cible', textContent: `Cible : ${focus.target}${focus.here ? '' : ' · autre tuile'}` });
+  objectivePanel.replaceChildren(h('button', { type: 'button', className: 'objectif-encart', title: 'Montrer la cible', onclick: () => showTarget(focus) },
+    h('span', { className: 'objectif-titre', textContent: `Objectif · ${focus.title}` }),
+    h('span', { className: 'objectif-etape', textContent: focus.step }),
+    target));
+}
+
+// Met en évidence la cible un court instant : son hexagone sur la tuile, sinon la carte du monde.
+function showTarget(focus) {
+  const polygon = focus.here && focus.hex && board.grid.querySelector(`[data-hex="${focus.hex}"]`);
+  const node = polygon || (focus.tile ? worldSvg : null);
+  if (!node) return;
+  node.classList.remove('repere');
+  node.getBoundingClientRect();
+  node.classList.add('repere');
+  setTimeout(() => node.classList.remove('repere'), 2000);
 }
 
 function renderBar() {
@@ -263,7 +299,12 @@ function renderCommands(day) {
       enter.disabled = !option.enabled;
       lines.push(enter);
     }
-    for (const npc of npcsHere(campaign)) lines.push(button(`Parler à ${npc.name}`, { type: 'talk', npc: npc.id }));
+    const givers = giverMarkers(campaign).map((giver) => giver.npc);
+    for (const npc of npcsHere(campaign)) {
+      const talk = button(`${givers.includes(npc.id) ? '! ' : ''}Parler à ${npc.name}`, { type: 'talk', npc: npc.id });
+      if (givers.includes(npc.id)) talk.classList.add('donneur');
+      lines.push(talk);
+    }
     const token = tokenAt(day, day.player.hex);
     if (token?.revealed && token.kind === 'artefact') lines.push(button('Ramasser (1 PA)', { type: 'pickup' }));
     lines.push(...useButtons(button));
@@ -304,6 +345,7 @@ function renderLayer() {
 }
 
 function chooseLayer() {
+  if (layer?.kind === 'intro') return () => renderIntro(layerSection);
   if (layer?.kind === 'title') return () => renderTitle(layerSection, { slots: titleSlots(saves.list()), error: layer.error }, titleHandlers);
   const death = deathView(campaign);
   if (death) return () => renderDeath(layerSection, death, deathCause, { respawn: () => dispatch({ type: 'respawn' }), title: () => showLayer({ kind: 'title' }) });
@@ -313,6 +355,14 @@ function chooseLayer() {
   if (layer?.kind === 'camp') return () => renderCamp(layerSection, campPreview(campaign), { confirm: () => { layer = null; dispatch({ type: 'camp' }); }, cancel: () => showLayer(null) });
   if (layer?.kind === 'wake') return () => renderWake(layerSection, layer.report, { close: () => showLayer(null) });
   return null;
+}
+
+function renderIntro(section) {
+  section.dataset.ecran = 'intro';
+  section.replaceChildren(h('div', { className: 'ecran-carte ecran-intro' },
+    h('h2', { textContent: `Jour ${campaign.day} · ${tileName(campaign.world.currentTile)}` }),
+    ...INTRO_LINES.map((text) => h('p', { textContent: text })),
+    h('div', { className: 'ecran-boutons' }, h('button', { type: 'button', id: 'entrer-zone', textContent: 'Entrer dans la Zone', onclick: () => showLayer(null) }))));
 }
 
 function showLayer(next) {
@@ -325,6 +375,7 @@ const titleHandlers = {
     const seed = seedText.trim() ? parseSeed(seedText) : randomSeed();
     if (seed === null) return showLayer({ kind: 'title', error: 'graine invalide : un entier de 0 à 4294967295' });
     start(createCampaign({ seed, mode }));
+    showLayer({ kind: 'intro' });
   },
   load(slot) {
     const loaded = saves.load(slot);
