@@ -9,8 +9,12 @@
 // En attendant la carte 5, la seule tuile est l'Agroprom de la v1, importée telle quelle :
 // src/engine/data/agroprom.js reste en place pour l'interface et le banc v1.
 
-import agroprom from '../engine/data/agroprom.js';
+// Format de chaque collection et test de cohérence : src/content/validate.js.
+// deepFreeze gèle aussi les hexagones d'Agroprom, que la v1 ne gelait qu'en surface.
 
-export default Object.freeze({
-  tiles: Object.freeze({ agroprom }),
+import agroprom from '../engine/data/agroprom.js';
+import { deepFreeze } from './freeze.js';
+
+export default deepFreeze({
+  tiles: { agroprom },
 });
