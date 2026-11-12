@@ -104,7 +104,7 @@ function fixture() {
       },
       'rencontres-cordon': {
         kind: 'rencontres', tile: 'cordon',
-        cards: [{ id: 'chiens', name: 'Chiens aveugles', threat: 3, wounds: 1 }],
+        cards: [{ id: 'chiens', name: 'Chiens aveugles', threat: 3, wounds: 1, type: 'mutant' }],
       },
     },
     perks: {
@@ -334,6 +334,15 @@ test('paquets : le paquet de rencontres d’une tuile existe et ses cartes ont n
   }));
   hasError(errors, /^tiles\.decharge\.encounters : paquet inconnu « rencontres-decharge »/);
   hasError(errors, /^decks\.rencontres-cordon\.cards\[0\]\.threat : 0 n'est pas un entier positif/);
+});
+
+test('paquets : une carte de rencontre porte un type d’ennemi connu', () => {
+  const errors = checkDecks(broken((c) => {
+    c.decks['rencontres-cordon'].cards.push({ id: 'pillard', name: 'Pillard', threat: 2, wounds: 1 });
+    c.decks['rencontres-cordon'].cards[0].type = 'robot';
+  }));
+  hasError(errors, /^decks\.rencontres-cordon\.cards\[0\]\.type : type d'ennemi inconnu « robot »/);
+  hasError(errors, /^decks\.rencontres-cordon\.cards\[1\]\.type : type d'ennemi inconnu « undefined »/);
 });
 
 test('butin : niveau 1-4, poids positifs, niveau de la table = niveau de la tuile du lieu', () => {

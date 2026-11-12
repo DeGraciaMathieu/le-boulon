@@ -15,7 +15,8 @@
 //   checkDialogues   liens vers des nœuds connus, aucun nœud orphelin
 //   checkDecks       genres et types de cartes connus, 4 à 10 cartes par paquet d'exploration,
 //                    paquet d'un lieu = paquet d'exploration de ce lieu, occupants tirés du
-//                    paquet de rencontres de la tuile, tables de butin au niveau de la tuile
+//                    paquet de rencontres de la tuile, type d'ennemi de chaque rencontre,
+//                    tables de butin au niveau de la tuile
 //   checkTraders     marchand au comptoir de son hub, stock, rangs et répliques connus ; un
 //                    marchand par hub qui offre le service 'marchand'
 //   checkContracts   type connu, délai [min, max], hubs à contrats, objet de livraison et de
@@ -103,7 +104,7 @@
 //       'exploration', 4 à 10 cartes en comptant les exemplaires (§5.1). Carte 'occupant' :
 //       encounter = id d'une carte du paquet de rencontres de la tuile du lieu.
 //       Paquet de rencontres (paquets/rencontres-<tuile>.js) : kind 'rencontres', tile, cartes
-//       { id, name, threat, wounds, hp?, damage?, type?, faction?, trophy?, count? } (en-tête
+//       { id, name, threat, wounds, type, hp?, damage?, faction?, trophy?, count? } (en-tête
 //       de src/content/paquets/rencontres-agroprom.js).
 //   perks (savoir-faire.js, §11.2) { [perkId]: { name, effect } }
 //   traders (marchands.js, §6.2) { [traderId]: { npc, place, coefficient, sell?, stock: [{ item,
@@ -135,6 +136,9 @@ export const TERRAINS = Object.freeze(['route', 'herbe', 'foret', 'marais', 'bat
 export const QUEST_STATUSES = Object.freeze(['active', 'done', 'failed']);
 
 export const DECK_KINDS = Object.freeze(['zone', 'nuit', 'meteo', 'rencontres', 'exploration']);
+
+// §13 : seuls les humains parlementent ; les mutants laissent des trophées.
+export const ENEMY_TYPES = Object.freeze(['humain', 'mutant']);
 
 export const CARD_TYPES = Object.freeze([
   'butin', 'cache', 'anomalie', 'occupant', 'pnj', 'indice', 'passage', 'rien',
@@ -471,6 +475,9 @@ export function checkDecks(content) {
         if (typeof card.name !== 'string') errors.push(`${path}.cards[${i}].name : nom manquant`);
         positive(card.threat, `${path}.cards[${i}].threat`);
         positive(card.wounds, `${path}.cards[${i}].wounds`);
+        if (!ENEMY_TYPES.includes(card.type)) {
+          errors.push(`${path}.cards[${i}].type : type d'ennemi inconnu « ${card.type} »`);
+        }
       }
     });
     if (deck.kind === 'exploration') {
