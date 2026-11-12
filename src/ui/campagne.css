@@ -1,0 +1,132 @@
+/* Interface v2 (campagne.html) : bandeau du haut, liaisons et marqueurs de quête sur la tuile,
+   carte du monde. Palette et typographie de la v1 (board.css). */
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#bandeau {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 22px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--olive-sombre);
+  background: var(--pda);
+  font-size: 13px;
+}
+
+.bandeau-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.bandeau-valeur {
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--texte);
+}
+
+.bandeau-label {
+  color: var(--sauge);
+  text-transform: uppercase;
+}
+
+.bandeau-pa .bandeau-valeur {
+  font-size: 44px;
+  line-height: 1;
+  color: var(--ocre);
+}
+
+.bandeau-item.alerte .bandeau-valeur {
+  color: var(--alerte);
+}
+
+.bandeau-emission {
+  padding: 2px 8px;
+  border: 1px solid var(--emission);
+  color: var(--emission);
+  font-weight: bold;
+}
+
+#table.campagne {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+/* Tuile : liaisons et cibles de quête. */
+.hex.liaison {
+  stroke: var(--rouille);
+  stroke-width: 2;
+}
+
+.marques {
+  pointer-events: none;
+}
+
+.liaison text {
+  fill: var(--papier);
+  stroke: var(--pda);
+  stroke-width: 4;
+  paint-order: stroke;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.marqueur-quete path {
+  fill: var(--ocre);
+  stroke: var(--pda);
+  stroke-width: 2;
+}
+
+/* Carte du monde. */
+#monde {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+#monde .liaisons line {
+  stroke: var(--sauge-sombre);
+  stroke-width: 4;
+}
+
+.tuile-monde .cadre {
+  fill: none;
+  stroke: var(--olive-sombre);
+  stroke-width: 1.5;
+}
+
+.tuile-monde.inconnue image {
+  filter: grayscale(1) brightness(0.45);
+}
+
+.tuile-monde.courante .cadre {
+  stroke: var(--phosphore);
+  stroke-width: 3;
+}
+
+.tuile-monde text {
+  fill: var(--texte);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.tuile-monde.inconnue text {
+  fill: var(--sauge-sombre);
+}
+
+.pion-monde {
+  fill: var(--phosphore);
+  stroke: var(--pda);
+  stroke-width: 2;
+}
+
+#nouvelle {
+  margin-top: 14px;
+}
