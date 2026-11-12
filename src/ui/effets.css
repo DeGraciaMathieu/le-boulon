@@ -1,6 +1,6 @@
-/* Retours visuels de la campagne (effets-view.js) : transitions entre tuiles, révélation des
-   cartes de lieu, réveil, annonce globale de l'Émission, montée de rang. Palette et typographie
-   de terminal de la v1 (board.css). Rien ici ne capte la souris. */
+/* Retours visuels de la campagne (effets-view.js) : transitions entre tuiles, réveil, annonce
+   globale de l'Émission, montée de rang. Palette et typographie de terminal de la v1
+   (board.css). Rien ici ne capte la souris. */
 
 .effets {
   position: fixed;
@@ -42,18 +42,6 @@
   25% { opacity: 1; letter-spacing: 0.25em; }
   75% { opacity: 1; }
   100% { opacity: 0; }
-}
-
-/* Carte de lieu révélée : elle se retourne sur la pile. */
-.lieu-pile > li.fx-revele {
-  animation: revele 0.5s ease-out;
-  transform-origin: left center;
-}
-
-@keyframes revele {
-  0% { opacity: 0; transform: perspective(600px) rotateY(-80deg); background: var(--jeton); }
-  60% { opacity: 1; }
-  100% { transform: none; }
 }
 
 /* Réveil : l'écran sort du noir. */
@@ -191,7 +179,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   #plateau.fx-transition,
-  .lieu-pile > li.fx-revele,
   #ecran.fx-reveil .ecran-carte,
   .fx-compteur.tic,
   .bandeau-emission {

@@ -8,7 +8,7 @@
 //   renderTitle(section, { slots, error }, { start(mode, seedText), load(slot), import(file) })
 //   renderCamp(section, preview, { confirm(), cancel() })
 //   renderNight(section, night, summary, { wake() })
-//   renderWake(section, report, { close() })
+//   renderWake(section, report, { close() })   report.cards : cartes Nuit et Météo (cartes.js)
 //   renderDeath(section, death, cause, { respawn(), title() })
 //   renderEnding(section, ending, { close(), title() })
 
@@ -97,12 +97,23 @@ export function renderNight(section, night, summary, on) {
     h('div', { className: 'ecran-boutons' }, button('Se réveiller', on.wake, { id: 'reveil' })));
 }
 
+// Carte Nuit ou Météo du réveil (cartes.js wakeCards), à deux faces : cartes-view.js la retourne.
+function wakeCard({ kind, title, text }) {
+  return h('div', { className: `carte-reveil ${kind}` },
+    h('div', { className: 'carte-face' },
+      h('small', { textContent: kind === 'nuit' ? 'Carte Nuit' : 'Carte Météo' }),
+      h('b', { textContent: title }),
+      h('p', { textContent: text })),
+    h('div', { className: 'carte-dos', textContent: kind === 'nuit' ? 'Nuit' : 'Météo', ariaHidden: 'true' }));
+}
+
 export function renderWake(section, report, on) {
   card(section, 'reveil',
     h('h2', { textContent: `Jour ${report.day}` }),
-    report.night && line('Carte Nuit', report.night),
+    ...(report.cards?.length
+      ? [h('div', { className: 'cartes-reveil' }, ...report.cards.map(wakeCard))]
+      : [report.night && line('Carte Nuit', report.night), line('Météo', report.weather)]),
     report.fight && line('Combat de nuit', report.fight),
-    line('Météo', report.weather),
     report.meal
       ? line('Mangé au réveil', `${report.meal} (sans repas : faim, −${HUNGER_MALUS} PA)`)
       : line('Faim', `${report.hunger} jour(s) sans manger`, 'alerte'),

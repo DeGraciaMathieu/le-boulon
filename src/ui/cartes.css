@@ -1,0 +1,262 @@
+/* Cartes physiques (direction plateau, lot L5 ; cartes-view.js). Matière de la direction 1
+   « Table de l'abri » : dos hachuré olive, recto papier crème, ombre portée. Couleurs : variables
+   de theme-abri.css. */
+
+:root {
+  --carte-dos: repeating-linear-gradient(45deg, #3a4a2c 0 6px, #33422a 6px 12px);
+  --carte-recto: var(--papier-clair, #fbf3dc);
+  --carte-bord: #b9a77c;
+}
+
+/* ---------- Paquet Zone, posé dans le coin bas droit du plateau ---------- */
+
+#paquet-zone {
+  grid-area: plateau;
+  align-self: end;
+  justify-self: end;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
+  margin: 0 14px 14px 0;
+  pointer-events: none;
+}
+
+#paquet-zone[hidden] {
+  display: none;
+}
+
+#paquet-zone .paquet,
+#paquet-zone .defausse {
+  box-sizing: border-box;
+  width: 58px;
+  height: 82px;
+  border-radius: 5px;
+  font-size: 10px;
+  pointer-events: auto;
+}
+
+#paquet-zone .paquet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 5px;
+  background: var(--carte-dos);
+  color: var(--papier);
+  box-shadow: 1px 1px 0 #222, 3px 3px 0 #333, 5px 5px 7px rgb(0 0 0 / 0.5);
+  font-family: var(--titre);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+#paquet-zone .paquet small {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+#paquet-zone .defausse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgb(239 229 201 / 0.35);
+  color: rgb(239 229 201 / 0.6);
+}
+
+#paquet-zone .defausse .carte-face {
+  width: 100%;
+  height: 100%;
+  padding: 5px;
+  transform: rotate(-4deg);
+}
+
+#paquet-zone .defausse .carte-face b {
+  font-size: 11px;
+}
+
+/* ---------- Faces et cartes en vol ---------- */
+
+.carte-face {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--carte-bord);
+  border-radius: 6px;
+  background: var(--carte-recto);
+  box-shadow: 0 4px 8px rgb(0 0 0 / 0.4);
+  color: var(--encre);
+  font-size: 11px;
+  text-align: left;
+}
+
+.carte-face small {
+  color: var(--olive-encre);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.carte-face b {
+  font-family: var(--titre);
+  font-size: 15px;
+}
+
+.carte-face p {
+  margin: 0;
+}
+
+.carte-gain {
+  margin-top: auto;
+  color: var(--olive-encre);
+  font-weight: bold;
+}
+
+.carte-volante {
+  position: fixed;
+  z-index: 60;
+  box-sizing: border-box;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.carte-volante .carte-face {
+  height: 100%;
+}
+
+.carte-volante.dos {
+  border-radius: 6px;
+  background: var(--carte-dos);
+  box-shadow: 0 6px 10px rgb(0 0 0 / 0.5);
+}
+
+/* ---------- Écran Lieu : la pile en cartes posées ---------- */
+
+#lieu .lieu-table {
+  perspective: 900px;
+}
+
+#lieu .lieu-paquet .carte.dos {
+  border-radius: 6px;
+  background: var(--carte-dos);
+  box-shadow: 1px 1px 0 #222, 3px 3px 0 #333, 5px 5px 7px rgb(0 0 0 / 0.5);
+}
+
+#lieu .lieu-pile > li.carte {
+  border-radius: 5px;
+  box-shadow: 0 3px 6px rgb(0 0 0 / 0.35);
+}
+
+/* ---------- Réveil : cartes Nuit et Météo ---------- */
+
+.cartes-reveil {
+  display: flex;
+  gap: 12px;
+  margin: 8px 0;
+  perspective: 800px;
+}
+
+.carte-reveil {
+  position: relative;
+  flex: 1;
+  min-height: 92px;
+  transform-style: preserve-3d;
+  transition: transform 320ms ease-in-out;
+}
+
+.carte-reveil.face-cachee {
+  transform: rotateY(180deg);
+}
+
+.carte-reveil .carte-face,
+.carte-reveil .carte-dos {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.carte-reveil .carte-dos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--carte-dos);
+  color: var(--papier);
+  font-family: var(--titre);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  transform: rotateY(180deg);
+}
+
+.carte-reveil.meteo .carte-face {
+  border-left: 5px solid var(--ocre);
+}
+
+.carte-reveil.nuit .carte-face {
+  border-left: 5px solid var(--olive);
+}
+
+/* ---------- Carte de mission (encart Objectif) ---------- */
+
+.carte-mission {
+  position: relative;
+  border-radius: 4px;
+}
+
+.mission-ancienne {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  background: linear-gradient(var(--papier), var(--papier-ombre));
+  pointer-events: none;
+}
+
+.mission-ancienne .objectif-etape {
+  text-decoration: line-through;
+  text-decoration-color: var(--rouille-encre);
+}
+
+.tampon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  margin-top: -20px;
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--rouille-encre);
+  border-radius: 50%;
+  color: var(--rouille-encre);
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 34px;
+  text-align: center;
+  transform: rotate(-12deg);
+}
+
+/* ---------- Combat : carte de l'ennemi ---------- */
+
+.fenetre-combat .ennemis {
+  perspective: 700px;
+}
+
+.fenetre-combat .ennemi.abattu {
+  opacity: 1;
+  background: var(--carte-dos);
+  color: var(--papier);
+}
+
+.fenetre-combat .ennemi.abattu .ennemi-pv,
+.fenetre-combat .ennemi.abattu .ennemi-stats {
+  visibility: hidden;
+}
+
+.fenetre-combat .ennemi.abattu .ennemi-etat {
+  color: var(--papier);
+  font-family: var(--titre);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}

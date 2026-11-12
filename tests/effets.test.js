@@ -8,16 +8,14 @@ test('effets : un événement sans retour visuel ne donne rien', () => {
   assert.deepEqual(campaignEffects([{ type: 'moved', to: 3 }, { type: 'weather', card: 'pluie' }]), []);
 });
 
-test('effets : voyage, carte de lieu, réveil, rang, dans l’ordre des événements', () => {
+test('effets : voyage, réveil, rang, dans l’ordre des événements', () => {
   const effects = campaignEffects([
     { type: 'traveled', from: { tile: 'cordon' }, to: { tile: 'decharge' }, cost: 1, firstVisit: true },
-    { type: 'place-card', place: 'pont', card: 'x', cardType: 'butin', position: 1, zone: 'main' },
     { type: 'day-started', day: 3, ap: 12 },
     { type: 'rank-up', rank: 'experimente' },
   ]);
   assert.deepEqual(effects, [
     { kind: 'transition', tile: content.tiles.decharge.name, firstVisit: true },
-    { kind: 'card', cardType: 'butin' },
     { kind: 'wake', day: 3 },
     { kind: 'rank', rank: 'experimente', name: 'Expérimenté' },
   ]);
@@ -55,5 +53,7 @@ test('effets : eventEffect donne l’effet d’un seul événement, null sans re
   assert.deepEqual(eventEffect({ type: 'day-started', day: 2, ap: 12 }), { kind: 'wake', day: 2 });
   assert.equal(eventEffect({ type: 'weather', card: 'pluie' }), null);
   assert.equal(eventEffect({ type: 'moved', to: 3 }), null);
-  assert.ok(EFFECT_TYPES.includes('place-card'));
+  assert.ok(EFFECT_TYPES.includes('traveled'));
+  // La carte de lieu se joue en carte physique (cartes.js, lot L5).
+  assert.ok(!EFFECT_TYPES.includes('place-card'));
 });

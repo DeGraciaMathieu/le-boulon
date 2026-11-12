@@ -30,8 +30,11 @@
 // (barBeats de bar.js, dessinés par bar-view.js, lot L2). Pendant une séquence, tout clic ou toute
 // touche l'accélère et n'atteint pas le jeu : pas de seconde action avant la fin de la première.
 //
-// OBJECTIF (objectif.js) : encart en haut du panneau, la quête suivie et sa cible ; un clic
-// met en évidence l'hexagone cible sur la tuile, ou la carte du monde si la cible est ailleurs.
+// CARTES PHYSIQUES (cartes.js, cartes-view.js, lot L5) : paquet Zone posé sur le plateau, cartes
+// du lieu, du réveil et de l'ennemi qui sortent et se retournent ; pas insérés par cardBeats.
+//
+// OBJECTIF (objectif.js) : carte de mission (cartes-view.js) en haut du panneau, la quête suivie
+// et sa cible ; un clic met en évidence l'hexagone cible sur la tuile, ou la carte du monde si la cible est ailleurs.
 // Marqueur « ! » sur le donneur de la quête principale tant qu'elle n'est pas prise.
 //
 // DÉMARRAGE : écran titre ; ?seed=<entier> dans l'adresse lance tout de suite une partie normale.
@@ -70,6 +73,8 @@ import { readMotion, saveMotion, applyMotion } from './animations.js';
 import { createSequencer } from './sequencer.js';
 import { mountBar } from './bar-view.js';
 import { barSnapshot, barBeats } from './bar.js';
+import { mountCards } from './cartes-view.js';
+import { cardBeats, wakeCards } from './cartes.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -98,8 +103,9 @@ const pda = mountPda(document.getElementById('pda'), document.getElementById('ou
   drawWorld: (svg, current) => renderWorld(svg, current, { tiles: content.tiles, sizes }),
 });
 const sequencer = createSequencer();
-const effects = mountEffects({ plateau, place: placeSection, layer: layerSection, sequencer });
+const effects = mountEffects({ plateau, layer: layerSection, sequencer });
 const barView = mountBar(bar, sequencer);
+const cards = mountCards({ table, place: placeSection, layer: layerSection, objective: objectivePanel, sequencer });
 const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
@@ -155,6 +161,7 @@ function renderTable() {
   renderPlace(placeSection, campaign, { tile, size: sizes[campaign.world.currentTile], dispatch, events: lastEvents });
   renderWorld(worldSvg, campaign, { tiles: content.tiles, sizes });
   barView.render(campaign);
+  cards.render(campaign, lastEvents);
   renderObjective();
   renderCommands(day);
   renderSaves();
@@ -214,11 +221,7 @@ function renderTileMarks(day) {
 
 function renderObjective() {
   const focus = objectiveFocus(campaign);
-  const target = focus.target && h('div', { className: 'objectif-cible', textContent: `Cible : ${focus.target}${focus.here ? '' : ' · autre tuile'}` });
-  objectivePanel.replaceChildren(h('button', { type: 'button', className: 'objectif-encart', title: 'Montrer la cible', onclick: () => showTarget(focus) },
-    h('span', { className: 'objectif-titre', textContent: `Objectif · ${focus.title}` }),
-    h('span', { className: 'objectif-etape', textContent: focus.step }),
-    target));
+  cards.renderMission(focus, () => showTarget(focus));
 }
 
 // Met en évidence la cible un court instant : son hexagone sur la tuile, sinon la carte du monde.
@@ -420,8 +423,8 @@ const titleHandlers = {
 function afterStep(events, rest) {
   const wake = wakeReport([...dayEvents, ...events], { campaign, rest });
   if (wake) {
+    layer = { kind: 'wake', report: { ...wake, cards: wakeCards([...dayEvents, ...events]) } };
     dayEvents = [];
-    layer = { kind: 'wake', report: wake };
     report(saves.autosave(campaign), 'Sauvegarde automatique');
   } else {
     dayEvents.push(...events);
@@ -483,7 +486,7 @@ function dispatch(action) {
   appendEvents(result.events);
   afterStep(result.events, rest);
   render();
-  sequencer.play(barBeats(result.events, before, barSnapshot(campaign)));
+  sequencer.play(cardBeats(barBeats(result.events, before, barSnapshot(campaign))));
 }
 
 // Pendant une séquence, un clic ou une touche l'accélère et s'arrête là (phase de capture).
@@ -593,6 +596,7 @@ function start(loaded) {
   targeting = false;
   sequencer.skip();
   effects.reset();
+  cards.reset();
   render();
 }
 
