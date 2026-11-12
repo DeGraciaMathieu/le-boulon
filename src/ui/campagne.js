@@ -27,8 +27,10 @@
 //
 // SÉQUENCEUR (sequencer.js, lot L1) : l'état final est rendu d'abord, puis le séquenceur joue les
 // animations des événements du step l'une après l'autre, avec les pas du bandeau en pistes
-// (barBeats de bar.js, dessinés par bar-view.js, lot L2). Pendant une séquence, tout clic ou toute
-// touche l'accélère et n'atteint pas le jeu : pas de seconde action avant la fin de la première.
+// (barBeats de bar.js, dessinés par bar-view.js, lot L2). Les jets roulent dans le bac à dés
+// (bac-view.js, lot L3), au-dessus de « Ici » ; la fenêtre de combat l'accueille pendant un combat.
+// Pendant une séquence, tout clic ou toute touche l'accélère et n'atteint pas le jeu : pas de
+// seconde action avant la fin de la première.
 //
 // OBJECTIF (objectif.js) : encart en haut du panneau, la quête suivie et sa cible ; un clic
 // met en évidence l'hexagone cible sur la tuile, ou la carte du monde si la cible est ailleurs.
@@ -70,6 +72,7 @@ import { readMotion, saveMotion, applyMotion } from './animations.js';
 import { createSequencer } from './sequencer.js';
 import { mountBar } from './bar-view.js';
 import { barSnapshot, barBeats } from './bar.js';
+import { mountDiceTray } from './bac-view.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -100,6 +103,7 @@ const pda = mountPda(document.getElementById('pda'), document.getElementById('ou
 const sequencer = createSequencer();
 const effects = mountEffects({ plateau, place: placeSection, layer: layerSection, sequencer });
 const barView = mountBar(bar, sequencer);
+const diceTray = mountDiceTray(document.getElementById('bac-place'), sequencer);
 const inventory = mountInventory(document.getElementById('inventaire'), document.getElementById('ouvrir-inventaire'), { dispatch });
 
 let campaign;
@@ -593,11 +597,12 @@ function start(loaded) {
   targeting = false;
   sequencer.skip();
   effects.reset();
+  diceTray.reset();
   render();
 }
 
 const dialogueWindow = mountDialogue({ onChoose: dispatch });
-const combatWindow = mountCombat({ onAction: dispatch, onClose: finishNightFight });
+const combatWindow = mountCombat({ onAction: dispatch, onClose: finishNightFight, tray: diceTray });
 
 document.getElementById('nouvelle').addEventListener('click', () => showLayer({ kind: 'title' }));
 
