@@ -8,7 +8,9 @@
 //   clic sur un voisin     { type: 'move', to } ;
 //   clic sur le pion       { type: 'enter-place', place } si le pion est sur un lieu explorable,
 //                          sinon { type: 'travel' } (hexagone de liaison) ;
-//   clic droit             { type: 'bolt', target }.
+//   clic droit             { type: 'bolt', target } ;
+//   bouton Boulon          mode ciblage : les voisins s'allument, clic sur l'un d'eux = boulon,
+//                          ailleurs ou Échap = annuler.
 //
 // ÉCRANS : la tuile, le lieu (place-view.js, carte 25) et l'écran Hub de hub-view.js à la
 // place du plateau pendant une visite ; par-dessus, les fenêtres Dialogue (dialogue-window.js,
@@ -28,10 +30,12 @@
 import { createCampaign, step, dayState } from '../engine/campaign.js';
 import { travelTarget } from '../engine/rules/world.js';
 import { entryCost } from '../engine/actions/move.js';
-import { tokenAt } from '../engine/rules/suspects.js';
+import { tokenAt, BOLT_COST } from '../engine/rules/suspects.js';
+import { countCharges } from '../engine/rules/sheet.js';
 import { encounterCards } from '../engine/rules/tile.js';
 import content from '../content/index.js';
-import { mountBoard, renderBoard, reachableHexes, el } from './board.js';
+import { mountBoard, renderBoard, reachableHexes, boltTargets, el } from './board.js';
+import { hexWarnings } from './hex-hints.js';
 import { hexCenter } from './geometry.js';
 import { describeEvent, ITEM_NAMES } from './journal.js';
 import { linkExits, tileQuestMarkers, topBar } from './world-map.js';
@@ -131,6 +135,8 @@ let layer = null;
 // Événements depuis le dernier réveil : le résumé de la journée à l'écran nuit.
 let dayEvents = [];
 let deathCause = null;
+// Mode ciblage du bouton Boulon : le prochain clic sur un voisin lance le boulon.
+let targeting = false;
 
 function loadSize(src) {
   return new Promise((resolve, reject) => {
@@ -160,7 +166,7 @@ function render() {
 function renderTable() {
   const day = dayState(campaign);
   if (board?.tileId !== campaign.world.currentTile) mountTile(campaign.world.currentTile);
-  renderBoard(board, day);
+  renderBoard(board, day, { targeting });
   renderTileMarks(day);
   renderPlaceMarks(board, campaign);
   table.dataset.screen = campaign.screen;
@@ -266,15 +272,33 @@ function renderCommands(day) {
     for (const npc of npcsHere(campaign)) lines.push(button(`Parler à ${npc.name}`, { type: 'talk', npc: npc.id }));
     const token = tokenAt(day, day.player.hex);
     if (token?.revealed && token.kind === 'artefact') lines.push(button('Ramasser (1 PA)', { type: 'pickup' }));
+    lines.push(boltButton(day));
     lines.push(...useButtons(button));
     const target = travelTarget(campaign);
     if (target) lines.push(button(`Passer à ${tileName(target.tile)} (1 PA)`, { type: 'travel' }));
     const hub = hubAt(campaign);
     if (hub) lines.push(button(`Entrer : ${content.places[hub].name}`, { type: 'enter-hub' }));
     lines.push(h('button', { type: 'button', id: 'finir', textContent: 'Finir la journée', onclick: () => showLayer({ kind: 'camp' }) }));
-    lines.push(h('div', { className: 'aide', textContent: 'Clic : se déplacer · clic sur le pion : entrer dans le lieu ou voyager · clic droit : boulon' }));
+    const help = targeting
+      ? 'Boulon : cliquez un hexagone voisin · Échap : annuler'
+      : 'Clic : se déplacer · clic sur le pion : entrer dans le lieu ou voyager · clic droit : boulon';
+    lines.push(h('div', { className: 'aide', textContent: help }));
   }
   commandsPanel.replaceChildren(...lines);
+}
+
+// Bouton Boulon : bascule le mode ciblage ; grisé sans boulon ou sans PA.
+function boltButton(day) {
+  const count = countCharges(day.inventory, 'boulons');
+  const label = targeting ? 'Annuler le boulon' : `Boulon (${BOLT_COST} PA) · ${count} restant${count > 1 ? 's' : ''}`;
+  const node = h('button', { type: 'button', className: `boulon${targeting ? ' actif' : ''}`, textContent: label, onclick: () => setTargeting(!targeting) });
+  node.disabled = !targeting && (count === 0 || day.ap.left < BOLT_COST);
+  return node;
+}
+
+function setTargeting(next) {
+  targeting = next;
+  render();
 }
 
 function useButtons(button) {
@@ -377,6 +401,7 @@ function appendLine(text, type) {
 }
 
 function dispatch(action) {
+  targeting = false;
   const result = step(campaign, action);
   campaign = result.state;
   lastEvents = result.events;
@@ -391,7 +416,7 @@ const hexOf = (event) => Number(event.target.closest('[data-hex]')?.dataset.hex)
 function describeHex(n) {
   const day = dayState(campaign);
   const hex = day.tile.hexes[n];
-  const lines = [`Hexagone ${n} · ${TERRAINS[hex.terrain]}`];
+  const lines = [TERRAINS[hex.terrain]];
   if (hex.lieu) lines.push(`${hex.lieu}${hex.abri ? ' · abri' : ''}`);
   const exit = linkExits(campaign.world.currentTile).find((link) => link.hex === n);
   if (exit) lines.push(`Liaison vers ${exit.name} (1 PA)`);
@@ -399,10 +424,14 @@ function describeHex(n) {
   const place = tilePlaces(campaign).find((entry) => entry.hex === n);
   if (place) lines.push(placeLine(place));
 
-  if (n === campaign.world.hex) {
+  lines.push(...hexWarnings(day, n));
+
+  if (targeting) {
+    lines.push(boltTargets(day).includes(n) ? 'Clic : lancer le boulon ici' : 'Hors de portée du boulon');
+  } else if (n === campaign.world.hex) {
     lines.push(pawnHint(place, exit));
   } else if (reachableHexes(day).includes(n)) {
-    const cost = entryCost(hex);
+    const cost = entryCost(hex, day);
     lines.push(`Coût : ${cost} PA · reste ${day.ap.left - cost} PA`);
   } else {
     lines.push('Hors de portée');
@@ -437,9 +466,18 @@ plateau.addEventListener('mouseleave', () => { preview.hidden = true; });
 
 plateau.addEventListener('click', (event) => {
   const n = hexOf(event);
+  if (targeting) {
+    if (n && boltTargets(dayState(campaign)).includes(n)) dispatch({ type: 'bolt', target: n });
+    else setTargeting(false);
+    return showPreview(event);
+  }
   if (!n) return;
   dispatch(n === campaign.world.hex ? pawnAction() : { type: 'move', to: n });
   showPreview(event);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && targeting) setTargeting(false);
 });
 
 // Sur un lieu explorable, le pion y entre ; sinon il voyage (liaison).
@@ -462,6 +500,7 @@ function start(loaded) {
   layer = null;
   dayEvents = [];
   deathCause = null;
+  targeting = false;
   effects.reset();
   render();
 }

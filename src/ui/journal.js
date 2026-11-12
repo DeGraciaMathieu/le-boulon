@@ -2,6 +2,7 @@
 // Lecture seule : describeEvent ne touche jamais l'état.
 
 import { ENCOUNTER_CARDS } from '../engine/rules/encounters.js';
+import { tileArea, towards } from './hex-hints.js';
 
 export const ITEM_NAMES = {
   pistolet: 'Pistolet', munitions: 'Munitions', boulons: 'Boulons', bandage: 'Bandage',
@@ -67,7 +68,7 @@ function progressText(kind, progress) {
 }
 
 const LINES = {
-  moved: (e) => `Déplacement ${e.from} → ${e.to} (${e.cost} PA)`,
+  moved: (e) => `Déplacement ${towards(e.from, e.to)} (${e.cost} PA)`,
   check: (e) => `Test de ${STAT_NAMES[e.stat] ?? e.stat} : ${e.roll} ${signed(e.bonus)} = ${e.roll + e.bonus} / ${e.target} · ${e.success ? 'réussi' : 'raté'}`,
   wounded: (e) => `+${e.amount} blessure${e.amount > 1 ? 's' : ''} (${cause(e.cause)})`,
   irradiated: (e) => `+${e.amount} radiation${e.amount > 1 ? 's' : ''} (${cause(e.cause)})`,
@@ -75,29 +76,29 @@ const LINES = {
   died: (e) => `Mort (${cause(e.cause)})`,
   'item-removed': (e) => `${ITEM_NAMES[e.kind] ?? e.kind} détruit (${cause(e.cause)})`,
   used: (e) => `${ITEM_NAMES[e.item]} utilisé${e.item === 'vodka' || e.item === 'ration' ? 'e' : ''}${e.wounds ? ` · blessures ${e.wounds}` : ''}${e.radiation ? ` · radiations ${e.radiation}` : ''}`,
-  exited: (e) => `Sortie de la tuile par l'hexagone ${e.hex}`,
+  exited: (e) => `Sortie de la tuile (${tileArea(e.hex)})`,
   'day-ended': () => 'Plus de PA : la nuit tombe',
   refused: (e) => `Refusé : ${REFUSALS[e.reason] ?? e.reason}`,
-  'token-revealed': (e) => `Jeton de l'hexagone ${e.hex} révélé${e.by === 'bolt' ? ' au boulon' : e.by === 'detector' ? ' par le détecteur' : ''} : ${tokenName(e)}`,
+  'token-revealed': (e) => `Jeton révélé (${tileArea(e.hex)})${e.by === 'bolt' ? ' au boulon' : e.by === 'detector' ? ' par le détecteur' : ''} : ${tokenName(e)}`,
   'anomaly-avoided': (e) => `Anomalie ${ANOMALY_NAMES[e.anomaly]} évitée`,
   'anomaly-triggered': (e) => `Anomalie ${ANOMALY_NAMES[e.anomaly]} déclenchée !`,
   'detector-broken': () => 'Détecteur en panne',
-  thrown: (e) => `Projeté de ${e.from} vers ${e.to}`,
-  'bolt-thrown': (e) => `Boulon lancé sur l'hexagone ${e.target}`,
+  thrown: (e) => `Projeté ${towards(e.from, e.to)}`,
+  'bolt-thrown': (e) => `Boulon lancé (${tileArea(e.target)})`,
   'artefact-picked': (e) => `Artefact ramassé (${e.value} ₽)`,
   'pickup-failed': () => "Ramassage raté, l'artefact reste en place",
-  'encounter-avoided': (e) => `Rencontre contournée (hexagone ${e.hex})`,
+  'encounter-avoided': (e) => `Rencontre contournée (${tileArea(e.hex)})`,
   'encounter-revealed': (e) => `Rencontre : ${cardName(e.card)} (Menace ${ENCOUNTER_CARDS[e.card]?.threat}) · combat !`,
   fight: (e) => `Combat contre ${cardName(e.card)} : ${e.roll} + Tir ${e.tir} ${signed(e.weapon)} arme ${signed(e.cover)} couvert = ${e.total} / ${e.threat} · ${e.won ? 'victoire' : 'défaite'}`,
   'encounter-removed': (e) => `${cardName(e.card)} écarté`,
-  fled: (e) => `Fuite ${e.from} → ${e.to} (${e.cost} PA)`,
+  fled: (e) => `Fuite ${towards(e.from, e.to)} (${e.cost} PA)`,
   'zone-card': (e) => `Carte Zone : ${ZONE_CARD_NAMES[e.card] ?? e.card}`,
-  patrol: (e) => `Une patrouille passe de ${e.from} à ${e.to}`,
-  'dogs-placed': (e) => (e.hex ? `Des chiens rôdent sur l'hexagone ${e.hex}` : 'Des chiens au loin, sans place pour approcher'),
+  patrol: (e) => `Une patrouille passe : ${tileArea(e.from)} → ${tileArea(e.to)}`,
+  'dogs-placed': (e) => (e.hex ? `Des chiens rôdent (${tileArea(e.hex)})` : 'Des chiens au loin, sans place pour approcher'),
   'cache-found': (e) => `Cachette : ${ITEM_NAMES[e.item]}${e.stored ? '' : ' perdu, inventaire plein'}`,
   'emission-started': (e) => `ÉMISSION ! ${e.apLeftToShelter} PA pour rejoindre un abri`,
   'emission-countdown': (e) => `Émission : ${e.left} PA avant l'impact`,
-  'emission-survived': (e) => `Émission passée à l'abri (hexagone ${e.hex})`,
+  'emission-survived': () => "Émission passée à l'abri",
   'emission-caught': () => "Pris par l'Émission",
   'suspects-reset': () => 'La Zone a changé : 5 nouveaux jetons suspects',
   'mission-assigned': (e) => `Mission du jour : ${MISSION_NAMES[e.kind]} (${progressText(e.kind, e.progress)})`,

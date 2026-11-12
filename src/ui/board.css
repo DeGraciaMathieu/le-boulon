@@ -68,14 +68,42 @@ body {
 }
 
 .hex.atteignable {
-  fill: rgba(214, 196, 92, 0.18);
+  fill: rgba(227, 207, 106, 0.28);
   stroke: var(--ocre);
-  stroke-width: 2.5;
+  stroke-width: 5;
   cursor: pointer;
 }
 
 .hex.atteignable:hover {
-  fill: rgba(214, 196, 92, 0.35);
+  fill: rgba(227, 207, 106, 0.45);
+}
+
+/* Mode ciblage du boulon : les voisins que le boulon peut viser. */
+.hex.cible {
+  fill: rgba(127, 214, 255, 0.22);
+  stroke: var(--electro);
+  stroke-width: 5;
+  stroke-dasharray: 12 6;
+  cursor: crosshair;
+}
+
+.hex.cible:hover {
+  fill: rgba(127, 214, 255, 0.42);
+}
+
+.couts {
+  pointer-events: none;
+}
+
+.cout rect {
+  fill: rgba(16, 20, 12, 0.88);
+  stroke: var(--ocre);
+  stroke-width: 2;
+}
+
+.cout text {
+  fill: var(--ocre);
+  font: bold 15px var(--mono);
 }
 
 .hex.sortie {
@@ -276,6 +304,15 @@ button {
 
 button:hover {
   background: var(--ocre);
+}
+
+button.boulon.actif {
+  background: var(--electro);
+}
+
+#commandes button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .aide {
