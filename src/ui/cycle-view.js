@@ -5,7 +5,8 @@
 // ni le stockage. campagne.js choisit l'écran à montrer.
 //
 // API (section : l'élément #ecran ; on : gestionnaires de l'écran) :
-//   renderTitle(section, { slots, error }, { start(mode, seedText), load(slot), import(file) })
+//   renderTitle(section, { slots, error, motion, tutorial }, { start(mode, seedText), load(slot), import(file),
+//     motion(mode), tutorial(on) })   tutorial : case « Tutoriel » d'une nouvelle partie
 //   renderCamp(section, preview, { confirm(), cancel() })
 //   renderNight(section, night, summary, { wake() })
 //   renderWake(section, report, { close() })
@@ -40,7 +41,9 @@ function card(section, kind, ...children) {
   section.replaceChildren(h('div', { className: `ecran-carte ecran-${kind}` }, ...children));
 }
 
-export function renderTitle(section, { slots, error, motion }, on) {
+export function renderTitle(section, { slots, error, motion, tutorial }, on) {
+  const tutorialBox = h('input', { type: 'checkbox', id: 'tutoriel', checked: tutorial });
+  tutorialBox.addEventListener('change', () => on.tutorial(tutorialBox.checked));
   const seed = h('input', { type: 'text', inputMode: 'numeric', placeholder: 'au hasard', id: 'graine', size: 12 });
   const file = h('input', { type: 'file', accept: 'application/json,.json', id: 'importer' });
   file.addEventListener('change', () => file.files[0] && on.import(file.files[0]));
@@ -49,6 +52,7 @@ export function renderTitle(section, { slots, error, motion }, on) {
     h('p', { className: 'ecran-sous-titre', textContent: 'Campagne dans la Zone' }),
     h('h2', { textContent: 'Nouvelle partie' }),
     h('label', { className: 'ecran-graine' }, 'Graine ', seed),
+    h('label', { className: 'ecran-tutoriel' }, tutorialBox, ' Tutoriel : le jour 1 pas à pas'),
     h('div', { className: 'ecran-boutons' },
       button('Normal', () => on.start('normal', seed.value), { id: 'nouvelle-normal' }),
       button('Hardcore', () => on.start('hardcore', seed.value), { id: 'nouvelle-hardcore' })),

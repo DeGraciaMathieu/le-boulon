@@ -49,6 +49,11 @@
 // la première règle rencontrée et jamais montrée se dit dans une bulle ; jamais pendant une
 // séquence, ni sous un écran de la couche, le PDA ou l'Inventaire.
 //
+// TUTORIEL (tutoriel.js, tutoriel-view.js, lot L8) : six étapes du jour 1 dites dans les bulles,
+// validées par les événements du step. Proposé à une nouvelle partie de l'écran titre (case
+// « Tutoriel »), jamais avec ?seed= ni au chargement ; l'onglet Aide du PDA le relance. Pendant
+// une étape, les bulles L7 qui la doublonnent se taisent.
+//
 // DÉMARRAGE : écran titre ; ?seed=<entier> dans l'adresse lance tout de suite une partie normale.
 // Une nouvelle campagne s'ouvre sur l'écran d'introduction (3 phrases).
 
@@ -92,6 +97,8 @@ import { mountBoardMotion } from './plateau-view.js';
 import { boardBeats } from './plateau.js';
 import { eventWhy, trackCauses } from './pourquoi.js';
 import { mountBubbles } from './bulles-view.js';
+import { mountTutorial } from './tutoriel-view.js';
+import { readSetting, saveSetting } from './tutoriel.js';
 import { renderTitle, renderCamp, renderNight, renderWake, renderDeath, renderEnding } from './cycle-view.js';
 
 const TERRAINS = { route: 'Route', herbe: 'Herbe', foret: 'Forêt', marais: 'Marais', batiment: 'Bâtiment' };
@@ -119,9 +126,17 @@ const pda = mountPda(document.getElementById('pda'), document.getElementById('ou
   dispatch,
   drawWorld: (svg, current) => renderWorld(svg, current, { tiles: content.tiles, sizes }),
   replayBubbles: () => bubbles.reset(),
+  replayTutorial: () => {
+    tutorial.replay(campaign);
+    pda.close();
+    scheduleBubbles();
+  },
 });
 const sequencer = createSequencer();
 const bubbles = mountBubbles(sequencer);
+const tutorial = mountTutorial(bubbles);
+// Une bulle fermée laisse la place à la suivante, celle du tutoriel d'abord.
+bubbles.onClose = scheduleBubbles;
 const effects = mountEffects({ plateau, place: placeSection, layer: layerSection, sequencer });
 const barView = mountBar(bar, sequencer);
 const diceTray = mountDiceTray(document.getElementById('bac-place'), sequencer);
@@ -185,7 +200,9 @@ function scheduleBubbles() {
 function checkBubbles() {
   const covered = [layerSection, document.getElementById('pda'), document.getElementById('inventaire')].some((node) => !node.hidden);
   if (!campaign || covered) return;
-  bubbles.check({ campaign, day: dayState(campaign), events: lastEvents });
+  const day = dayState(campaign);
+  const muted = tutorial.show({ campaign, day });
+  bubbles.check({ campaign, day, events: lastEvents }, muted);
 }
 
 function renderTable() {
@@ -420,7 +437,7 @@ function renderLayer() {
 
 function chooseLayer() {
   if (layer?.kind === 'intro') return () => renderIntro(layerSection);
-  if (layer?.kind === 'title') return () => renderTitle(layerSection, { slots: titleSlots(saves.list()), error: layer.error, motion: readMotion() }, titleHandlers);
+  if (layer?.kind === 'title') return () => renderTitle(layerSection, { slots: titleSlots(saves.list()), error: layer.error, motion: readMotion(), tutorial: readSetting() }, titleHandlers);
   const death = deathView(campaign);
   if (death) return () => renderDeath(layerSection, death, deathCause, { respawn: () => dispatch({ type: 'respawn' }), title: () => showLayer({ kind: 'title' }) });
   if (layer?.kind === 'ending') return () => renderEnding(layerSection, endingView(campaign), { close: () => showLayer(null), title: () => showLayer({ kind: 'title' }) });
@@ -450,6 +467,7 @@ const titleHandlers = {
     const seed = seedText.trim() ? parseSeed(seedText) : randomSeed();
     if (seed === null) return showLayer({ kind: 'title', error: 'graine invalide : un entier de 0 à 4294967295' });
     start(createCampaign({ seed, mode }));
+    if (readSetting()) tutorial.begin(campaign);
     showLayer({ kind: 'intro' });
   },
   load(slot) {
@@ -461,6 +479,9 @@ const titleHandlers = {
     const loaded = await saves.importFile(file);
     if (loaded.error) return showLayer({ kind: 'title', error: loaded.error });
     start(loaded.campaign);
+  },
+  tutorial(on) {
+    saveSetting(undefined, on);
   },
   motion(mode) {
     saveMotion(undefined, mode);
@@ -540,6 +561,7 @@ function dispatch(action) {
   lastEvents = result.events;
   causes = trackCauses(causes, result.events, campaign.player);
   appendEvents(result.events);
+  tutorial.feed(result.events, campaign);
   afterStep(result.events, rest);
   render();
   const beats = boardBeats(ficheBeats(barBeats(result.events, before, barSnapshot(campaign))), campaign.world.currentTile);
@@ -656,6 +678,7 @@ function start(loaded) {
   sequencer.skip();
   effects.reset();
   diceTray.reset();
+  tutorial.attach(loaded);
   render();
 }
 
