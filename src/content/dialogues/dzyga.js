@@ -18,7 +18,7 @@ export default deepFreeze({
         {
           text: 'Voici le relevé des Entrepôts.',
           next: 'releve',
-          conditions: [{ type: 'quete', quest: 'champ-anomalies', step: 'remise' }],
+          conditions: [{ type: 'quete', quest: 'champ-anomalies', step: 'remise', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

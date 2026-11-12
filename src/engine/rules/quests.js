@@ -53,7 +53,7 @@
 //   { type: 'quete', quest }          démarre la quête. Refus : 'unknown-quest' | 'quest-known'
 //   { type: 'avancer', quest, step }  passe à la suite step. Refus : 'quest-not-active'
 //                                     | 'bad-step' (pas une suite de l'étape courante)
-//   La condition { type: 'quete', quest, step? } de dialogue.js lit campaign.quests[quest].step.
+//   La condition { type: 'quete', quest, step?, status? } de dialogue.js lit campaign.quests[quest].
 //
 // RÉACTION (REACTIONS de campaign.js) : questsAfterStep(draft, events, ctx).
 //

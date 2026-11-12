@@ -19,7 +19,7 @@ export default deepFreeze({
         {
           text: 'Le suceur est mort.',
           next: 'suceur-mort',
-          conditions: [{ type: 'quete', quest: 'suceur-pompage', step: 'rapport' }],
+          conditions: [{ type: 'quete', quest: 'suceur-pompage', step: 'rapport', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

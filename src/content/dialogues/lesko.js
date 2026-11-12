@@ -20,7 +20,7 @@ export default deepFreeze({
         {
           text: 'J’ai lu les ordres de la Barrière.',
           next: 'ordres',
-          conditions: [{ type: 'quete', quest: 'ordres-devoir', step: 'retour' }],
+          conditions: [{ type: 'quete', quest: 'ordres-devoir', step: 'retour', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

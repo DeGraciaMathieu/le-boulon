@@ -18,7 +18,7 @@ export default deepFreeze({
         {
           text: 'Voici une queue de chien.',
           next: 'remise',
-          conditions: [{ type: 'quete', quest: 'queues-chien', step: 'remise' }],
+          conditions: [{ type: 'quete', quest: 'queues-chien', step: 'remise', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

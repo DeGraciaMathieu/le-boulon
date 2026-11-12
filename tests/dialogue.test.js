@@ -79,6 +79,19 @@ test('étape de quête : quête démarrée, étape précise', () => {
   assert.equal(evaluate({ type: 'quete', quest: 'le-guide' }, campaign), false);
 });
 
+test('quête : statut actif, fini ou raté ; une quête finie n’est plus à son étape « active »', () => {
+  const campaign = campaignWith({ quests: {
+    courrier: { status: 'done', step: 'ateliers' },
+    'le-guide': { status: 'active', step: 'a1-atp' },
+  } });
+  assert.equal(evaluate({ type: 'quete', quest: 'courrier', step: 'ateliers' }, campaign), true);
+  assert.equal(evaluate({ type: 'quete', quest: 'courrier', step: 'ateliers', status: 'active' }, campaign), false);
+  assert.equal(evaluate({ type: 'quete', quest: 'courrier', status: 'done' }, campaign), true);
+  assert.equal(evaluate({ type: 'quete', quest: 'courrier', status: 'failed' }, campaign), false);
+  assert.equal(evaluate({ type: 'quete', quest: 'le-guide', step: 'a1-atp', status: 'active' }, campaign), true);
+  assert.equal(evaluate({ type: 'quete', quest: 'pelerinage', status: 'active' }, campaign), false);
+});
+
 test('stat et roubles', () => {
   const campaign = campaignWith({ roubles: 150 });
   const survie = campaign.player.stats.survie;

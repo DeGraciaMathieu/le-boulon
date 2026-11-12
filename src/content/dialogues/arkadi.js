@@ -19,7 +19,7 @@ export default deepFreeze({
         {
           text: 'Voici tes mesures du Cimetière.',
           next: 'mesures',
-          conditions: [{ type: 'quete', quest: 'mesures-arkadi', step: 'retour' }],
+          conditions: [{ type: 'quete', quest: 'mesures-arkadi', step: 'retour', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

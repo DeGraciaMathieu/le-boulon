@@ -25,7 +25,7 @@ export default deepFreeze({
         {
           text: 'À propos de ta caisse.',
           next: 'caisse',
-          conditions: [{ type: 'quete', quest: 'caisse-matvii', step: 'caisse' }],
+          conditions: [{ type: 'quete', quest: 'caisse-matvii', step: 'caisse', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

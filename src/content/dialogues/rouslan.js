@@ -18,7 +18,7 @@ export default deepFreeze({
         {
           text: 'La chimère est morte.',
           next: 'chimere',
-          conditions: [{ type: 'quete', quest: 'chimere-lac', step: 'rapport' }],
+          conditions: [{ type: 'quete', quest: 'chimere-lac', step: 'rapport', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

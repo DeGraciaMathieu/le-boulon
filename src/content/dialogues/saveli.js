@@ -19,7 +19,7 @@ export default deepFreeze({
         {
           text: 'Voici ton relevé.',
           next: 'releve',
-          conditions: [{ type: 'quete', quest: 'releve-saveli', step: 'remise' }],
+          conditions: [{ type: 'quete', quest: 'releve-saveli', step: 'remise', status: 'active' }],
         },
         {
           text: 'On parle franchement ?',

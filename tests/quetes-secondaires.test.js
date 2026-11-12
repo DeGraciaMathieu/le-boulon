@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import content from '../src/content/index.js';
 import { createCampaign, step } from '../src/engine/campaign.js';
 import { createItem } from '../src/engine/rules/sheet.js';
+import { evaluate } from '../src/engine/rules/dialogue.js';
 
 const SECONDARY = Object.freeze([
   'chiens-cordon', 'dette-bohdan', 'releve-saveli',
@@ -149,4 +150,25 @@ test('la caisse de Matviï : la vendre au Devoir passe par Ostap', () => {
   campaign = play(campaign, [pick(campaign, toward('caisse'))]);
   assert.equal(campaign.quests['caisse-matvii'].status, 'done');
   assert.ok(campaign.reputation.devoir > devoir);
+});
+
+// Une quête finie ou ratée garde sa dernière étape : sans statut, la réplique de fin resterait proposée.
+test('dialogues des donneurs : une condition d’étape exige la quête active', () => {
+  for (const id of SECONDARY) {
+    for (const choice of choicesOf(content.quests[id].giver)) {
+      for (const condition of choice.conditions ?? []) {
+        if (condition.type !== 'quete' || condition.step === undefined) continue;
+        assert.equal(condition.status, 'active', `${id} : « ${choice.text} » sans status 'active'`);
+      }
+    }
+  }
+});
+
+test('Stas : la réplique de fin n’est plus proposée une fois la quête finie', () => {
+  const end = choicesOf('stas').find((choice) => choice.next === 'ateliers');
+  const campaign = createCampaign({ seed: 1 });
+  campaign.quests = { 'ateliers-rostok': { status: 'active', step: 'rapport' } };
+  assert.equal(end.conditions.every((condition) => evaluate(condition, campaign)), true);
+  campaign.quests['ateliers-rostok'].status = 'done';
+  assert.equal(end.conditions.every((condition) => evaluate(condition, campaign)), false);
 });

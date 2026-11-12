@@ -18,7 +18,7 @@ export default deepFreeze({
         {
           text: 'J’ai vu la carte de l’icône.',
           next: 'icone',
-          conditions: [{ type: 'quete', quest: 'icone-eglise', step: 'retour' }],
+          conditions: [{ type: 'quete', quest: 'icone-eglise', step: 'retour', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

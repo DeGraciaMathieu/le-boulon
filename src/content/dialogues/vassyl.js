@@ -20,7 +20,7 @@ export default deepFreeze({
         {
           text: 'Je reviens du Pont.',
           next: 'trace',
-          conditions: [{ type: 'quete', quest: 'ami-du-pont', step: 'retour' }],
+          conditions: [{ type: 'quete', quest: 'ami-du-pont', step: 'retour', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

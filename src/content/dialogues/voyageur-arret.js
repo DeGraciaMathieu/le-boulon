@@ -20,7 +20,7 @@ export default deepFreeze({
         {
           text: 'J’ai lu la liste de l’abri.',
           next: 'liste',
-          conditions: [{ type: 'quete', quest: 'liste-arret', step: 'retour' }],
+          conditions: [{ type: 'quete', quest: 'liste-arret', step: 'retour', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

@@ -23,7 +23,7 @@ export default deepFreeze({
         {
           text: 'Les ateliers sont libres.',
           next: 'ateliers',
-          conditions: [{ type: 'quete', quest: 'ateliers-rostok', step: 'rapport' }],
+          conditions: [{ type: 'quete', quest: 'ateliers-rostok', step: 'rapport', status: 'active' }],
         },
         { text: 'Au revoir.', next: null },
       ],

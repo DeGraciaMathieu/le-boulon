@@ -110,7 +110,7 @@ export default deepFreeze({
     butin(2),
     anomalie('gravitationnelle'),
     anomalie('electro'),
-    indice('icone', 'Derrière l’icône, une carte du Marais annotée au crayon.'),
+    indice('icone', 'Derrière l’icône, une carte du Marais annotée au crayon.', [{ type: 'reveler', stash: true }]),
     reservee('souvenir-du-guide', indice('notes-guide',
       'Sous l’autel, un carnet. L’écriture du Guide : « Les Émissions suivent le vent. Toujours vers le nord. »')),
     rien('nef', 'Des bancs renversés. La lumière tombe du clocher crevé.'),

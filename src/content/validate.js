@@ -69,10 +69,12 @@
 //       Condition / effet : { type, ...références } ; champs en anglais (item, quest, step,
 //       place, faction, amount). Types (src/engine/rules/dialogue.js) :
 //         conditions 'reputation' { faction, min?, max? }, 'objet' { item }, 'rang', 'quete'
-//         { quest, step? }, 'stat', 'roubles', 'tous' | 'un' { conditions }, 'non' { condition } ;
+//         { quest, step?, status? } (status : QUEST_STATUSES ; une quête finie ou ratée garde
+//         sa dernière étape, une réplique d'étape porte donc status 'active'), 'stat', 'roubles', 'tous' | 'un' { conditions }, 'non' { condition } ;
 //         effets 'donner' | 'prendre' { item }, 'roubles' { amount }, 'reputation'
 //         { faction, amount }, 'rejoindre-faction' { faction }, 'quete' { quest }, 'avancer'
-//         { quest, step }, 'reveler' { place } | { stash }.
+//         { quest, step }, 'reveler' { place } | { stash: true } (planque connue, tuile
+//         courante ou voisine, src/engine/rules/stashes.js).
 //       Ajoutés par src/engine/rules/npcs.js : condition 'premiere-visite' ; effet 'aider' { npc }.
 //   quests (quetes/<id>.js, §8.2)
 //       { [questId]: { name, giver?, start, deadline?, rewards?, steps: { [stepId]: {
@@ -129,6 +131,8 @@ import { HEXES, isEdge } from '../engine/hex.js';
 import { RANKS } from '../engine/rules/progression.js';
 
 export const TERRAINS = Object.freeze(['route', 'herbe', 'foret', 'marais', 'batiment']);
+
+export const QUEST_STATUSES = Object.freeze(['active', 'done', 'failed']);
 
 export const DECK_KINDS = Object.freeze(['zone', 'nuit', 'meteo', 'rencontres', 'exploration']);
 
@@ -435,6 +439,11 @@ export function checkDialogues(content) {
       errors.push(`${path}.start : nœud inconnu « ${dialogue.start} »`);
       continue;
     }
+    walk(dialogue, path, (object, at) => {
+      if (object.type === 'quete' && 'status' in object && !QUEST_STATUSES.includes(object.status)) {
+        errors.push(`${at}.status : statut inconnu « ${object.status} »`);
+      }
+    });
     const reachable = reach(dialogue.start, linksOf);
     for (const nodeId of Object.keys(nodes)) {
       if (!reachable.has(nodeId)) errors.push(`${path}.nodes.${nodeId} : nœud orphelin`);
