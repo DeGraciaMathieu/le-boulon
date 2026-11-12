@@ -105,8 +105,8 @@ export const COMBAT_MODES = Object.freeze(['rounds', 'rapide']);
 
 const ENEMY_DEFAULTS = Object.freeze({ hp: 1, damage: 1, type: 'humain', faction: null, trophy: null, count: 1 });
 const UNARMED = Object.freeze({ bonus: -1, damage: 1, ammo: null });
-const BASE_DEFENSE = 4;
-const ARMOR_DEFENSE = 1;
+export const BASE_DEFENSE = 4;
+export const ARMOR_DEFENSE = 1;
 const TAKE_COVER = Object.freeze({ bonus: 2, rounds: 2 });
 const ESCAPE_COST = 2;
 const NIGHT_ESCAPE_WOUNDS = 1;
