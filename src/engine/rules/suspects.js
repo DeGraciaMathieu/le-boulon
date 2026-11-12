@@ -75,7 +75,7 @@ import { hasPerk } from './progression.js';
 
 export const ARTEFACT_VALUE = 1000;
 export const DETECTOR_RANGE = 2;
-const BOLT_COST = 1;
+export const BOLT_COST = 1;
 const PICKUP_COST = 1;
 const LYNX_RANGE = 1;
 
