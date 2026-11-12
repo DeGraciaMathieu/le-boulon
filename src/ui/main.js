@@ -4,11 +4,7 @@
 //   survol d'un hexagone   aperçu : coût en PA, terrain, lieu, abri, PA restants une fois entré ;
 //   clic sur un voisin     { type: 'move', to } ;
 //   clic sur le pion       { type: 'exit' } si le pion est sur un hexagone de bord ;
-//   clic droit             { type: 'bolt', hex } : boulon lancé sur l'hexagone visé.
-//
-// BOULON (point d'accroche) : le moteur n'a pas encore d'action 'bolt'. Le clic droit
-// l'envoie quand même ; tant que step la refuse en 'unknown-action', rien ne change.
-// Le jour où src/engine/actions/ enregistre 'bolt' dans ACTIONS, elle est branchée.
+//   clic droit             { type: 'bolt', target } : boulon lancé sur l'hexagone voisin visé.
 //
 // GRAINE : ?seed=<entier> dans l'adresse, sinon une graine au hasard.
 
@@ -76,7 +72,7 @@ board.svg.addEventListener('click', (event) => {
 board.svg.addEventListener('contextmenu', (event) => {
   event.preventDefault();
   const n = hexOf(event);
-  if (n) dispatch({ type: 'bolt', hex: n });
+  if (n) dispatch({ type: 'bolt', target: n });
 });
 
 renderBoard(board, state);
