@@ -5,6 +5,7 @@
 // à elle. Le moteur lit le contenu par cet index ; l'état de campagne ne garde que des ids.
 //
 //   tiles    { [id]: tuile au format de src/engine/data/agroprom.js }   carte 5 (Données des tuiles)
+//   factions { [id]: faction } (src/content/factions.js)                carte 16 (Factions)
 //
 // En attendant la carte 5, la seule tuile est l'Agroprom de la v1, importée telle quelle :
 // src/engine/data/agroprom.js reste en place pour l'interface et le banc v1.
@@ -13,8 +14,10 @@
 // deepFreeze gèle aussi les hexagones d'Agroprom, que la v1 ne gelait qu'en surface.
 
 import agroprom from '../engine/data/agroprom.js';
+import factions from './factions.js';
 import { deepFreeze } from './freeze.js';
 
 export default deepFreeze({
   tiles: { agroprom },
+  factions,
 });

@@ -25,6 +25,8 @@
 //     { type: 'prendre-objet', objet }         refus 'no-item'             -> item-removed
 //     { type: 'roubles', montant }             refus 'not-enough-roubles'  -> roubles-changed
 //     { type: 'reputation', faction, montant } piste bornée -3..3          -> reputation-changed
+//     { type: 'rejoindre-faction', faction }   refus de joinFaction        -> faction-joined
+//     (ces deux effets : src/engine/rules/factions.js, carte 16)
 //   À brancher par leur carte : 'demarrer-quete' { quete }, 'avancer-quete' { quete, etape }
 //   (carte 15), 'reveler-lieu' { lieu } (carte 10), 'reveler-planque' { planque } (carte 23) ;
 //   la carte 16 peut remplacer 'reputation'. Un effet sans hook refuse le choix ('unknown-effect').
@@ -54,11 +56,10 @@
 
 import content from '../../content/index.js';
 import { INVENTORY_SLOTS, createItem, usedSlots } from './sheet.js';
+import { changeReputation, joinFaction } from './factions.js';
 
 // Hypothèse v2 : ids des rangs du §11.1, sans accents, 'bleu' comme dans campaign.js.
 export const RANKS = Object.freeze(['bleu', 'experimente', 'veteran', 'expert', 'maitre']);
-const REPUTATION_MIN = -3;
-const REPUTATION_MAX = 3;
 
 export const DIALOGUES = {};
 
@@ -113,12 +114,8 @@ export const EFFECTS = {
     draft.player.roubles = roubles;
     ctx.emit({ type: 'roubles-changed', amount: effect.montant, roubles });
   },
-  reputation: (draft, effect, ctx) => {
-    const before = draft.reputation[effect.faction] ?? 0;
-    const reputation = Math.max(REPUTATION_MIN, Math.min(REPUTATION_MAX, before + effect.montant));
-    draft.reputation[effect.faction] = reputation;
-    ctx.emit({ type: 'reputation-changed', faction: effect.faction, amount: effect.montant, reputation });
-  },
+  reputation: (draft, effect, ctx) => changeReputation(draft, effect.faction, effect.montant, ctx),
+  'rejoindre-faction': (draft, effect, ctx) => joinFaction(draft, effect.faction, ctx),
 };
 
 export function dialogueView(campaign) {
