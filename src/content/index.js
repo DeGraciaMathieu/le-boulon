@@ -14,6 +14,7 @@
 //   dialogues { [id]: dialogue } (src/content/dialogues/)               carte 19
 //   decks    { [id]: paquet } (src/content/paquets/) : Nuit, Météo       carte 7 (Temps)
 //   quests   { [id]: quête } (src/content/quetes/)                      carte 15 (Quêtes)
+//   contracts { [id]: modèle de contrat } (src/content/contrats.js)     carte 22 (Contrats)
 //
 // src/engine/data/agroprom.js reste l'Agroprom v1 de l'interface et du banc ; la v2 est
 // src/content/tuiles/agroprom.js.
@@ -37,6 +38,7 @@ import dialogues from './dialogues/index.js';
 import nuit from './paquets/nuit.js';
 import meteo from './paquets/meteo.js';
 import quests from './quetes/index.js';
+import contracts from './contrats.js';
 import { deepFreeze } from './freeze.js';
 
 export default deepFreeze({
@@ -50,4 +52,5 @@ export default deepFreeze({
   dialogues,
   decks: { ...nuit, ...meteo },
   quests,
+  contracts,
 });

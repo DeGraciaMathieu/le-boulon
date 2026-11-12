@@ -13,6 +13,8 @@
 //   checkPlaces      chaque lieu sur un hexagone 1-19 de sa tuile, un lieu par hexagone
 //   checkQuests      étapes connues, sans orpheline, et chacune mène à une fin
 //   checkDialogues   liens vers des nœuds connus, aucun nœud orphelin
+//   checkContracts   type connu, délai [min, max], hubs à contrats, objet de livraison et de
+//                    récupération
 // Une collection absente ou vide est valide : chaque règle s'active quand sa carte arrive.
 //
 // FORMAT DU CONTENU (src/content/index.js) : un objet gelé, une clé par collection. Les
@@ -73,9 +75,10 @@
 //       Objectif 'explorer' : { place, card } (carte fixée du paquet du lieu) ; 'parler' :
 //       { npc, node }.
 //   contracts (contrats.js, §8.4)
-//       { [templateId]: { type, faction, places, reward, deadline: [min, max] } }
-//       type : 'livraison' | 'recuperation' | 'elimination' | 'escorte' | 'cartographie'.
-//       places : hubs qui l'affichent.
+//       { [templateId]: { type, faction, places, reward, deadline: [min, max], item? } }
+//       type : CONTRACT_TYPES. places : hubs qui l'affichent (service 'contrats'). faction :
+//       celle du hub. reward : base en roubles. item : colis (livraison) ou objet à rapporter
+//       (récupération), requis pour ces deux types (src/engine/rules/contracts.js).
 //   factions (factions.js, §9) { [factionId]: { name, places, joinable, start, default?, act?,
 //                                rival? } }
 //       places : bases. joinable : on peut en être membre. start : réputation de départ,
@@ -108,6 +111,9 @@ export const OBJECTIVES = Object.freeze([
   'visiter', 'explorer', 'parler', 'rapporter', 'eliminer', 'escorter', 'cartographier',
   'survivre',
 ]);
+
+export const CONTRACT_TYPES = Object.freeze(['livraison', 'recuperation', 'elimination', 'escorte', 'cartographie']);
+const CONTRACT_ITEM_TYPES = Object.freeze(['livraison', 'recuperation']);
 
 // Champ -> [collection, libellé de l'erreur].
 const REF_FIELDS = Object.freeze({
@@ -155,6 +161,7 @@ export function validateContent(content) {
     checkPlaces,
     checkQuests,
     checkDialogues,
+    checkContracts,
   ].flatMap((check) => check(content));
 }
 
@@ -395,6 +402,26 @@ export function checkDialogues(content) {
     const reachable = reach(dialogue.start, linksOf);
     for (const nodeId of Object.keys(nodes)) {
       if (!reachable.has(nodeId)) errors.push(`${path}.nodes.${nodeId} : nœud orphelin`);
+    }
+  }
+  return errors;
+}
+
+export function checkContracts(content) {
+  const errors = [];
+  for (const [id, template] of entriesOf(content, 'contracts')) {
+    const path = `contracts.${id}`;
+    if (!CONTRACT_TYPES.includes(template.type)) errors.push(`${path}.type : type inconnu « ${template.type} »`);
+    const [min, max] = template.deadline ?? [];
+    if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || min > max) {
+      errors.push(`${path}.deadline : [min, max] attendu`);
+    }
+    (template.places ?? []).forEach((place, i) => {
+      const services = content.places?.[place]?.services ?? [];
+      if (!services.includes('contrats')) errors.push(`${path}.places[${i}] : « ${place} » n’affiche pas de contrats`);
+    });
+    if (CONTRACT_ITEM_TYPES.includes(template.type) && !template.item) {
+      errors.push(`${path}.item : objet requis pour ${template.type}`);
     }
   }
   return errors;

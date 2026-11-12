@@ -41,7 +41,8 @@
 //        npcs      PNJ itinérants (carte 19, rules/npcs.js)
 //        traders   restock des marchands (carte 13)
 //        emission  calendrier de l'Émission (carte 8) : pose world.emission avant la Météo
-//        quests    délais des quêtes (carte 15)
+//        quests    délais des quêtes (carte 15) ; renouvellement des contrats (carte 22,
+//                  renewContracts de rules/contracts.js)
 //      DAY_HOOKS est vide : chaque carte ajoute sa fonction dans son tableau ci-dessous.
 //   3. carte Météo : 'signes-emission' si world.emission.nextDay === day (le paquet reste à la
 //      carte 8 pour l'annonce, l'Émission elle-même n'est pas jouée ici), sinon pioche pondérée
@@ -94,6 +95,7 @@ import { apBonus, beltRadiation } from './equipment.js';
 import { memberPerks } from './factions.js';
 import { stealthBonus } from './progression.js';
 import { TRACK_MAX, RADIATION_RESET, WOUND_PENALTY_AT, irradiate, wound } from './sheet.js';
+import { renewContracts } from './contracts.js';
 import content from '../../content/index.js';
 
 export const BED_PRICE = 50;
@@ -112,7 +114,7 @@ export const DAY_HOOKS = Object.freeze({
   npcs: Object.freeze([]),
   traders: Object.freeze([]),
   emission: Object.freeze([]),
-  quests: Object.freeze([]),
+  quests: Object.freeze([renewContracts]),
 });
 
 const NIGHT_ACTIONS = Object.freeze(['wake']);

@@ -47,7 +47,7 @@
 //   status  'active' | 'done' | 'failed' ; step : étape courante (dernière étape une fois finie)
 //   started jour du départ ; deadline : jour limite ou null ; waiting : objectif d'un
 //   embranchement rempli, en attente du choix ; history : étapes passées, dans l'ordre ;
-//   reason : cause de l'échec.
+//   reason : cause de l'échec ; quest : la quête elle-même, pour une quête générée (contrat).
 //   campaign.journal (PDA) reçoit { day, kind, quest, step } à chaque événement de quête.
 //
 // EFFETS DE DIALOGUE (EFFECTS de rules/dialogue.js) :
@@ -65,6 +65,8 @@
 //   ou null ; options : suites d'un embranchement en attente, sinon [].
 //
 // QUESTS : quêtes en plus du contenu (tests), lues avant content.quests.
+// QUÊTES GÉNÉRÉES (contrats, rules/contracts.js) : startQuest(draft, id, ctx, quest) range la
+//   quête dans campaign.quests[id].quest, lue avant QUESTS et le contenu.
 //
 // ÉVÉNEMENTS :
 //   { type: 'quest-started', quest }   { type: 'quest-step', quest, step }
@@ -85,7 +87,7 @@ export const QUESTS = {};
 // Hypothèse v2 : la carte d'un objectif 'explorer' sort en premier si rien d'autre n'est dit.
 const EXPLORE_POSITION = 1;
 
-const questOf = (id) => QUESTS[id] ?? content.quests?.[id];
+const questOf = (id, campaign) => campaign.quests[id]?.quest ?? QUESTS[id] ?? content.quests?.[id];
 const placeOf = (id) => PLACES[id] ?? content.places?.[id];
 const has = (events, predicate) => events.some(predicate);
 
@@ -125,10 +127,10 @@ const ON_MET = {
   },
 };
 
-export function startQuest(draft, id, ctx) {
-  const quest = questOf(id);
-  if (!quest) return 'unknown-quest';
+export function startQuest(draft, id, ctx, generated) {
   if (draft.quests[id]) return 'quest-known';
+  const quest = generated ?? questOf(id, draft);
+  if (!quest) return 'unknown-quest';
   draft.quests[id] = {
     status: 'active',
     step: quest.start,
@@ -136,6 +138,7 @@ export function startQuest(draft, id, ctx) {
     deadline: quest.deadline === undefined ? null : draft.day + quest.deadline,
     waiting: false,
     history: [],
+    ...(generated && { quest: generated }),
   };
   ctx.emit({ type: 'quest-started', quest: id });
   note(draft, 'quest-started', id);
@@ -145,7 +148,7 @@ export function startQuest(draft, id, ctx) {
 export function advanceQuest(draft, id, stepId, ctx) {
   const state = draft.quests[id];
   if (state?.status !== 'active') return 'quest-not-active';
-  if (!stepOf(id, state.step).next.includes(stepId)) return 'bad-step';
+  if (!stepOf(draft, id, state.step).next.includes(stepId)) return 'bad-step';
   enterStep(draft, id, stepId, ctx);
 }
 
@@ -158,7 +161,7 @@ export function questsAfterStep(draft, events, ctx) {
       const reason = failureOf(draft, id);
       if (reason) fail(draft, id, reason, ctx);
       if (reason || state.waiting) break;
-      const { objective } = stepOf(id, state.step);
+      const { objective } = stepOf(draft, id, state.step);
       if (!OBJECTIVE_MET[objective.type](objective, draft, seen)) break;
       ON_MET[objective.type]?.(objective, draft, ctx);
       completeStep(draft, id, ctx);
@@ -170,11 +173,11 @@ export function questsAfterStep(draft, events, ctx) {
 export function questLog(campaign) {
   const log = { active: [], done: [], failed: [] };
   for (const [id, state] of Object.entries(campaign.quests)) {
-    const { name } = questOf(id);
+    const { name } = questOf(id, campaign);
     if (state.status === 'done') log.done.push({ quest: id, name, step: state.step });
     else if (state.status === 'failed') log.failed.push({ quest: id, name, step: state.step, reason: state.reason });
     else {
-      const { objective, next } = stepOf(id, state.step);
+      const { objective, next } = stepOf(campaign, id, state.step);
       log.active.push({
         quest: id,
         name,
@@ -191,8 +194,8 @@ export function questLog(campaign) {
   return log;
 }
 
-function stepOf(id, stepId) {
-  const step = questOf(id).steps[stepId];
+function stepOf(campaign, id, stepId) {
+  const step = questOf(id, campaign).steps[stepId];
   return { ...step, next: step.next ?? [] };
 }
 
@@ -203,7 +206,7 @@ function enterStep(draft, id, stepId, ctx) {
   state.history.push(stepId);
   ctx.emit({ type: 'quest-step', quest: id, step: stepId });
   note(draft, 'quest-step', id);
-  const { objective } = stepOf(id, stepId);
+  const { objective } = stepOf(draft, id, stepId);
   if (objective.type === 'explorer') {
     fixCard(draft, objective.place, objective.card, objective.position ?? EXPLORE_POSITION);
   }
@@ -211,7 +214,7 @@ function enterStep(draft, id, stepId, ctx) {
 
 function completeStep(draft, id, ctx) {
   const state = draft.quests[id];
-  const { next } = stepOf(id, state.step);
+  const { next } = stepOf(draft, id, state.step);
   if (next.length === 0) finish(draft, id, ctx);
   else if (next.length === 1) enterStep(draft, id, next[0], ctx);
   else {
@@ -224,7 +227,7 @@ function completeStep(draft, id, ctx) {
 function failureOf(draft, id) {
   const state = draft.quests[id];
   if (state.deadline !== null && draft.day > state.deadline) return 'deadline';
-  const { npc } = stepOf(id, state.step).objective;
+  const { npc } = stepOf(draft, id, state.step).objective;
   if (npc && draft.npcs[npc]?.alive === false) return 'npc-dead';
 }
 
@@ -233,7 +236,7 @@ function finish(draft, id, ctx) {
   state.status = 'done';
   ctx.emit({ type: 'quest-completed', quest: id });
   note(draft, 'quest-completed', id);
-  giveRewards(draft, questOf(id).rewards ?? {}, ctx);
+  giveRewards(draft, questOf(id, draft).rewards ?? {}, ctx);
 }
 
 function fail(draft, id, reason, ctx) {

@@ -30,7 +30,7 @@ function fixture() {
     places: {
       camp: {
         name: 'Camp des novices', label: 'Табір новачків', tile: 'cordon', hex: 1,
-        tags: ['hub'], faction: 'solitaires', deck: 'camp', loot: 'n1',
+        tags: ['hub'], faction: 'solitaires', services: ['contrats'], deck: 'camp', loot: 'n1',
       },
       atp: { name: 'ATP', label: 'АТП', tile: 'cordon', hex: 8, tags: ['abri'], deck: 'atp', loot: 'n1' },
     },
@@ -85,7 +85,7 @@ function fixture() {
       },
     },
     contracts: {
-      livraison: { type: 'livraison', faction: 'solitaires', places: ['camp'], reward: 100, deadline: [2, 5] },
+      livraison: { type: 'livraison', faction: 'solitaires', places: ['camp'], reward: 100, deadline: [2, 5], item: 'pda' },
     },
     factions: {
       solitaires: { name: 'Solitaires', places: ['camp'], joinable: true, start: 2 },
