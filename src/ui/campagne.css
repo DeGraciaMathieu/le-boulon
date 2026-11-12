@@ -438,3 +438,43 @@ body {
   border-color: var(--phosphore);
   color: var(--phosphore);
 }
+
+/* Panneau de commandes en zones : Ici, Soins (repliée), Journée. */
+#commandes .zone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#commandes .zone + .zone {
+  padding-top: 8px;
+  border-top: 1px solid var(--sauge-sombre);
+}
+
+#commandes .zone-titre {
+  color: var(--sauge);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+#commandes details.soins > summary {
+  cursor: pointer;
+}
+
+#commandes details.soins > button {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* Action qui sert la quête suivie : même liseré ocre que l'encart Objectif. */
+#commandes button.suivie {
+  font-weight: bold;
+  outline: 2px solid var(--ocre);
+  outline-offset: 2px;
+}
+
+#commandes #finir {
+  background: var(--sauge);
+}
