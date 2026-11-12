@@ -282,4 +282,5 @@ export default deepFreeze({
   cle: { name: 'Clé', category: 'quete', price: null, size: 1 },
   // Colis d'un contrat de livraison (src/content/contrats.js).
   colis: { name: 'Colis', category: 'quete', price: null, size: 1 },
+  donnees: { name: 'Données du laboratoire', category: 'quete', price: null, size: 1 },
 });

@@ -1,7 +1,6 @@
 // Quêtes écrites (brief v2 §8.1, §8.2 ; carte 15) : { [questId]: quête }, format en tête de
 // src/content/validate.js, règles dans src/engine/rules/quests.js. Une quête par fichier,
 // sous son id ; son donneur la démarre par l'effet { type: 'quete', quest } de son dialogue.
-// La quête principale « Le Guide » viendra avec les cartes 20-21.
 
 import { deepFreeze } from '../freeze.js';
 import detteBohdan from './dette-bohdan.js';
@@ -22,6 +21,8 @@ import ateliersRostok from './ateliers-rostok.js';
 import chimereLac from './chimere-lac.js';
 import champAnomalies from './champ-anomalies.js';
 import caisseMatvii from './caisse-matvii.js';
+import leGuide from './le-guide.js';
+import souvenirDuGuide from './souvenir-du-guide.js';
 
 export default deepFreeze({
   'dette-bohdan': detteBohdan,
@@ -41,4 +42,6 @@ export default deepFreeze({
   'chimere-lac': chimereLac,
   'champ-anomalies': champAnomalies,
   'caisse-matvii': caisseMatvii,
+  'le-guide': leGuide,
+  'souvenir-du-guide': souvenirDuGuide,
 });

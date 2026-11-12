@@ -1,5 +1,5 @@
-// Dialogue de base du Marchand du bunker (brief v2 §7, §8.3 acte 1). Le nœud travail
-// accueillera la quête « Le Guide » (cartes 20-21) ; la boutique, la carte 13.
+// Dialogue du Marchand du bunker (brief v2 §7, §8.3 acte 1) : donne la quête « Le Guide »
+// (nœud travail, vers courrier) et ouvre le PDA du courrier (nœud pda-ouvert). La boutique : carte 13.
 import { deepFreeze } from '../freeze.js';
 
 export default deepFreeze({
@@ -23,8 +23,30 @@ export default deepFreeze({
       choices: [{ text: 'Compris.', next: 'accueil' }],
     },
     travail: {
-      text: 'Reviens quand tu sauras tenir une arme. Pour l’instant, rien.',
-      choices: [{ text: 'D’accord.', next: 'accueil' }],
+      text: 'Du travail, il y en a toujours. Encore faut-il revenir vivant.',
+      choices: [
+        {
+          text: 'Je prends.',
+          next: 'courrier',
+          conditions: [{ type: 'non', condition: { type: 'quete', quest: 'le-guide' } }],
+          effects: [{ type: 'quete', quest: 'le-guide' }],
+        },
+        {
+          text: 'Le PDA est ouvert. Le mot de passe : « Kolos ».',
+          next: 'pda-ouvert',
+          conditions: [{ type: 'quete', quest: 'le-guide', step: 'a1-retour' }, { type: 'objet', item: 'pda' }],
+          effects: [{ type: 'prendre', item: 'pda' }],
+        },
+        { text: 'D’accord.', next: 'accueil' },
+      ],
+    },
+    courrier: {
+      text: 'Un courrier devait passer hier. Il n’est jamais arrivé. Dernier signal près de l’ATP. Ramène son PDA. Ce qu’il porte m’appartient.',
+      choices: [{ text: 'J’y vais.', next: null }],
+    },
+    'pda-ouvert': {
+      text: 'Il lit longtemps. « Le Guide. Un stalker qui connaît un chemin vers le centre. Ses papiers sont restés dans les souterrains d’Agroprom. » Il rend l’écran. « Les bandits tiennent le barrage de la Décharge. Paie, cogne ou contourne. »',
+      choices: [{ text: 'Je descends à Agroprom.', next: null }],
     },
     confiance: {
       text: 'Les militaires ont doublé la garde à l’Avant-poste. Passe par la Ferme.',

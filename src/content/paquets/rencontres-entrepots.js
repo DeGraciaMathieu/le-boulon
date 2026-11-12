@@ -1,6 +1,6 @@
 // Paquet de rencontres : Entrepôts militaires (brief v2 §5.2, §13), format decks de src/content/validate.js,
 // cartes au format de src/content/paquets/rencontres-agroprom.js.
-// Hypothèse v2 : niveau 4, Menace 5 à 8, 2 à 3 blessures.
+// Hypothèse v2 : niveau 4, Menace 5 à 8, 2 à 3 blessures, escouades de faction comprises.
 
 import { deepFreeze } from '../freeze.js';
 
@@ -14,5 +14,8 @@ export default deepFreeze({
     { id: 'mercenaires', name: 'Mercenaires', threat: 7, wounds: 3 },
     { id: 'sangsue', name: 'Suceur de sang', threat: 7, wounds: 3 },
     { id: 'chimere', name: 'Chimère', threat: 8, wounds: 3 },
+    // Quête « Le Guide », acte 5 : occupants réservés du Village abandonné, aussi piochés sur la tuile.
+    { id: 'patrouille-liberte', name: 'Patrouille de Liberté', threat: 6, wounds: 2, faction: 'liberte' },
+    { id: 'commando-devoir', name: 'Commando du Devoir', threat: 7, wounds: 3, faction: 'devoir' },
   ],
 });
