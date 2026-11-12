@@ -45,6 +45,8 @@
 //     reputation: { [factionId]: -3..3 }  vide : la carte 16 pose les valeurs de départ
 //     rumors, stashes,             []                                                carte 23
 //     journal,                     [] journal du PDA                                 cartes 15, 28
+//     dialogue?,                   { npc, dialogue, node, previousScreen } pendant un
+//                                  dialogue seulement (rules/dialogue.js)            carte 14
 //     screen,                      'tile' | 'place' | 'hub' | 'dialogue' | 'combat' | 'night'
 //                                  toujours 'tile' ici ; chaque carte d'écran le change
 //   }
@@ -84,6 +86,7 @@
 import { createGame, step as stepDay } from './game.js';
 import { createRng } from './rng.js';
 import content from '../content/index.js';
+import { talk, choose } from './rules/dialogue.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -97,7 +100,7 @@ const START_FACTION = 'solitaires';
 // Hypothèse v2 : le brief ne fixe pas les roubles de départ.
 const START_ROUBLES = 0;
 
-export const CAMPAIGN_ACTIONS = {};
+export const CAMPAIGN_ACTIONS = { talk, choose };
 
 export const REACTIONS = [];
 
