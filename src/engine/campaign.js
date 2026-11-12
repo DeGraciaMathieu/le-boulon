@@ -38,7 +38,7 @@
 //                                  première visite, + lastVisit (rules/world.js)     cartes 2, 6
 //       currentTile,               id de la tuile courante (clé de content.tiles)    carte 6
 //       hex,                       hexagone du joueur sur la tuile courante (1-19)
-//       weather,                   null, carte Météo du matin                        carte 7
+//       weather,                   null, id de la carte Météo du matin (rules/time.js) carte 7
 //       emission: { nextDay, today }  null, false                                    carte 8
 //     },
 //     places: { [id]: placeState }  progression des lieux (rules/places.js)          carte 10
@@ -55,8 +55,11 @@
 //                                  dialogue seulement (rules/dialogue.js)            carte 14
 //     combatMode,                  'rounds' | 'rapide' (rules/combat.js)             carte 18
 //     combat,                      null, combat v2 en cours (rules/combat.js)        carte 18
+//     night?,                      { rest, place?, cardDrawn } pendant la nuit seulement
+//                                  (rules/time.js)                                   carte 7
 //     screen,                      'tile' | 'place' | 'hub' | 'dialogue' | 'combat' | 'night'
-//                                  toujours 'tile' ici ; chaque carte d'écran le change
+//                                  'tile' au départ ; chaque carte d'écran le change ; 'night'
+//                                  de la fin de journée au réveil (rules/time.js)
 //   }
 //
 // UNE SEULE SOURCE DE VÉRITÉ : un état v1 (src/engine/game.js) mélange la journée, la tuile et
@@ -67,9 +70,10 @@
 // player.perks -> campaign.player : dayState les prête aux règles v1 (savoir-faire), storeDay
 // ne les range pas dans la tuile.
 // equipment -> campaign.equipment : dayState le prête aux règles v1, qui le lisent sans le changer.
+// world.weather et screen 'night' -> prêtés en weather et isNight (météo et nuit, rules/time.js).
 // Restent dans tileState : tile (données), status, turn, ap, player.{ previousHex,
 // woundPenalty }, tokens, detector, encounters, encounterDeck, combat, zone, mission, outcome.
-// La carte 7 (Temps) sortira ap et status de la tuile vers la journée ; la carte 2 remplacera
+// ap et status restent dans la tuile courante (la carte 7 y pose le budget du matin) ; la carte 2 remplacera
 // tileState.tile (copie des données) par une référence à content.tiles.
 // dayState() recompose l'état v1 complet, storeDay() le redécoupe.
 //
@@ -78,6 +82,8 @@
 //     step v1 sur la tuile courante. Une règle par tuile s'écrit dans src/engine/rules/ comme
 //     en v1 (en-tête de game.js). Pendant un combat v2 (campaign.combat), step refuse
 //     'in-combat' à toute action autre que celles du round (combatRefusal de rules/combat.js).
+//     Pendant la nuit (screen 'night'), step refuse 'night' à toute action autre que wake
+//     (nightRefusal de rules/time.js).
 //   - Action de campagne (sleep, camp, travel, talk, buy…) : écrire un handler
 //     (draft, action, ctx) -> string | undefined dans src/engine/rules/<module>.js et
 //     l'ajouter à CAMPAIGN_ACTIONS ci-dessous. Une action de campagne masque une action v1 du
@@ -106,6 +112,7 @@ import { COMBAT_MODES, combatOnReveal, combatRefusal, shoot, takeCover, grenade,
 import { travel } from './rules/world.js';
 import { talkTo, startingNpcs } from './rules/npcs.js';
 import { enterPlace, explore, boltCard, leavePlace, placesAfterStep, PLACE_OVERRIDES } from './rules/places.js';
+import { sleep, camp, wake, endDayOnExhaustion, nightRefusal } from './rules/time.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -121,12 +128,12 @@ const START_ROUBLES = 0;
 export const CAMPAIGN_ACTIONS = {
   talk: talkTo, choose, join, equip, unequip, 'raise-stat': raiseStat, 'learn-perk': learnPerk,
   shoot, 'take-cover': takeCover, grenade, heal, escape, parley,
-  travel,
+  travel, sleep, camp, wake,
   'enter-place': enterPlace, explore, 'bolt-card': boltCard, 'leave-place': leavePlace,
 };
 
 // combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.
-export const REACTIONS = [combatOnReveal, placesAfterStep];
+export const REACTIONS = [combatOnReveal, placesAfterStep, endDayOnExhaustion];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);
@@ -178,7 +185,7 @@ export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles
 }
 
 export function step(campaign, action) {
-  const blocked = combatRefusal(campaign, action);
+  const blocked = combatRefusal(campaign, action) ?? nightRefusal(campaign, action);
   if (blocked) return { state: campaign, events: [{ type: 'refused', action, reason: blocked }] };
   // Dans un lieu, PLACE_OVERRIDES (rules/places.js) remplace des actions v1.
   const handler = (campaign.place && PLACE_OVERRIDES[action.type]) ?? CAMPAIGN_ACTIONS[action.type];
@@ -202,6 +209,8 @@ export function dayState(campaign) {
     rng: campaign.rng,
     inventory: campaign.inventory,
     equipment: campaign.equipment,
+    weather: world.weather,
+    isNight: campaign.screen === 'night',
     player: {
       ...tile.player,
       hex: world.hex,
@@ -215,7 +224,8 @@ export function dayState(campaign) {
 
 export function storeDay(draft, day) {
   // equipment, prêté par dayState et jamais modifié par les règles v1, est laissé de côté.
-  const { seed, rng, inventory, equipment, player, ...tile } = day;
+  // weather et isNight, prêtés aussi, restent dans la campagne (rules/time.js).
+  const { seed, rng, inventory, equipment, weather, isNight, player, ...tile } = day;
   // perks, prêtés comme equipment, restent dans campaign.player.
   const { hex, wounds, radiation, stats, perks, ...tilePlayer } = player;
   draft.rng = rng;

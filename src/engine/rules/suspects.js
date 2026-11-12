@@ -65,6 +65,7 @@ import { neighbors, distance, toAxial, toNumber } from '../hex.js';
 import { hasHex, tileHexes, suspectComposition, anomalyKinds } from './tile.js';
 import { consumables, createItem, countCharges, usedSlots, inventoryCapacity } from './sheet.js';
 import { detectorOf } from './equipment.js';
+import { detectorModifier } from './time.js';
 import { hasPerk } from './progression.js';
 
 export const ARTEFACT_VALUE = 1000;
@@ -181,7 +182,9 @@ function scanWithDetector(draft, ctx) {
     ? (detectorOf(draft.equipment) ?? { range: -1, anomalyType: false })
     : { range: DETECTOR_RANGE, anomalyType: false };
   const detected = anomalyType ? ['artefact', 'anomalie'] : ['artefact'];
-  const reach = range >= 0 && hasPerk(draft, 'oeil-de-lynx') ? range + LYNX_RANGE : range;
+  const lynx = range >= 0 && hasPerk(draft, 'oeil-de-lynx') ? LYNX_RANGE : 0;
+  // Météo du jour (pluie : -1, src/engine/rules/time.js), jamais sous l'hexagone du joueur.
+  const reach = range >= 0 ? Math.max(0, range + lynx + detectorModifier(draft)) : range;
   for (const token of draft.tokens) {
     const inRange = distance(draft.player.hex, token.hex) <= reach;
     if (detected.includes(token.kind) && !token.revealed && inRange) reveal(token, 'detector', ctx);
