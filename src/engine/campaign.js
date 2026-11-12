@@ -44,6 +44,8 @@
 //     places: { [id]: placeState }  progression des lieux (rules/places.js)          carte 10
 //     place?,                      { id, approach? } pendant la visite d'un lieu seulement
 //                                  (rules/places.js)                                 carte 10
+//     hub?, chests?,               { id } pendant la visite d'un hub ; coffres { [hubId]: [objet] }
+//                                  (rules/hubs.js)                                   carte 12
 //     npcs: { [id]: { alive, tile, place, met, helped } }  (rules/npcs.js)          carte 19
 //     quests: { [id]: questState }  (rules/quests.js)                                carte 15
 //     contracts: { [hubId]: [...] }                                                  carte 22
@@ -111,9 +113,10 @@ import { raiseStat, learnPerk } from './rules/progression.js';
 import { COMBAT_MODES, combatOnReveal, combatRefusal, shoot, takeCover, grenade, heal, escape, parley } from './rules/combat.js';
 import { travel } from './rules/world.js';
 import { talkTo, startingNpcs } from './rules/npcs.js';
-import { enterPlace, explore, boltCard, leavePlace, placesAfterStep, PLACE_OVERRIDES } from './rules/places.js';
+import { explore, boltCard, leavePlace, placesAfterStep, PLACE_OVERRIDES } from './rules/places.js';
 import { sleep, camp, wake, endDayOnExhaustion, nightRefusal } from './rules/time.js';
 import { questsAfterStep } from './rules/quests.js';
+import { enterHub, enterHubOrPlace, leaveHub, chestPut, chestTake, useService, hubsAfterStep, HUB_OVERRIDES } from './rules/hubs.js';
 
 export const CAMPAIGN_VERSION = 1;
 
@@ -130,12 +133,13 @@ export const CAMPAIGN_ACTIONS = {
   talk: talkTo, choose, join, equip, unequip, 'raise-stat': raiseStat, 'learn-perk': learnPerk,
   shoot, 'take-cover': takeCover, grenade, heal, escape, parley,
   travel, sleep, camp, wake,
-  'enter-place': enterPlace, explore, 'bolt-card': boltCard, 'leave-place': leavePlace,
+  'enter-place': enterHubOrPlace, explore, 'bolt-card': boltCard, 'leave-place': leavePlace,
+  'enter-hub': enterHub, 'leave-hub': leaveHub, 'chest-put': chestPut, 'chest-take': chestTake, service: useService,
 };
 
 // combatOnReveal d'abord : le combat v2 d'un lieu s'ouvre avant que placesAfterStep règle la visite.
 // questsAfterStep en dernier : les objectifs de quête lisent tout ce que le step a produit.
-export const REACTIONS = [combatOnReveal, placesAfterStep, endDayOnExhaustion, questsAfterStep];
+export const REACTIONS = [combatOnReveal, placesAfterStep, endDayOnExhaustion, hubsAfterStep, questsAfterStep];
 
 export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles = content.tiles, combatMode = 'rounds' }) {
   if (!MODES.includes(mode)) throw new Error(`mode inconnu : ${mode}`);
@@ -189,8 +193,9 @@ export function createCampaign({ seed, mode = 'normal', tile = START_TILE, tiles
 export function step(campaign, action) {
   const blocked = combatRefusal(campaign, action) ?? nightRefusal(campaign, action);
   if (blocked) return { state: campaign, events: [{ type: 'refused', action, reason: blocked }] };
-  // Dans un lieu, PLACE_OVERRIDES (rules/places.js) remplace des actions v1.
-  const handler = (campaign.place && PLACE_OVERRIDES[action.type]) ?? CAMPAIGN_ACTIONS[action.type];
+  // Dans un lieu, PLACE_OVERRIDES (rules/places.js) remplace des actions v1 ; dans un hub, HUB_OVERRIDES (rules/hubs.js).
+  const handler = (campaign.place && PLACE_OVERRIDES[action.type])
+    ?? (campaign.hub && HUB_OVERRIDES[action.type]) ?? CAMPAIGN_ACTIONS[action.type];
   const result = handler ? runCampaignAction(campaign, action, handler) : relayToTile(campaign, action);
   if (result.state === campaign) return result;
 
