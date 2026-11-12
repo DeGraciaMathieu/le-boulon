@@ -21,7 +21,8 @@
 //       stats: { tir, survie, discretion, endurance },
 //     },
 //     inventory,                   [{ kind, size, charges? }], grille de 12 cases (sheet.js)
-//     tokens, encounters, zone, mission   réservés aux cartes suivantes
+//     tokens, detector,            jetons suspects et détecteur (src/engine/rules/suspects.js)
+//     encounters, zone, mission    réservés aux cartes suivantes
 //   }
 //
 // ÉVÉNEMENTS (un objet { type, ... } par ligne de journal) :
@@ -32,7 +33,8 @@
 //   { type: 'day-ended', reason: 'no-ap' }
 //   { type: 'refused', action, reason }
 //     reason : 'game-over' | 'unknown-action' | 'not-adjacent' | 'not-enough-ap' | 'not-on-edge'
-//              | 'not-usable' | 'no-item'
+//              | 'not-usable' | 'no-item' | 'blocked'
+//   Jetons suspects, boulon, ramassage : événements et refus en tête de src/engine/rules/suspects.js.
 //
 // BRANCHER UNE RÈGLE :
 //   - Nouvelle action (boulon, fouille, fuite…) : écrire un handler
@@ -50,18 +52,19 @@
 import { createRng } from './rng.js';
 import { move } from './actions/move.js';
 import { exit } from './actions/exit.js';
+import { placeSuspects, bolt, pickup } from './rules/suspects.js';
 import { use, wound, irradiate, addItem, removeItem, useCharge, startingInventory } from './rules/sheet.js';
 
 export const BASE_AP = 10;
 
 const START_STATS = Object.freeze({ tir: 1, survie: 1, discretion: 1, endurance: 0 });
 
-const ACTIONS = { move, exit, use };
+const ACTIONS = { move, exit, use, bolt, pickup };
 
 export function createGame({ seed, tile }) {
   const stats = { ...START_STATS };
   const max = BASE_AP + stats.endurance;
-  return {
+  const state = {
     seed,
     rng: seed >>> 0,
     tile: structuredClone(tile),
@@ -70,11 +73,16 @@ export function createGame({ seed, tile }) {
     ap: { max, left: max, spent: 0 },
     player: { hex: tile.entry, previousHex: null, wounds: 0, radiation: 0, woundPenalty: false, stats },
     tokens: [],
+    detector: { broken: false },
     encounters: [],
     inventory: startingInventory(),
     zone: null,
     mission: null,
   };
+  const rng = createRng(state.rng);
+  placeSuspects(state, rng);
+  state.rng = rng.state();
+  return state;
 }
 
 export function step(state, action) {
