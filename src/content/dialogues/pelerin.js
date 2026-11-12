@@ -1,4 +1,5 @@
 // Dialogue de base du Pèlerin, itinérant du Marais (brief v2 §7).
+// Donne la quête « Le pèlerinage » (src/content/quetes/pelerinage.js).
 import { deepFreeze } from '../freeze.js';
 
 export default deepFreeze({
@@ -9,6 +10,12 @@ export default deepFreeze({
       choices: [
         { text: 'Qui êtes-vous ?', next: 'presentation', conditions: [{ type: 'premiere-visite' }] },
         { text: 'Que cherchez-vous ?', next: 'signe' },
+        {
+          text: 'Je peux vous accompagner ?',
+          next: 'route',
+          conditions: [{ type: 'non', condition: { type: 'quete', quest: 'pelerinage' } }],
+          effects: [{ type: 'quete', quest: 'pelerinage' }],
+        },
         { text: 'Au revoir.', next: null },
       ],
     },
@@ -19,6 +26,10 @@ export default deepFreeze({
     signe: {
       text: 'Un signe. Peut-être le tien.',
       choices: [{ text: 'Bonne route.', next: 'accueil' }],
+    },
+    route: {
+      text: 'Au Hameau des pêcheurs, il y a une croix sur la rive. Je voudrais la revoir. Seul, je n’y arriverai pas.',
+      choices: [{ text: 'Suivez-moi.', next: null }],
     },
   },
 });
