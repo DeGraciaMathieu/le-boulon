@@ -68,7 +68,7 @@ const questOf = (id, campaign) => campaign.quests[id]?.quest ?? content.quests[i
 const OBJECTIVES = {
   visiter: (o) => `Se rendre à ${placeName(o.place)}`,
   explorer: (o, campaign) => `Fouiller ${placeName(o.place)}${cardHint(o, campaign)}`,
-  parler: (o) => `Parler à ${npcName(o.npc)}`,
+  parler: (o) => `Parler à ${npcName(o.npc)}`.replace(/ à Les /, ' aux ').replace(/ à Le /, ' au '),
   rapporter: (o) => `Rapporter ${nameOf('items', o.item)} à ${npcName(o.npc)}`,
   eliminer: (o) => `Éliminer ${o.encounter}${o.tile ? ` (${tileName(o.tile)})` : ''}`,
   escorter: (o) => `Escorter ${npcName(o.npc)} jusqu'à ${placeName(o.place)}`,

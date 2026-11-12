@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCampaign, step } from '../src/engine/campaign.js';
-import { conditionText, dialogueLine, dialogueWindow, npcsHere } from '../src/ui/dialogue-screen.js';
+import { conditionText, dialogueLine, dialogueWindow, npcsHere, stepObjective } from '../src/ui/dialogue-screen.js';
 
 // Départ au Camp des novices (hexagone 5 du Cordon), où se tient Bohdan.
 const talking = (npc = 'bohdan') => step(createCampaign({ seed: 1 }), { type: 'talk', npc }).state;
@@ -50,7 +50,10 @@ test('conditionText : chaque type de condition en clair', () => {
   assert.equal(conditionText({ type: 'rang', min: 'veteran' }), 'Rang ≥ Vétéran');
   assert.equal(conditionText({ type: 'stat', stat: 'tir', min: 2, max: 4 }), 'Tir entre 2 et 4');
   assert.equal(conditionText({ type: 'roubles', min: 100 }), 'Roubles ≥ 100');
-  assert.match(conditionText({ type: 'quete', quest: 'dette-bohdan', step: 'retour' }), /à l'étape retour$/);
+  assert.equal(conditionText({ type: 'quete', quest: 'dette-bohdan', step: 'retour' }), 'Quête « La dette de Bohdan », étape : Parler à Bohdan');
+  assert.equal(conditionText({ type: 'quete', quest: 'le-guide', step: 'a1-retour' }), 'Quête « Le Guide », étape : Parler au Marchand du bunker');
+  assert.equal(conditionText({ type: 'quete', quest: 'le-guide', step: 'inconnue' }), 'Quête « Le Guide » plus avancée');
+  assert.equal(conditionText({ type: 'inconnue' }), 'condition particulière');
   assert.equal(conditionText({ type: 'premiere-visite' }), 'Première rencontre');
   assert.equal(
     conditionText({ type: 'un', conditions: [{ type: 'roubles', min: 1 }, { type: 'objet', item: 'vodka' }] }),
@@ -62,12 +65,21 @@ test('conditionText : chaque type de condition en clair', () => {
 test('dialogueLine : lignes de journal du dialogue, nœuds tus, autres événements ignorés', () => {
   const { events } = step(createCampaign({ seed: 1 }), { type: 'talk', npc: 'bohdan' });
   const lines = events.map(dialogueLine);
-  assert.ok(lines.includes('Dialogue avec Bohdan'));
-  assert.ok(lines.includes('Rencontre : Bohdan'));
+  assert.ok(lines.includes('Conversation avec Bohdan'));
+  assert.ok(lines.includes('Nouveau contact : Bohdan'));
+  assert.ok(!lines.some((line) => line?.startsWith('Rencontre')));
   assert.equal(dialogueLine({ type: 'dialogue-node', npc: 'bohdan' }), '');
   assert.equal(dialogueLine({ type: 'reputation-changed', faction: 'devoir', amount: -1, reputation: -1 }), 'Réputation Devoir -1 (-1)');
   assert.equal(dialogueLine({ type: 'item-removed', kind: 'vodka', cause: 'dialogue' }), 'Donné : Vodka');
   assert.equal(dialogueLine({ type: 'item-removed', kind: 'vodka', cause: 'bruleuse' }), undefined);
   assert.equal(dialogueLine({ type: 'refused', reason: 'choice-unavailable' }), 'Refusé : choix indisponible');
   assert.equal(dialogueLine({ type: 'moved' }), undefined);
+});
+
+test('stepObjective : l’objectif d’une étape en clair, « à Le » contracté', () => {
+  const campaign = createCampaign({ seed: 1 });
+  assert.equal(stepObjective('le-guide', 'a1-elevateur', campaign), 'Parler au stalker blessé');
+  assert.equal(stepObjective('le-guide', 'a1-atp', campaign), 'Fouiller ATP : retrouver le PDA du courrier');
+  assert.equal(stepObjective('le-guide', 'inconnue', campaign), null);
+  assert.equal(stepObjective('inconnue', 'a1-atp', campaign), null);
 });

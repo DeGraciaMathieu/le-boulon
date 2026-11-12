@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { tileArea, towards, hexWarnings } from '../src/ui/hex-hints.js';
-import { describeEvent } from '../src/ui/journal.js';
+import { journalLine } from '../src/ui/journal.js';
 
 // État minimal d'une journée : 19 hexagones d'herbe, pion au centre.
 function day({ player = 1, encounters = [], tokens = [], forest = [] } = {}) {
@@ -45,10 +45,10 @@ test('infobulle : rien sur l\'hexagone du pion', () => {
 });
 
 test('journal : plus de numéro d\'hexagone, une direction ou une position', () => {
-  assert.equal(describeEvent({ type: 'moved', from: 1, to: 3, cost: 1 }), "Déplacement vers l'est (1 PA)");
-  assert.equal(describeEvent({ type: 'fled', from: 1, to: 5, cost: 2 }), 'Fuite vers le sud-ouest (2 PA)');
-  assert.equal(describeEvent({ type: 'bolt-thrown', target: 2 }), 'Boulon lancé (nord-est)');
-  assert.equal(describeEvent({ type: 'encounter-avoided', hex: 19 }), 'Rencontre contournée (bord nord)');
-  assert.equal(describeEvent({ type: 'patrol', from: 4, to: 12 }), 'Une patrouille passe : sud-est → bord sud-est');
-  assert.equal(describeEvent({ type: 'emission-survived', hex: 7 }), "Émission passée à l'abri");
+  assert.equal(journalLine({ type: 'moved', from: 1, to: 3, cost: 1 }), "Déplacement vers l'est (1 PA)");
+  assert.equal(journalLine({ type: 'fled', from: 1, to: 5, cost: 2 }), 'Fuite vers le sud-ouest (2 PA)');
+  assert.equal(journalLine({ type: 'bolt-thrown', target: 2 }), 'Boulon lancé (nord-est)');
+  assert.equal(journalLine({ type: 'encounter-avoided', hex: 19 }), 'Rencontre contournée (bord nord)');
+  assert.equal(journalLine({ type: 'patrol', from: 4, to: 12 }), 'Une patrouille passe : sud-est → bord sud-est');
+  assert.equal(journalLine({ type: 'emission-survived', hex: 7 }), "Émission passée à l'abri");
 });
