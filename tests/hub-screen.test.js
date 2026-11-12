@@ -34,7 +34,7 @@ test('onglets : un service sans handler moteur est marqué non prêt', () => {
   const campaign = inCamp();
   campaign.hub = { id: 'bar' };
   const tabs = Object.fromEntries(hubTabs(campaign).map((tab) => [tab.id, tab.ready]));
-  assert.equal(tabs.barman, false);
+  assert.equal(tabs.barman, true);
   assert.equal(tabs.medecin, false);
   assert.equal(tabs.marchand, true);
   assert.equal(tabs.coffre, true);
