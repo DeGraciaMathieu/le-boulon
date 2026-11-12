@@ -15,8 +15,12 @@ function fakeTile() {
   return { name: 'Test', entry: 8, hexes };
 }
 
-// Sans jetons suspects ni rencontres : ces tests portent sur le déplacement seul.
-const newGame = (seed = 1) => ({ ...createGame({ seed, tile: fakeTile() }), tokens: [], encounters: [] });
+// Sans jetons suspects, rencontres ni carte Zone active : ces tests portent sur le déplacement seul.
+function newGame(seed = 1) {
+  const state = createGame({ seed, tile: fakeTile() });
+  const zone = { ...state.zone, deck: Array(10).fill('calme') };
+  return { ...state, tokens: [], encounters: [], zone };
+}
 const move = (to) => ({ type: 'move', to });
 
 // Joue une suite d'actions et rend le dernier état et tous les événements.

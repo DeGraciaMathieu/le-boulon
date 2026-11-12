@@ -12,6 +12,7 @@
 //     rng,                         état interne du RNG (uint32), avance à chaque tirage
 //     tile,                        { name, entry, hexes } (format de src/engine/data/agroprom.js)
 //     status,                      'playing' | 'exited' | 'night' (0 PA sans être sorti) | 'dead'
+//                                  | 'emission' (prise sans abri)
 //     turn,                        nombre d'actions acceptées
 //     ap: { max, left, spent },    budget de PA de la journée
 //     player: {
@@ -23,7 +24,8 @@
 //     inventory,                   [{ kind, size, charges? }], grille de 12 cases (sheet.js)
 //     tokens, detector,            jetons suspects et détecteur (src/engine/rules/suspects.js)
 //     encounters, encounterDeck, combat   rencontres (src/engine/rules/encounters.js)
-//     zone, mission                réservés aux cartes suivantes
+//     zone                         paquet Zone et Émission (src/engine/rules/zone.js)
+//     mission                      réservé à la carte suivante
 //   }
 //
 // ÉVÉNEMENTS (un objet { type, ... } par ligne de journal) :
@@ -34,9 +36,11 @@
 //   { type: 'day-ended', reason: 'no-ap' }
 //   { type: 'refused', action, reason }
 //     reason : 'game-over' | 'unknown-action' | 'not-adjacent' | 'not-enough-ap' | 'not-on-edge'
-//              | 'not-usable' | 'no-item' | 'blocked' | 'in-combat' | 'not-in-combat'
+//              | 'not-usable' | 'no-item' | 'blocked' | 'in-combat' | 'not-in-combat' | 'fog'
 //   Jetons suspects, boulon, ramassage : événements et refus en tête de src/engine/rules/suspects.js.
 //   Rencontres et combat : en tête de src/engine/rules/encounters.js.
+//   Paquet Zone et Émission (pioche tous les 3 PA dépensés, refus 'fog') : en tête de
+//   src/engine/rules/zone.js.
 //
 // BRANCHER UNE RÈGLE :
 //   - Nouvelle action (boulon, fouille, fuite…) : écrire un handler
@@ -56,6 +60,7 @@ import { move } from './actions/move.js';
 import { exit } from './actions/exit.js';
 import { placeSuspects, bolt, pickup } from './rules/suspects.js';
 import { setupEncounters, combatRefusal, fight, flee } from './rules/encounters.js';
+import { setupZone, zoneRefusal, zoneAfterAction } from './rules/zone.js';
 import { use, wound, irradiate, addItem, removeItem, useCharge, startingInventory } from './rules/sheet.js';
 
 export const BASE_AP = 10;
@@ -85,7 +90,7 @@ export function createGame({ seed, tile }) {
   const rng = createRng(state.rng);
   placeSuspects(state, rng);
   state.rng = rng.state();
-  return setupEncounters(state);
+  return setupZone(setupEncounters(state));
 }
 
 export function step(state, action) {
@@ -94,8 +99,8 @@ export function step(state, action) {
   if (state.status !== 'playing') return refuse('game-over');
   const handler = ACTIONS[action.type];
   if (!handler) return refuse('unknown-action');
-  const inCombat = combatRefusal(state, action);
-  if (inCombat) return refuse(inCombat);
+  const blocked = combatRefusal(state, action) ?? zoneRefusal(state, action);
+  if (blocked) return refuse(blocked);
 
   const draft = structuredClone(state);
   const events = [];
@@ -117,6 +122,7 @@ export function step(state, action) {
 
   const refusal = handler(draft, action, ctx);
   if (refusal) return refuse(refusal);
+  if (draft.status === 'playing') zoneAfterAction(draft, state.ap.spent, ctx);
 
   draft.turn += 1;
   draft.rng = rng.state();
