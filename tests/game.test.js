@@ -15,8 +15,8 @@ function fakeTile() {
   return { name: 'Test', entry: 8, hexes };
 }
 
-// Sans jetons suspects : ils sont testés dans tests/suspects.test.js.
-const newGame = (seed = 1) => ({ ...createGame({ seed, tile: fakeTile() }), tokens: [] });
+// Sans jetons suspects ni rencontres : ces tests portent sur le déplacement seul.
+const newGame = (seed = 1) => ({ ...createGame({ seed, tile: fakeTile() }), tokens: [], encounters: [] });
 const move = (to) => ({ type: 'move', to });
 
 // Joue une suite d'actions et rend le dernier état et tous les événements.
