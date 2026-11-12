@@ -82,3 +82,31 @@
 .alveole.retenu {
   cursor: help;
 }
+
+/* Tutoriel joué (lot L8) : compteur d'étape et lien « Passer le tutoriel » en pied de bulle. */
+.bulle-tutoriel {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgb(42 36 28 / 0.25);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.bulle-tutoriel[hidden] {
+  display: none;
+}
+
+.bulle-passer {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 400;
+  text-decoration: underline;
+  cursor: pointer;
+}
