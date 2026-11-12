@@ -294,6 +294,22 @@ test('PNJ : la carte lance le dialogue, qui ramène au lieu', () => {
   assert.equal(back.screen, 'place');
 });
 
+test('PNJ : la carte passe par les contrôles de talkTo (mort, absent, première rencontre)', () => {
+  const here = placeWith([{ id: 'p', type: 'pnj', npc: 'tolik' }]);
+  const met = play(campaignWith(), [{ type: 'enter-place', place: here }, { type: 'explore' }]);
+  assert.deepEqual(ofType(met.events, 'npc-met')[0], { type: 'npc-met', npc: 'tolik' });
+  assert.equal(met.campaign.npcs.tolik.met, true);
+
+  const dead = campaignWith();
+  dead.npcs.tolik.alive = false;
+  const entered = play(dead, [{ type: 'enter-place', place: here }]).campaign;
+  assert.equal(step(entered, { type: 'explore' }).events[0].reason, 'npc-dead');
+
+  const away = placeWith([{ id: 'p', type: 'pnj', npc: 'blesse-elevateur' }]);
+  const inside = play(campaignWith(), [{ type: 'enter-place', place: away }]).campaign;
+  assert.equal(step(inside, { type: 'explore' }).events[0].reason, 'npc-not-here');
+});
+
 test('indice : événement et effets de quête par les hooks de dialogue', () => {
   const place = placeWith([{ id: 'note', type: 'indice', text: 'Un PDA.', effects: [{ type: 'roubles', amount: 50 }] }]);
   const { campaign, events } = play(campaignWith(), [{ type: 'enter-place', place }, { type: 'explore' }]);

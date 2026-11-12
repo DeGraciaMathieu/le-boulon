@@ -16,7 +16,8 @@
 //   'occupant'  encounter?     rencontre : PLACE_COMBAT.start (carte encounter du paquet de
 //                              rencontres de la tuile, sinon piochée dans ce paquet). Combat selon
 //                              campaign.combatMode (voir COMBAT ci-dessous).
-//   'pnj'       npc            lance le dialogue du PNJ (talk de rules/dialogue.js) ; sa fin
+//   'pnj'       npc            lance le dialogue du PNJ (talkTo de rules/npcs.js : refus
+//                              'npc-dead' | 'npc-not-here', première rencontre) ; sa fin
 //                              ramène à l'écran du lieu
 //   'indice'    effects?       événement clue-found, puis les effets, au format des effets de
 //                              dialogue (EFFECTS de rules/dialogue.js : 'quete', 'avancer',
@@ -112,7 +113,8 @@ import { zoneAfterAction } from './zone.js';
 import { encounterCards, anomalyKinds } from './tile.js';
 import { placeAccess } from './factions.js';
 import { hasPerk } from './progression.js';
-import { talk, EFFECTS } from './dialogue.js';
+import { EFFECTS } from './dialogue.js';
+import { talkTo } from './npcs.js';
 import { combatMode } from './combat.js';
 
 export const PLACES = {};
@@ -185,7 +187,7 @@ const CARD_RULES = {
     day: (day, dctx, { place, card }) => PLACE_COMBAT.start(day, dctx, { place, encounter: card.encounter }),
   },
   pnj: {
-    campaign: (draft, ctx, { card }) => talk(draft, { type: 'talk', npc: card.npc }, ctx),
+    campaign: (draft, ctx, { card }) => talkTo(draft, { type: 'talk', npc: card.npc }, ctx),
   },
   indice: {
     campaign: (draft, ctx, { place, card }) => {
